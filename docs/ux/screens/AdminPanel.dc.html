@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/styles.css">
+<script src="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/_ds_bundle.js"></script>
+<style>
+@keyframes langyFade { from { opacity: 0 } to { opacity: 1 } }
+</style>
+</helmet>
+<div style="{{ themeVars }}">
+  <div style="width:1180px;height:760px;position:relative;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:'Lora',Georgia,serif;overflow:hidden;border:1px solid var(--line);border-radius:4px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 34px;border-bottom:1px solid var(--line)">
+      <div style="display:flex;align-items:baseline;gap:16px">
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:26px;letter-spacing:.02em">Langy</div>
+        <div style="font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)">Admin</div>
+      </div>
+      <div style="font-size:13px;color:var(--soft)">jan.kowalski@gmail.com</div>
+    </div>
+
+    <div style="flex:1;overflow:hidden;padding:34px 34px 0">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:8px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:40px;line-height:1.1;font-weight:400">Users</div>
+          <div style="font-size:13.5px;color:var(--soft);margin-top:6px;font-feature-settings:'tnum'">Billing period 1–31 August · 6 users · $61.40 of $95.00 committed</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:4px;padding:9px 13px;min-width:230px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.2-3.2"></path></svg>
+            <span style="font-size:13.5px;color:var(--soft)">Search by name or email</span>
+          </div>
+          <button style="font-size:13px;letter-spacing:.04em;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:10px 16px;min-height:42px;cursor:pointer;white-space:nowrap;font-family:'Lora',Georgia,serif" style-hover="background:var(--goldTint)">Export CSV</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.1fr 1.4fr 0.7fr 1.5fr 0.6fr;gap:20px;padding:16px 0 12px;border-bottom:1px solid var(--ink2);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)">
+        <div>Name</div><div>Email</div><div style="text-align:right">Spend cap</div><div>Used this period</div><div></div>
+      </div>
+
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:1.1fr 1.4fr 0.7fr 1.5fr 0.6fr;gap:20px;align-items:center;padding:15px 0;border-bottom:1px solid var(--line)">
+          <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:21px;white-space:nowrap">{{ r.name }}</div>
+          <div style="font-size:13.5px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.email }}</div>
+          <div style="font-size:14px;text-align:right;font-feature-settings:'tnum';white-space:nowrap">{{ r.cap }}</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="flex:1;height:3px;background:var(--line);position:relative;min-width:90px">
+              <div style="{{ r.barStyle }}"></div>
+            </div>
+            <div style="{{ r.usedStyle }}">{{ r.used }}</div>
+            <div style="{{ r.flagStyle }}">At cap</div>
+          </div>
+          <div style="text-align:right">
+            <button onClick="{{ r.onEdit }}" style="font-size:12.5px;letter-spacing:.05em;color:var(--gold);background:transparent;border:1px solid var(--line);border-radius:4px;padding:8px 12px;min-height:38px;cursor:pointer;white-space:nowrap;font-family:'Lora',Georgia,serif" style-hover="border-color:var(--gold);background:var(--goldTint)">Edit cap</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,.34);display:flex;align-items:center;justify-content:center;animation:langyFade .2s ease-out both">
+        <div style="width:420px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:30px;box-shadow:0 10px 34px rgba(0,0,0,.16)">
+          <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Anna Wójcik</div>
+          <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:30px;line-height:1.12;margin-bottom:10px">Spend cap</div>
+          <div style="font-size:13.5px;line-height:1.65;color:var(--soft);margin-bottom:20px;text-wrap:pretty">When the cap is reached, chats and word generation stop for this user until the next period. Nothing is deleted.</div>
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--gold);border-radius:4px;padding:13px 15px;margin-bottom:8px">
+            <span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:22px;color:var(--soft)">$</span>
+            <span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:22px;font-feature-settings:'tnum'">25.00</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--soft);margin-bottom:24px;font-feature-settings:'tnum'">Used so far this period: $15.00</div>
+          <div style="display:flex;justify-content:flex-end;gap:10px">
+            <button onClick="{{ onClose }}" style="font-size:13px;letter-spacing:.05em;color:var(--soft);background:transparent;border:1px solid var(--line);border-radius:4px;padding:11px 18px;min-height:44px;cursor:pointer;white-space:nowrap;font-family:'Lora',Georgia,serif" style-hover="color:var(--gold);border-color:var(--gold)">Cancel</button>
+            <button onClick="{{ onClose }}" style="font-size:13px;letter-spacing:.05em;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:11px 18px;min-height:44px;cursor:pointer;white-space:nowrap;font-family:'Lora',Georgia,serif" style-hover="background:var(--goldTint)">Save cap</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:760},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const USERS = [
+  ['Jan Kowalski', 'jan.kowalski@gmail.com', 20, 12.4],
+  ['Anna W\u00f3jcik', 'anna.wojcik@gmail.com', 15, 15],
+  ['Piotr Nowak', 'p.nowak@outlook.com', 20, 6.85],
+  ['Maria Zieli\u0144ska', 'maria.z@gmail.com', 10, 2.1],
+  ['Tomasz Le\u015bniak', 't.lesniak@gmail.com', 20, 19.6],
+  ['Ewa D\u0105browska', 'ewa.dabrowska@gmail.com', 10, 5.45]
+];
+
+class Component extends DCLogic {
+  state = { dialog: false };
+  renderVals() {
+    const dark = this.props.theme === 'dark';
+    const themeVars = dark ? {
+      '--paper': '#16130f', '--surface': '#1e1a15', '--ink': '#ece7dd', '--ink2': 'rgba(236,231,221,0.45)',
+      '--soft': 'rgba(236,231,221,0.56)', '--gold': '#d3a765',
+      '--line': 'rgba(236,231,221,0.16)', '--goldTint': 'rgba(211,167,101,0.12)'
+    } : {
+      '--paper': '#f3f2f2', '--surface': '#fbfaf9', '--ink': '#201f1d', '--ink2': 'rgba(32,31,29,0.4)',
+      '--soft': 'rgba(32,31,29,0.58)', '--gold': '#b68235',
+      '--line': 'rgba(32,31,29,0.14)', '--goldTint': 'rgba(182,130,53,0.09)'
+    };
+    const rows = USERS.map(([name, email, cap, used]) => {
+      const pct = Math.min(100, Math.round((used / cap) * 100));
+      const atCap = used >= cap;
+      return {
+        name, email,
+        cap: '$' + cap.toFixed(2),
+        used: '$' + used.toFixed(2),
+        barStyle: {
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: pct + '%',
+          background: atCap ? 'var(--gold)' : 'var(--ink2)'
+        },
+        usedStyle: {
+          fontSize: '14px', fontFeatureSettings: "'tnum'", whiteSpace: 'nowrap',
+          minWidth: '58px', textAlign: 'right', color: atCap ? 'var(--gold)' : 'var(--ink)'
+        },
+        flagStyle: {
+          fontSize: '11px', letterSpacing: '.12em', textTransform: 'uppercase',
+          whiteSpace: 'nowrap', minWidth: '54px',
+          color: 'var(--gold)', visibility: atCap ? 'visible' : 'hidden'
+        },
+        onEdit: () => this.setState({ dialog: true })
+      };
+    });
+    return { themeVars, rows, dialogOpen: this.state.dialog, onClose: () => this.setState({ dialog: false }) };
+  }
+}
+</script>
+</body>
+</html>

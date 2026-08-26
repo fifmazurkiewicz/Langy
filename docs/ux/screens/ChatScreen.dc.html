@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/styles.css">
+<script src="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/_ds_bundle.js"></script>
+<style>
+@keyframes langyBreathe { 0%,100% { transform: scale(0.94); opacity: .55 } 50% { transform: scale(1.06); opacity: 1 } }
+@keyframes langyBar { 0%,100% { transform: scaleY(0.22) } 50% { transform: scaleY(1) } }
+@keyframes langyTurn { to { transform: rotate(360deg) } }
+@keyframes langyRise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+</style>
+</helmet>
+<div style="{{ themeVars }}">
+  <div style="width:390px;height:844px;position:relative;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:'Lora',Georgia,serif;overflow:hidden;border:1px solid var(--line);border-radius:4px">
+
+    <div onClick="{{ onToggleSwitcher }}" style="display:flex;align-items:center;justify-content:space-between;padding:44px 22px 14px;border-bottom:1px solid var(--line);cursor:pointer;position:relative;z-index:6">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--gold);font-feature-settings:'tnum'">GB</div>
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:19px;font-weight:500;letter-spacing:.01em">English (UK)</div>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round"><path d="m6 9 6 6 6-6"></path></svg>
+    </div>
+
+    <sc-if value="{{ isSwitcher }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:0;right:0;top:78px;bottom:0;z-index:5;background:rgba(0,0,0,.28);display:flex;flex-direction:column">
+        <div style="background:var(--surface);border-bottom:1px solid var(--line);padding:8px 22px 18px;animation:langyRise .28s ease-out both">
+          <div style="display:flex;align-items:center;gap:13px;padding:15px 0;border-bottom:1px solid var(--line)">
+            <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--gold);flex-shrink:0">GB</div>
+            <div style="flex:1;font-family:'Cormorant Garamond',Garamond,serif;font-size:22px;color:var(--gold)">English (British)</div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;padding:15px 0;border-bottom:1px solid var(--line)">
+            <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--soft);flex-shrink:0">US</div>
+            <div style="flex:1;font-family:'Cormorant Garamond',Garamond,serif;font-size:22px">English (American)</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;padding:15px 0;border-bottom:1px solid var(--line)">
+            <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--soft);flex-shrink:0">DE</div>
+            <div style="flex:1;font-family:'Cormorant Garamond',Garamond,serif;font-size:22px">German</div>
+          </div>
+          <button onClick="{{ onToggleSwitcher }}" style="margin-top:16px;width:100%;display:flex;align-items:center;justify-content:center;gap:9px;font-family:'Cormorant Garamond',Garamond,serif;font-size:18px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:13px;min-height:48px;cursor:pointer;white-space:nowrap" style-hover="background:var(--goldTint)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+            Add a language
+          </button>
+        </div>
+        <div onClick="{{ onToggleSwitcher }}" style="flex:1;cursor:pointer"></div>
+      </div>
+    </sc-if>
+
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:0 30px;text-align:center">
+
+      <sc-if value="{{ showAgent }}" hint-placeholder-val="{{ true }}">
+        <div style="{{ animStyle }}">
+          <svg width="188" height="188" viewBox="0 0 200 200" fill="none">
+            <circle cx="100" cy="100" r="88" stroke="var(--gold)" stroke-width="0.75" opacity="0.28" style="transform-origin:100px 100px;animation:langyBreathe 5.2s ease-in-out infinite"></circle>
+            <circle cx="100" cy="100" r="66" stroke="var(--gold)" stroke-width="0.9" opacity="0.45" style="transform-origin:100px 100px;animation:langyBreathe 4.4s ease-in-out infinite .3s"></circle>
+            <circle cx="100" cy="100" r="44" stroke="var(--gold)" stroke-width="1.1" opacity="0.7" style="transform-origin:100px 100px;animation:langyBreathe 3.6s ease-in-out infinite .6s"></circle>
+            <circle cx="100" cy="100" r="7" fill="var(--gold)" opacity="0.85" style="transform-origin:100px 100px;animation:langyBreathe 3.6s ease-in-out infinite .6s"></circle>
+          </svg>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:36px;font-weight:400;line-height:1.1;letter-spacing:.01em">{{ title }}</div>
+        <div style="font-size:14px;line-height:1.55;color:var(--soft);max-width:250px;text-wrap:pretty">{{ sub }}</div>
+      </div>
+
+      <sc-if value="{{ isIdle }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ onPrimary }}" style="font-family:'Cormorant Garamond',Garamond,serif;font-size:19px;letter-spacing:.02em;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:14px 30px;min-height:48px;cursor:pointer;white-space:nowrap" style-hover="background:var(--goldTint)">Tap to start talking</button>
+      </sc-if>
+
+      <sc-if value="{{ showTranscript }}" hint-placeholder-val="{{ true }}">
+        <div style="width:100%;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:16px 2px;display:flex;flex-direction:column;gap:9px;text-align:left">
+          <div style="font-size:13.5px;line-height:1.6;color:var(--soft)">Where did you go at the weekend?</div>
+          <div style="font-size:13.5px;line-height:1.6">I go to the mountains with my brother.</div>
+          <div style="font-size:13.5px;line-height:1.6;color:var(--gold);font-style:italic">went — past tense</div>
+        </div>
+      </sc-if>
+
+      <button onClick="{{ onToggleTranscript }}" style="font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);background:transparent;border:none;border-bottom:1px solid var(--line);padding:6px 2px;cursor:pointer;font-family:'Lora',Georgia,serif">{{ transcriptLabel }}</button>
+    </div>
+
+    <sc-if value="{{ isSummary }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:16px;right:16px;bottom:96px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:22px 22px 18px;box-shadow:0 6px 20px rgba(0,0,0,.10);animation:langyRise .4s ease-out both;text-align:left">
+        <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;font-feature-settings:'tnum'">7 minutes · 3 notes</div>
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:27px;line-height:1.15;margin-bottom:14px">Three things to keep</div>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;gap:12px;font-size:14px;line-height:1.5"><span style="color:var(--gold);font-feature-settings:'tnum'">1</span><span>“I <i>went</i> to the mountains” — past tense of <i>go</i>.</span></div>
+          <div style="display:flex;gap:12px;font-size:14px;line-height:1.5"><span style="color:var(--gold);font-feature-settings:'tnum'">2</span><span><i>Ridge</i> and <i>trail</i> — saved to your words.</span></div>
+          <div style="display:flex;gap:12px;font-size:14px;line-height:1.5"><span style="color:var(--gold);font-feature-settings:'tnum'">3</span><span>You spoke for six minutes without switching. That's new.</span></div>
+        </div>
+        <button onClick="{{ onPrimary }}" style="margin-top:18px;width:100%;font-family:'Cormorant Garamond',Garamond,serif;font-size:18px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:12px;min-height:46px;cursor:pointer" style-hover="background:var(--goldTint)">Good, thanks</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isError }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:16px;right:16px;bottom:96px;background:var(--surface);border:1px solid var(--gold);border-radius:4px;padding:22px;animation:langyRise .4s ease-out both;text-align:left">
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:25px;line-height:1.15;margin-bottom:8px">Your mic is switched off</div>
+        <div style="font-size:14px;line-height:1.6;color:var(--soft);margin-bottom:16px">Turn it on in your browser settings and we can pick up where we left off.</div>
+        <button onClick="{{ onPrimary }}" style="font-family:'Cormorant Garamond',Garamond,serif;font-size:18px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:12px 24px;min-height:46px;cursor:pointer;white-space:nowrap" style-hover="background:var(--goldTint)">Open settings</button>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;border-top:1px solid var(--line);padding:12px 0 30px;background:var(--paper)">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--gold);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Chat</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--soft);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Words</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--soft);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Menu</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;breath&quot;,&quot;wave&quot;,&quot;plate&quot;],&quot;default&quot;:&quot;breath&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;listening&quot;,&quot;thinking&quot;,&quot;speaking&quot;,&quot;summary&quot;,&quot;error&quot;],&quot;default&quot;:&quot;idle&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;transcript&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onToggleTranscript&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onPrimary&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const dark = this.props.theme === 'dark';
+    const state = this.props.state || 'idle';
+    const themeVars = dark ? {
+      '--paper': '#16130f', '--surface': '#1e1a15', '--ink': '#ece7dd',
+      '--soft': 'rgba(236,231,221,0.56)', '--gold': '#d3a765',
+      '--line': 'rgba(236,231,221,0.16)', '--goldTint': 'rgba(211,167,101,0.12)'
+    } : {
+      '--paper': '#f3f2f2', '--surface': '#fbfaf9', '--ink': '#201f1d',
+      '--soft': 'rgba(32,31,29,0.58)', '--gold': '#b68235',
+      '--line': 'rgba(32,31,29,0.14)', '--goldTint': 'rgba(182,130,53,0.09)'
+    };
+    const copy = {
+      idle:      { title: 'Ready when you are', sub: 'No buttons to hold. Just talk, and pause when you\u2019re done.' },
+      listening: { title: 'Listening', sub: 'Take your time. I\u2019m not going anywhere.' },
+      thinking:  { title: 'Thinking', sub: 'One moment.' },
+      speaking:  { title: 'Speaking', sub: 'Jump in whenever you like.' },
+      summary:   { title: 'Nice session', sub: 'Here\u2019s what stuck.' },
+      error:     { title: 'I can\u2019t hear you', sub: 'The microphone is blocked.' }
+    }[state];
+    const speed = { idle: '1', listening: '0.55', thinking: '2.4', speaking: '0.8', summary: '1.6', error: '1.6' }[state];
+    const animStyle = {
+      animationDuration: undefined,
+      opacity: state === 'error' ? 0.35 : state === 'summary' ? 0.5 : 1,
+      transition: 'opacity .35s ease',
+      // slow the whole visual down or speed it up per state
+      ['--x']: speed
+    };
+    // scale the child animations by re-timing via CSS custom property is not supported per-element,
+    // so apply a transform cue instead: quieter when thinking, fuller when listening
+    animStyle.transform = state === 'listening' ? 'scale(1.04)' : state === 'thinking' ? 'scale(0.9)' : 'scale(1)';
+    animStyle.filter = state === 'thinking' ? 'saturate(0.4)' : 'none';
+    return {
+      themeVars, animStyle,
+      showAgent: true,
+      isIdle: state === 'idle', isSummary: state === 'summary', isError: state === 'error',
+      title: copy.title, sub: copy.sub,
+      isSwitcher: !!this.props.switcher,
+      onToggleSwitcher: this.props.onToggleSwitcher,
+      showTranscript: !!this.props.transcript,
+      transcriptLabel: this.props.transcript ? 'Hide transcript' : 'Show transcript',
+      onToggleTranscript: this.props.onToggleTranscript,
+      onPrimary: this.props.onPrimary
+    };
+  }
+}
+</script>
+</body>
+</html>

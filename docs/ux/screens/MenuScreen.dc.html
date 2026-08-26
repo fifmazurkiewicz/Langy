@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/styles.css">
+<script src="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/_ds_bundle.js"></script>
+</helmet>
+<div style="{{ themeVars }}">
+  <div style="width:390px;height:844px;position:relative;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:'Lora',Georgia,serif;overflow:hidden;border:1px solid var(--line);border-radius:4px">
+
+    <div style="padding:52px 22px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px">
+      <sc-if value="{{ isSub }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ onBack }}" style="background:transparent;border:none;cursor:pointer;color:var(--gold);display:flex;align-items:center;padding:4px;margin-left:-4px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+      </sc-if>
+      <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:34px;font-weight:400;line-height:1.05">{{ heading }}</div>
+    </div>
+
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:6px 22px 0">
+
+      <sc-if value="{{ isRoot }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column">
+          <div style="padding:20px 0 18px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:3px">
+            <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:25px;line-height:1.1">Jan Kowalski</div>
+            <div style="font-size:13px;color:var(--soft)">jan.kowalski@gmail.com</div>
+          </div>
+          <button onClick="{{ onLanguages }}" style="{{ rowStyle }}" style-hover="color:var(--gold)">
+            <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start"><span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">Languages</span><span style="font-size:12.5px;color:var(--soft);font-feature-settings:'tnum'">English (UK) · German</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <button onClick="{{ onProfile }}" style="{{ rowStyle }}" style-hover="color:var(--gold)">
+            <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start"><span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">Profile</span><span style="font-size:12.5px;color:var(--soft)">Why you're learning, what you like, where you're at</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <button onClick="{{ onAppearance }}" style="{{ rowStyle }}" style-hover="color:var(--gold)">
+            <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start"><span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">Appearance</span><span style="font-size:12.5px;color:var(--soft)">{{ appearanceMeta }}</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <button style="{{ rowStyle }}" style-hover="color:var(--gold)">
+            <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start"><span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">Admin</span><span style="font-size:12.5px;color:var(--soft);white-space:nowrap">Users &amp; spend caps · desktop</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <button style="margin-top:26px;align-self:flex-start;font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);background:transparent;border:none;border-bottom:1px solid var(--line);padding:6px 2px;cursor:pointer;font-family:'Lora',Georgia,serif;white-space:nowrap" style-hover="color:var(--gold);border-color:var(--gold)">Sign out</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isLanguages }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;padding-top:8px">
+          <div style="display:flex;align-items:center;gap:13px;padding:17px 0;border-bottom:1px solid var(--line)">
+            <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--gold);flex-shrink:0">GB</div>
+            <div style="flex:1;font-family:'Cormorant Garamond',Garamond,serif;font-size:23px;color:var(--gold)">English (British)</div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;padding:17px 0;border-bottom:1px solid var(--line)">
+            <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--soft);flex-shrink:0">US</div>
+            <div style="flex:1;font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">English (American)</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;padding:17px 0;border-bottom:1px solid var(--line)">
+            <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--soft);flex-shrink:0">DE</div>
+            <div style="flex:1;font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">German</div>
+          </div>
+          <button onClick="{{ onAddLang }}" style="margin-top:22px;width:100%;display:flex;align-items:center;justify-content:center;gap:9px;font-family:'Cormorant Garamond',Garamond,serif;font-size:18px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:14px;min-height:50px;cursor:pointer;white-space:nowrap" style-hover="background:var(--goldTint)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+            Add a language
+          </button>
+          <div style="font-size:12.5px;line-height:1.6;color:var(--soft);margin-top:14px;text-wrap:pretty">A new language asks you five quick questions about your level — nothing else.</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;padding-top:8px">
+          <button onClick="{{ onMotivation }}" style="{{ rowStyle }}" style-hover="color:var(--gold)">
+            <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start"><span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">Motivation</span><span style="font-size:12.5px;color:var(--soft)">Career · Travel</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <button onClick="{{ onInterests }}" style="{{ rowStyle }}" style-hover="color:var(--gold)">
+            <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start"><span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">Interests</span><span style="font-size:12.5px;color:var(--soft);font-feature-settings:'tnum'">4 topics · they are your word sets</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <button onClick="{{ onLevels }}" style="{{ rowStyle }}" style-hover="color:var(--gold)">
+            <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-start"><span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:23px">Self-assessment</span><span style="font-size:12.5px;color:var(--soft);white-space:nowrap">Last updated 4 August</span></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <div style="font-size:12.5px;line-height:1.6;color:var(--soft);margin-top:18px;text-wrap:pretty">Change any of this whenever you like — the next chat picks it up.</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isChipEdit }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;padding-top:14px;gap:22px">
+          <div style="font-size:13.5px;line-height:1.6;color:var(--soft);text-wrap:pretty">{{ chipBlurb }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <sc-for list="{{ chips }}" as="c" hint-placeholder-count="9">
+              <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isLevels }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;padding-top:14px">
+          <sc-if value="{{ multiLang }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+              <sc-for list="{{ langTabs }}" as="t" hint-placeholder-count="2">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-for list="{{ aspects }}" as="a" hint-placeholder-count="5">
+            <div style="padding:7px 0;border-top:1px solid var(--line)">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:2px">
+                <span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:20px;white-space:nowrap">{{ a.name }}</span>
+                <span style="font-size:12.5px;color:var(--gold);white-space:nowrap">{{ a.anchor }}</span>
+              </div>
+              <div style="display:flex;align-items:center">
+                <sc-for list="{{ a.ticks }}" as="t" hint-placeholder-count="5">
+                  <button onClick="{{ t.onClick }}" style="{{ t.style }}"><span style="{{ t.dot }}"></span></button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAddLang }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;padding-top:14px;gap:20px">
+          <div style="font-size:13.5px;line-height:1.6;color:var(--soft);text-wrap:pretty">Pick one. You'll answer five quick level questions for it — nothing else from the interview repeats.</div>
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ addable }}" as="l" hint-placeholder-count="3">
+              <button onClick="{{ l.onClick }}" style="{{ l.style }}">
+                <span style="{{ l.badge }}">{{ l.code }}</span>
+                <span style="flex:1;font-family:'Cormorant Garamond',Garamond,serif;font-size:23px;text-align:left">{{ l.label }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAppearance }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;padding-top:20px;gap:18px">
+          <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)">Dark mode</div>
+          <div style="display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden">
+            <button onClick="{{ onSystem }}" style="{{ segSystem }}">System</button>
+            <button onClick="{{ onLight }}" style="{{ segLight }}">Light</button>
+            <button onClick="{{ onDark }}" style="{{ segDark }}">Dark</button>
+          </div>
+          <div style="font-size:13px;line-height:1.65;color:var(--soft);text-wrap:pretty">{{ appearanceNote }}</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display:flex;border-top:1px solid var(--line);padding:12px 0 30px;background:var(--paper)">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--soft);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Chat</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--soft);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Words</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--gold);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Menu</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;root&quot;,&quot;languages&quot;,&quot;appearance&quot;,&quot;profile&quot;,&quot;motivation&quot;,&quot;interests&quot;,&quot;levels&quot;,&quot;addLanguage&quot;],&quot;default&quot;:&quot;root&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;system&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;system&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onLanguages&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onAppearance&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onProfile&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMotivation&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInterests&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onLevels&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onAddLang&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onSystem&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onLight&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onDark&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const MOTIVES = ['Career', 'Travel', 'Relocation', 'Family', 'Academic', 'Culture', 'Heritage', 'Fun', 'Other'];
+const INTERESTS = ['Technology', 'Sports', 'Movies', 'Music', 'Books', 'Travel', 'Food', 'Business', 'Science', 'Gaming', 'Art', 'Nature', 'Other'];
+const ASPECTS = ['Reading', 'Speaking', 'Writing', 'Listening', 'Vocabulary'];
+const ANCHORS = ['Just starting', 'A few words', 'Getting by', 'Comfortable', 'Almost fluent'];
+const ADDABLE = [['US', 'English (American)'], ['ES', 'Spanish'], ['IT', 'Italian']];
+
+class Component extends DCLogic {
+  state = { motives: ['Career', 'Travel'], interests: ['Technology', 'Music', 'Nature', 'Food'], levels: {}, langIx: 0 };
+
+  toggle(key, val) {
+    this.setState(s => {
+      const cur = s[key];
+      return { [key]: cur.indexOf(val) > -1 ? cur.filter(v => v !== val) : cur.concat([val]) };
+    });
+  }
+
+  chipStyle(active) {
+    return {
+      fontFamily: "'Lora', Georgia, serif", fontSize: '14px', padding: '11px 15px',
+      minHeight: '44px', cursor: 'pointer', borderRadius: '4px', whiteSpace: 'nowrap',
+      background: active ? 'var(--goldTint)' : 'transparent',
+      border: '1px solid ' + (active ? 'var(--gold)' : 'var(--line)'),
+      color: active ? 'var(--gold)' : 'var(--ink)'
+    };
+  }
+
+  renderVals() {
+    const dark = this.props.theme === 'dark';
+    const state = this.props.state || 'root';
+    const mode = this.props.mode || 'system';
+    const themeVars = dark ? {
+      '--paper': '#16130f', '--surface': '#1e1a15', '--ink': '#ece7dd',
+      '--soft': 'rgba(236,231,221,0.56)', '--gold': '#d3a765',
+      '--line': 'rgba(236,231,221,0.16)', '--goldTint': 'rgba(211,167,101,0.12)'
+    } : {
+      '--paper': '#f3f2f2', '--surface': '#fbfaf9', '--ink': '#201f1d',
+      '--soft': 'rgba(32,31,29,0.58)', '--gold': '#b68235',
+      '--line': 'rgba(32,31,29,0.14)', '--goldTint': 'rgba(182,130,53,0.09)'
+    };
+    const seg = (active) => ({
+      flex: 1, background: active ? 'var(--goldTint)' : 'transparent',
+      border: 'none', borderRight: '1px solid var(--line)',
+      color: active ? 'var(--gold)' : 'var(--soft)',
+      fontFamily: "'Lora', Georgia, serif", fontSize: '13.5px',
+      padding: '14px 0', minHeight: '48px', cursor: 'pointer', whiteSpace: 'nowrap'
+    });
+    const note = {
+      system: 'Langy follows your phone. It goes dark when your phone does.',
+      light: 'Always light, whatever your phone says.',
+      dark: 'Always dark — easier at night, when most people practise.'
+    }[mode];
+    const langs = ['GB', 'DE'];
+    const activeLang = langs[this.state.langIx] || 'GB';
+    const levels = this.state.levels[activeLang] || {};
+    const aspects = ASPECTS.map(name => {
+      const val = levels[name] || 3;
+      return {
+        name, anchor: ANCHORS[val - 1],
+        ticks: [1, 2, 3, 4, 5].map(n => ({
+          onClick: () => this.setState(s => ({
+            levels: Object.assign({}, s.levels, { [activeLang]: Object.assign({}, s.levels[activeLang], { [name]: n }) })
+          })),
+          style: {
+            flex: 1, background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: '10px 0', minHeight: '36px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', borderTop: '1px solid ' + (n <= val ? 'var(--gold)' : 'var(--line)')
+          },
+          dot: {
+            display: 'block', width: n === val ? '11px' : '5px', height: n === val ? '11px' : '5px',
+            borderRadius: '50%', background: n <= val ? 'var(--gold)' : 'var(--line)', transition: 'all .18s ease'
+          }
+        }))
+      };
+    });
+    const langTabs = [['GB', 'English UK'], ['DE', 'German']].map(([code, label], i) => ({
+      label, onClick: () => this.setState({ langIx: i }),
+      style: {
+        fontFamily: "'Lora', Georgia, serif", fontSize: '12.5px', padding: '8px 12px', minHeight: '38px',
+        cursor: 'pointer', borderRadius: '4px', whiteSpace: 'nowrap',
+        background: i === this.state.langIx ? 'var(--goldTint)' : 'transparent',
+        border: '1px solid ' + (i === this.state.langIx ? 'var(--gold)' : 'var(--line)'),
+        color: i === this.state.langIx ? 'var(--gold)' : 'var(--soft)'
+      }
+    }));
+    const isMotivation = state === 'motivation';
+    const isInterests = state === 'interests';
+    const chipSource = isMotivation ? MOTIVES : INTERESTS;
+    const chipSel = isMotivation ? this.state.motives : this.state.interests;
+    const chipKey = isMotivation ? 'motives' : 'interests';
+    const headings = {
+      root: 'Menu', languages: 'Languages', appearance: 'Appearance', profile: 'Profile',
+      motivation: 'Motivation', interests: 'Interests', levels: 'Self-assessment', addLanguage: 'Add a language'
+    };
+    return {
+      themeVars,
+      isRoot: state === 'root', isLanguages: state === 'languages', isAppearance: state === 'appearance',
+      isProfile: state === 'profile', isChipEdit: isMotivation || isInterests,
+      isLevels: state === 'levels', isAddLang: state === 'addLanguage',
+      multiLang: true, aspects, langTabs,
+      chipBlurb: isMotivation
+        ? 'What keeps you at this. It steers what the Agent brings up.'
+        : 'Each topic is a word set in Words. Removing one keeps its words — it just stops generating new ones.',
+      chips: chipSource.map(label => ({
+        label, onClick: () => this.toggle(chipKey, label), style: this.chipStyle(chipSel.indexOf(label) > -1)
+      })),
+      addable: ADDABLE.map(([code, label]) => ({
+        code, label, onClick: this.props.onLevels,
+        style: {
+          display: 'flex', alignItems: 'center', gap: '13px', width: '100%', padding: '15px 0',
+          border: 'none', borderBottom: '1px solid var(--line)', background: 'transparent',
+          cursor: 'pointer', color: 'var(--ink)', minHeight: '48px', fontFamily: "'Lora', Georgia, serif"
+        },
+        badge: {
+          width: '26px', height: '19px', border: '1px solid var(--line)', borderRadius: '2px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          fontFamily: "'Cormorant Garamond', Garamond, serif", fontSize: '12px',
+          letterSpacing: '.06em', color: 'var(--soft)'
+        }
+      })),
+      onProfile: this.props.onProfile, onMotivation: this.props.onMotivation,
+      onInterests: this.props.onInterests, onLevels: this.props.onLevels,
+      onAddLang: this.props.onAddLang,
+      isSub: state !== 'root',
+      heading: headings[state] || 'Menu',
+      appearanceMeta: 'Dark mode: ' + mode.charAt(0).toUpperCase() + mode.slice(1),
+      appearanceNote: note,
+      rowStyle: {
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px',
+        width: '100%', padding: '18px 0', borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+        borderBottom: '1px solid var(--line)', background: 'transparent', cursor: 'pointer',
+        color: 'var(--ink)', textAlign: 'left', fontFamily: "'Lora', Georgia, serif", minHeight: '48px'
+      },
+      segSystem: seg(mode === 'system'), segLight: seg(mode === 'light'), segDark: seg(mode === 'dark'),
+      onBack: this.props.onBack, onLanguages: this.props.onLanguages, onAppearance: this.props.onAppearance,
+      onSystem: this.props.onSystem, onLight: this.props.onLight, onDark: this.props.onDark
+    };
+  }
+}
+</script>
+</body>
+</html>

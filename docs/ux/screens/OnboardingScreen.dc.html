@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/styles.css">
+<script src="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/_ds_bundle.js"></script>
+</helmet>
+<div style="{{ themeVars }}">
+  <div style="width:390px;height:844px;position:relative;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:'Lora',Georgia,serif;overflow:hidden;border:1px solid var(--line);border-radius:4px">
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:52px 22px 22px">
+      <sc-for list="{{ dots }}" as="d" hint-placeholder-count="4">
+        <div style="{{ d.style }}"></div>
+      </sc-for>
+    </div>
+
+    <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:0 26px;overflow-y:auto">
+      <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;font-feature-settings:'tnum'">{{ kicker }}</div>
+      <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:36px;line-height:1.16;font-weight:400;margin-bottom:10px;padding-bottom:4px;text-wrap:pretty">{{ heading }}</div>
+      <div style="font-size:14px;line-height:1.6;color:var(--soft);margin-bottom:22px;text-wrap:pretty">{{ blurb }}</div>
+
+      <sc-if value="{{ isChips }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;overflow:hidden">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="8">
+            <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isLevels }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:0">
+          <sc-if value="{{ multiLang }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+              <sc-for list="{{ langTabs }}" as="t" hint-placeholder-count="2">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-for list="{{ aspects }}" as="a" hint-placeholder-count="5">
+            <div style="padding:7px 0;border-top:1px solid var(--line)">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:2px">
+                <span style="font-family:'Cormorant Garamond',Garamond,serif;font-size:20px;white-space:nowrap">{{ a.name }}</span>
+                <span style="font-size:12.5px;color:var(--gold);white-space:nowrap">{{ a.anchor }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:0">
+                <sc-for list="{{ a.ticks }}" as="t" hint-placeholder-count="5">
+                  <button onClick="{{ t.onClick }}" style="{{ t.style }}"><span style="{{ t.dot }}"></span></button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="padding:18px 26px 34px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line)">
+      <button onClick="{{ onNext }}" style="{{ nextStyle }}">{{ nextLabel }}</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;min-height:34px">
+        <button onClick="{{ onBack }}" style="{{ backStyle }}">Back</button>
+        <sc-if value="{{ canSkip }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ onNext }}" style="font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);background:transparent;border:none;border-bottom:1px solid var(--line);padding:6px 2px;cursor:pointer;font-family:'Lora',Georgia,serif;white-space:nowrap" style-hover="color:var(--gold);border-color:var(--gold)">Skip for now</button>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const LANGS = [['gb', 'English (British)'], ['us', 'English (American)'], ['de', 'German'], ['es', 'Spanish'], ['it', 'Italian']];
+const MOTIVES = ['Career', 'Travel', 'Relocation', 'Family', 'Academic', 'Culture', 'Heritage', 'Fun', 'Other'];
+const INTERESTS = ['Technology', 'Sports', 'Movies', 'Music', 'Books', 'Travel', 'Food', 'Business', 'Science', 'Gaming', 'Art', 'Nature', 'Other'];
+const ASPECTS = ['Reading', 'Speaking', 'Writing', 'Listening', 'Vocabulary'];
+const ANCHORS = ['Just starting', 'A few words', 'Getting by', 'Comfortable', 'Almost fluent'];
+
+class Component extends DCLogic {
+  state = { step: 0, langs: ['gb'], motives: [], interests: ['Technology'], langIx: 0, levels: {} };
+
+  toggle(key, val) {
+    this.setState(s => {
+      const cur = s[key];
+      return { [key]: cur.indexOf(val) > -1 ? cur.filter(v => v !== val) : cur.concat([val]) };
+    });
+  }
+
+  chipStyle(active) {
+    return {
+      fontFamily: "'Lora', Georgia, serif", fontSize: '14px', padding: '11px 15px',
+      minHeight: '44px', cursor: 'pointer', borderRadius: '4px', whiteSpace: 'nowrap',
+      background: active ? 'var(--goldTint)' : 'transparent',
+      border: '1px solid ' + (active ? 'var(--gold)' : 'var(--line)'),
+      color: active ? 'var(--gold)' : 'var(--ink)'
+    };
+  }
+
+  renderVals() {
+    const dark = this.props.theme === 'dark';
+    const themeVars = dark ? {
+      '--paper': '#16130f', '--surface': '#1e1a15', '--ink': '#ece7dd',
+      '--soft': 'rgba(236,231,221,0.56)', '--gold': '#d3a765',
+      '--line': 'rgba(236,231,221,0.16)', '--goldTint': 'rgba(211,167,101,0.12)'
+    } : {
+      '--paper': '#f3f2f2', '--surface': '#fbfaf9', '--ink': '#201f1d',
+      '--soft': 'rgba(32,31,29,0.58)', '--gold': '#b68235',
+      '--line': 'rgba(32,31,29,0.14)', '--goldTint': 'rgba(182,130,53,0.09)'
+    };
+    const { step, langs, motives, interests, langIx } = this.state;
+    const total = 4;
+    const dots = Array.from({ length: total }, (_, i) => ({
+      style: {
+        width: i === step ? '20px' : '6px', height: '6px', borderRadius: '3px',
+        background: i <= step ? 'var(--gold)' : 'var(--line)', transition: 'width .25s ease'
+      }
+    }));
+
+    const copy = [
+      { kicker: 'Step 1 of 4', heading: 'Which language are we speaking?', blurb: 'Pick one or several. You can add more later.' },
+      { kicker: 'Step 2 of 4', heading: 'Why this language?', blurb: 'It shapes what we talk about. Skip it if you\u2019d rather just start.' },
+      { kicker: 'Step 3 of 4', heading: 'What do you like talking about?', blurb: 'These become your first word sets, so pick what you\u2019d actually say out loud.' },
+      { kicker: 'Step 4 of 4', heading: 'Where are you now?', blurb: 'A rough guess is fine. We adjust as we go.' }
+    ][step];
+
+    let chips = [];
+    if (step === 0) chips = LANGS.map(([id, label]) => ({ label, onClick: () => this.toggle('langs', id), style: this.chipStyle(langs.indexOf(id) > -1) }));
+    if (step === 1) chips = MOTIVES.map(m => ({ label: m, onClick: () => this.toggle('motives', m), style: this.chipStyle(motives.indexOf(m) > -1) }));
+    if (step === 2) chips = INTERESTS.map(m => ({ label: m, onClick: () => this.toggle('interests', m), style: this.chipStyle(interests.indexOf(m) > -1) }));
+
+    const activeLang = langs[langIx] || langs[0] || 'gb';
+    const levels = this.state.levels[activeLang] || {};
+    const aspects = ASPECTS.map(name => {
+      const val = levels[name] || 3;
+      return {
+        name, anchor: ANCHORS[val - 1],
+        ticks: [1, 2, 3, 4, 5].map(n => ({
+          onClick: () => this.setState(s => ({
+            levels: Object.assign({}, s.levels, { [activeLang]: Object.assign({}, s.levels[activeLang], { [name]: n }) })
+          })),
+          style: {
+            flex: 1, background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: '10px 0', minHeight: '36px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', position: 'relative',
+            borderTop: '1px solid ' + (n <= val ? 'var(--gold)' : 'var(--line)')
+          },
+          dot: {
+            display: 'block', width: n === val ? '11px' : '5px', height: n === val ? '11px' : '5px',
+            borderRadius: '50%', background: n <= val ? 'var(--gold)' : 'var(--line)',
+            transition: 'all .18s ease'
+          }
+        }))
+      };
+    });
+
+    const langTabs = langs.map((id, i) => {
+      const label = (LANGS.find(l => l[0] === id) || [id, id])[1].replace(' (British)', ' UK').replace(' (American)', ' US');
+      return { label, onClick: () => this.setState({ langIx: i }), style: {
+        fontFamily: "'Lora', Georgia, serif", fontSize: '12.5px', padding: '8px 12px', minHeight: '38px',
+        cursor: 'pointer', borderRadius: '4px', whiteSpace: 'nowrap',
+        background: i === langIx ? 'var(--goldTint)' : 'transparent',
+        border: '1px solid ' + (i === langIx ? 'var(--gold)' : 'var(--line)'),
+        color: i === langIx ? 'var(--gold)' : 'var(--soft)'
+      } };
+    });
+
+    const btn = (enabled) => ({
+      width: '100%', fontFamily: "'Cormorant Garamond', Garamond, serif", fontSize: '19px',
+      letterSpacing: '.02em', color: enabled ? 'var(--gold)' : 'var(--soft)', background: 'transparent',
+      border: '1px solid ' + (enabled ? 'var(--gold)' : 'var(--line)'), borderRadius: '4px',
+      padding: '14px', minHeight: '50px', cursor: enabled ? 'pointer' : 'default',
+      whiteSpace: 'nowrap', opacity: enabled ? 1 : 0.45
+    });
+
+    return {
+      themeVars, dots,
+      kicker: copy.kicker, heading: copy.heading, blurb: copy.blurb,
+      isChips: step < 3, isLevels: step === 3,
+      chips, aspects, langTabs, multiLang: langs.length > 1,
+      canSkip: step > 0 && step < 3,
+      nextLabel: step === 3 ? 'Start talking' : 'Continue',
+      nextStyle: btn(step !== 0 || langs.length > 0),
+      onNext: () => this.setState(s => ({ step: Math.min(3, s.step + 1) })),
+      onBack: () => this.setState(s => ({ step: Math.max(0, s.step - 1) })),
+      backStyle: {
+        fontSize: '12.5px', letterSpacing: '.09em', textTransform: 'uppercase',
+        color: 'var(--soft)', background: 'transparent', border: 'none',
+        borderBottom: '1px solid var(--line)', padding: '6px 2px', cursor: 'pointer',
+        fontFamily: "'Lora', Georgia, serif", whiteSpace: 'nowrap',
+        visibility: step === 0 ? 'hidden' : 'visible'
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
