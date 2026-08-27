@@ -1,0 +1,2 @@
+turn_correction substantive JSON schema — return is_corrected, corrected_text, explanation_pl, mistake_type.
+Learner text: {{user_text}}

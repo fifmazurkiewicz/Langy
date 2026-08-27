@@ -1,0 +1,2 @@
+Extract vocabulary candidates from the conversation transcript. Return JSON candidates array.
+{{transcript}}

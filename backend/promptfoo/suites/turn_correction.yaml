@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: turn_correction prompt regression
+
+providers:
+  - id: python:../providers/mock_provider.py
+
+prompts:
+  - file://../prompts/turn_correction.txt
+
+tests:
+  - vars:
+      user_text: I go shop yesterday
+    assert:
+      - type: javascript
+        value: |
+          const o = typeof output === 'string' ? JSON.parse(output) : output;
+          return o.is_corrected === true && !!o.corrected_text
+  - vars:
+      user_text: I went to the shop yesterday
+    assert:
+      - type: javascript
+        value: |
+          const o = typeof output === 'string' ? JSON.parse(output) : output;
+          return o.is_corrected === false
+
+
+

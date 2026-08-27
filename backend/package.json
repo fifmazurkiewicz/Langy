@@ -1,0 +1,10 @@
+{
+  "name": "langy-backend",
+  "private": true,
+  "scripts": {
+    "promptfoo": "python scripts/run_promptfoo.py"
+  },
+  "devDependencies": {
+    "promptfoo": "^0.120.0"
+  }
+}

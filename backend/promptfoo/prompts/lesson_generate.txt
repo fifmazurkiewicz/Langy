@@ -1,0 +1,3 @@
+Create a short language lesson. Return title, content, vocab_candidates.
+Language: {{language}}
+Topic: {{topic}}

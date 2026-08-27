@@ -1,0 +1,2 @@
+Generate shadowing dialogue JSON with lines (role, text).
+Topic: {{topic}}

@@ -41,14 +41,16 @@ class OpenRouterProvider:
 
 class MockTextProvider:
     def complete_json(self, messages: list[dict[str, str]]) -> dict[str, Any]:
-        if "Generate 5 vocabulary" in messages[0]["content"] or "category" in messages[1]["content"].lower():
+        system = messages[0]["content"] if messages else ""
+        user = messages[1]["content"] if len(messages) > 1 else ""
+        if "Generate 5 vocabulary" in system or "category" in user.lower():
             return {
                 "candidates": [
                     {"term": "journey", "translation_pl": "podróż", "context": "A long journey."},
                     {"term": "ticket", "translation_pl": "bilet", "context": "Buy a ticket."},
                 ]
             }
-        if "Create a short language lesson" in messages[0]["content"]:
+        if "Create a short language lesson" in system:
             return {
                 "title": "Practice lesson",
                 "content": "Read the examples and repeat aloud.",
@@ -56,7 +58,7 @@ class MockTextProvider:
                     {"term": "lesson", "translation_pl": "lekcja", "context": "This is a lesson."},
                 ],
             }
-        if "mnemonic" in messages[0]["content"].lower() and "association" in messages[0]["content"].lower():
+        if "mnemonic" in system.lower() and "association" in system.lower():
             term = "word"
             if len(messages) > 1 and "term" in messages[1]["content"]:
                 term = messages[1]["content"].split(":", 1)[-1].strip()
@@ -65,7 +67,7 @@ class MockTextProvider:
                 "example_l2": f"I love using {term} every day.",
                 "example_pl": "Uwielbiam używać tego słowa każdego dnia.",
             }
-        if "shadowing" in messages[0]["content"].lower() or "dialogue" in messages[0]["content"].lower():
+        if "shadowing" in system.lower() or "dialogue" in system.lower():
             return {
                 "lines": [
                     {"role": "agent", "text": "Welcome to our practice."},
@@ -74,10 +76,10 @@ class MockTextProvider:
                     {"role": "user", "text": "OK."},
                 ]
             }
-        if "Compare learner" in messages[0]["content"]:
+        if "Compare learner" in system:
             return {"ok": True, "corrected_text": None, "explanation_pl": None, "mark_hard": False}
-        if "turn_correction" in messages[0]["content"] or "substantive" in messages[0]["content"].lower():
-            text = messages[1]["content"]
+        if "turn_correction" in system or "substantive" in system.lower():
+            text = user or system
             if "I go shop" in text:
                 return {
                     "is_corrected": True,
@@ -91,15 +93,15 @@ class MockTextProvider:
                 "explanation_pl": None,
                 "mistake_type": None,
             }
-        if "translation_pl" in messages[0]["content"] or "flashcard" in messages[0]["content"].lower():
-            span = messages[1]["content"].split(":", 1)[-1].strip() if len(messages) > 1 else "word"
+        if "translation_pl" in system or "flashcard" in system.lower():
+            span = user.split(":", 1)[-1].strip() if user else "word"
             return {
                 "translation_pl": "przykład",
                 "example_l2": f"I used {span} in a sentence.",
                 "example_pl": "Użyłem tego w zdaniu.",
                 "context_sentence": f"Example with {span}.",
             }
-        if "candidates" in messages[0]["content"]:
+        if "candidates" in system:
             return {
                 "candidates": [
                     {

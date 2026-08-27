@@ -1,0 +1,2 @@
+Return JSON with translation_pl, example_l2, example_pl for the span. L1 is Polish.
+User span: {{span}}

@@ -19,6 +19,8 @@ from app.domain.agenda.service import (
     process_post_session_job,
 )
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
+from app.domain.voice.live_session import build_live_system_instruction
+from app.domain.voice.live_token import LiveTokenError, mint_ephemeral_live_token
 from app.models import Conversation, Job, User
 
 router = APIRouter()
@@ -142,6 +144,54 @@ def save_word(
     item = agent_save_word(db, user, conversation.language, body.term, body.translation, body.context)
     record_usage(db, user.id, "gen_ai", 0.001, provider="agent_save")
     return {"vocab_id": str(item.id), "status": item.status}
+
+
+class LiveTokenRequest(BaseModel):
+    language: str | None = None
+    conversation_id: str | None = None
+
+
+@router.post("/live-token")
+def create_live_token(
+    body: LiveTokenRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    if settings.voice_mode != "speech_to_speech":
+        raise HTTPException(status_code=400, detail="Live tokens only for speech_to_speech mode")
+    try:
+        check_spend_cap(db, user)
+    except SpendCapExceeded as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+
+    language = body.language or user.active_language
+    if not language:
+        raise HTTPException(status_code=400, detail="No active language")
+
+    agenda = build_agenda(db, user, language)
+    system_instruction = build_live_system_instruction(agenda)
+
+    if not settings.google_api_key:
+        return {
+            "mode": "mock",
+            "token": None,
+            "model": "gemini-2.0-flash-live-001",
+            "api_version": "v1alpha",
+            "system_instruction": system_instruction,
+            "configured": False,
+        }
+
+    try:
+        token_data = mint_ephemeral_live_token(system_instruction=system_instruction)
+    except LiveTokenError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return {
+        "mode": "live",
+        "configured": True,
+        "system_instruction": system_instruction,
+        **token_data,
+    }
 
 
 @router.get("/live-config")

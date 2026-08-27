@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: mnemonic_generate prompt regression
+
+providers:
+  - id: python:../providers/mock_provider.py
+
+prompts:
+  - file://../prompts/mnemonic_generate.txt
+
+tests:
+  - vars:
+      term: hello
+    assert:
+      - type: javascript
+        value: |
+          const o = typeof output === 'string' ? JSON.parse(output) : output;
+          return !!(o.association_pl && o.example_l2);
+
+
+

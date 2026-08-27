@@ -1,0 +1,27 @@
+import json
+
+from app.domain.agenda.service import build_agenda
+
+
+def build_live_system_instruction(agenda: dict) -> str:
+    profile = agenda.get("profile") or {}
+    skills = profile.get("skills") or {}
+    plan = agenda.get("study_plan")
+    parts = [
+        "You are Langy, a friendly language tutor. The learner's native language is Polish; speak in the target language unless they ask for Polish.",
+        f"Target language session: {agenda.get('language')}.",
+        f"Motivations: {', '.join(profile.get('motivations') or []) or 'general practice'}.",
+        "Opening: ask what they want to talk about or practice today. Do not list their interests unless they are silent.",
+        "When the user asks to save a word, acknowledge you will save it.",
+    ]
+    if plan:
+        parts.append(
+            f"Optional study context: CEFR {plan.get('cefr_level')}, day {plan.get('progress_day')}, "
+            f"topic hint: {plan.get('current_topic') or 'flexible'}."
+        )
+    if skills:
+        parts.append(f"Self-assessed skills (1-5): {json.dumps(skills)}")
+    facts = agenda.get("memory_facts") or []
+    if facts:
+        parts.append("Known facts about the learner: " + "; ".join(facts[:10]))
+    return "\n".join(parts)

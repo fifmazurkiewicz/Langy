@@ -18,6 +18,7 @@ cd backend && python -m pip install -r requirements.txt
 cd backend && python -m scripts.create_tables   # local Postgres/SQLite dev
 cd backend && uvicorn app.main:app --reload --port 8000
 cd backend && python -m pytest
+cd backend && npm install && npm run promptfoo   # mock provider, no API keys
 
 # Frontend
 cd frontend && npm install && npm run dev

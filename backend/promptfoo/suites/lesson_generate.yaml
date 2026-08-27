@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: lesson_generate prompt regression
+
+providers:
+  - id: python:../providers/mock_provider.py
+
+prompts:
+  - file://../prompts/lesson_generate.txt
+
+tests:
+  - vars:
+      language: en-GB
+      topic: Greetings
+    assert:
+      - type: javascript
+        value: |
+          const o = typeof output === 'string' ? JSON.parse(output) : output;
+          return !!(o.title && Array.isArray(o.vocab_candidates) && o.vocab_candidates.length >= 1);
+
+
+

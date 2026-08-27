@@ -1,0 +1,2 @@
+Generate mnemonic association in Polish. Return association_pl, example_l2, example_pl.
+term: {{term}}

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: category_generate prompt regression
+
+providers:
+  - id: python:../providers/mock_provider.py
+
+prompts:
+  - file://../prompts/category_generate.txt
+
+tests:
+  - vars:
+      language: en-GB
+      category: travel
+    assert:
+      - type: javascript
+        value: |
+          const o = typeof output === 'string' ? JSON.parse(output) : output;
+          return o.candidates && o.candidates.length >= 1
+
+
+

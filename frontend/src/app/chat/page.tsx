@@ -8,6 +8,8 @@ import {
   type CorrectionResponse,
 } from "@/lib/api/correction";
 import { addSelectionPending, translateSelection, type TranslateSelectionResponse } from "@/lib/api/selection";
+import { fetchLiveToken } from "@/lib/api/live";
+import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -34,7 +36,27 @@ export default function ChatPage() {
   const [translateLoading, setTranslateLoading] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [checkResult, setCheckResult] = useState<CorrectionResponse | null>(null);
+  const [liveMode, setLiveMode] = useState<"live" | "mock">("mock");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
+  const listeningRef = useRef(listening);
+
+  useEffect(() => {
+    listeningRef.current = listening;
+  }, [listening]);
+
+  const geminiLive = useGeminiLive({
+    onUserText: (text) => {
+      void appendLineRef.current("User", text);
+    },
+    onAgentText: (text) => {
+      setState("speaking");
+      void appendLineRef.current("Agent", text).then(() =>
+        setState(listeningRef.current ? "listening" : "idle")
+      );
+    },
+    onError: (message) => console.warn("Gemini Live:", message),
+  });
 
   const triggerAutoCorrection = useCallback(
     async (lineIndex: number, text: string) => {
@@ -97,7 +119,20 @@ export default function ChatPage() {
     setLines([{ role: "Agent", text: session.opening_line }]);
     setCorrections({});
     setState("idle");
-  }, [token, activeLanguage]);
+
+    try {
+      const live = await fetchLiveToken(token, {
+        language: activeLanguage,
+        conversation_id: session.conversation_id,
+      });
+      setLiveMode(live.mode === "live" && live.configured ? "live" : "mock");
+      if (live.mode === "live" && live.configured) {
+        await geminiLive.connect(live);
+      }
+    } catch {
+      setLiveMode("mock");
+    }
+  }, [token, activeLanguage, geminiLive]);
 
   const appendLine = useCallback(
     async (role: "User" | "Agent", text: string) => {
@@ -121,9 +156,15 @@ export default function ChatPage() {
     [conversationId, token, triggerAutoCorrection]
   );
 
+  useEffect(() => {
+    appendLineRef.current = appendLine;
+  }, [appendLine]);
+
   const endSession = useCallback(async () => {
     if (!conversationId || !token) return;
     setListening(false);
+    geminiLive.disconnect();
+    setLiveMode("mock");
     setSelectedSpan(null);
     setTranslateResult(null);
     setCheckResult(null);
@@ -134,7 +175,7 @@ export default function ChatPage() {
     const count = await apiFetch<{ count: number }>("/api/vocab/pending/count", { token });
     setPendingCount(count.count);
     alert(count.count > 0 ? "Session ended — check Memo → Pending" : "No new words from that chat");
-  }, [conversationId, token]);
+  }, [conversationId, token, geminiLive]);
 
   const handleTranslate = useCallback(async () => {
     if (!token || !activeLanguage || !selectedSpan) return;
@@ -246,6 +287,11 @@ export default function ChatPage() {
       const text = event.results[event.results.length - 1][0].transcript.trim();
       if (!text) return;
       setState("thinking");
+      if (geminiLive.connected) {
+        void geminiLive.sendUserText(text);
+        setState(listening ? "listening" : "idle");
+        return;
+      }
       void appendLine("User", text).then(() => {
         const reply = `Good point about "${text}". Tell me more.`;
         setState("speaking");
@@ -259,7 +305,7 @@ export default function ChatPage() {
       recognition.stop();
       recognitionRef.current = null;
     };
-  }, [listening, conversationId, activeLanguage, appendLine]);
+  }, [listening, conversationId, activeLanguage, appendLine, geminiLive]);
 
   return (
     <div className="flex flex-1 flex-col pb-[calc(52px+env(safe-area-inset-bottom))]">
@@ -282,7 +328,9 @@ export default function ChatPage() {
 
       <main className="flex flex-1 flex-col gap-4 p-4">
         <div className="classical-card flex min-h-[48px] items-center justify-center p-3 text-sm">
-          {state === "waking" ? "Waking up…" : `Agent: ${state}`}
+          {state === "waking"
+            ? "Waking up…"
+            : `Agent: ${state}${conversationId ? ` · ${liveMode === "live" ? "Gemini Live" : "Web Speech"}` : ""}`}
         </div>
 
         <TranscriptPane

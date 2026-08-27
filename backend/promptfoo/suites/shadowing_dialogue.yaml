@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: shadowing_dialogue prompt regression
+
+providers:
+  - id: python:../providers/mock_provider.py
+
+prompts:
+  - file://../prompts/shadowing_dialogue.txt
+
+tests:
+  - vars:
+      topic: At the café
+    assert:
+      - type: javascript
+        value: |
+          const o = typeof output === 'string' ? JSON.parse(output) : output;
+          return Array.isArray(o.lines) && o.lines.length >= 2
+
+
+

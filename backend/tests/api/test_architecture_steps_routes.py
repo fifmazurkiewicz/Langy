@@ -20,6 +20,11 @@ def test_admin_users_auth():
     assert r.status_code == 401
 
 
+def test_live_token_auth():
+    r = client.post("/api/chat/live-token", json={})
+    assert r.status_code == 401
+
+
 def test_categories_generate_auth():
     r = client.post("/api/categories/00000000-0000-4000-8000-000000000001/generate")
     assert r.status_code == 401
