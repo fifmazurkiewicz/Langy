@@ -1,6 +1,6 @@
 # Langy
 
-PWA do nauki języków przez rozmowę głosową z agentem + fiszki FSRS (fork FreeLingo).
+PWA do nauki języków przez rozmowę głosową z agentem + fiszki FSRS. **Greenfield** — FreeLingo tylko jako referencja wzorców (bez forka).
 
 ## Dokumentacja
 

@@ -4,7 +4,7 @@
 
 | Layer | Platform |
 |---|---|
-| Frontend | **Vercel** (Next.js PWA, from FreeLingo fork) |
+| Frontend | **Vercel** (Next.js PWA, greenfield) |
 | Backend | **Render** (FastAPI / Docker) |
 | Database + Auth | **Supabase** (Postgres, Google OAuth, RLS) |
 
@@ -44,18 +44,30 @@ Until then: no runnable app commands — treat `docs/` as the contract.
 ## Learned User Preferences
 
 - Keep Superpowers mandatory in this repo; Graft and Superpowers belong in global Cursor rules so new repos get them immediately.
-- Prefer documentation deltas over full rewrites; ignore missing docs unless asked to create them.
-- Native language is always Polish; English is the primary language to learn, with multi-language support from the start.
+- Greenfield build: no FreeLingo fork; upstream/clone for reference only. Do not write feature code until scaffold + relevant plan Task 0 pass.
+- Native language is always Polish; English is the primary language to learn, with multi-language support from the start; Polish mid-chat only when the user explicitly asks.
 - Language change must be a single control that updates context everywhere; Classical language markers (e.g. GB/DE), not emoji flags.
-- Motivation and interests are per target language; the motivation interview depends on the active language.
-- Users can accept or reject extracted words; the agent may save a word to flashcards when the user asks.
+- Motivation and interests are per target language; the motivation interview depends on the active language; Chat uses Interests only softly (opening = varied “what to talk about / learn?” with no Interests listed; soft suggestions only if silent or unsure).
+- Users can accept or reject extracted words; the agent may save a word to flashcards when the user asks; flashcard export to `.txt` as Quizlet paste: `term<TAB>definition` with newline between cards.
 - Monthly spend_cap is admin-configurable and sums TTS + ASR + gen AI; when exceeded, block costly actions for the rest of the month but allow browsing and reviewing existing flashcards.
-- Want flashcard export to `.txt` suitable for pasting into Quizlet.
+- Chat listening is an optional on/off toggle (on = VAD hands-free; off = mic idle), not push-to-talk or a mandatory Tap-to-start flow.
+- User manages global memory in Menu → Memory (view, edit, delete facts).
+- Bottom nav is Chat / Memo / Menu; Words renamed to Memo with sub-tabs Flashcards, Shadowing, and Mnemonics.
+- Shadowing: agent asks topic, then generated dialogue or pick past conversation; show-text on/off before session (default on); audio TTS|Live switch; tip + optional Add during session and hard-line batch at end → Pending (`shadowing`).
+- Mnemonics: library tab for accepted terms without association → Generate; Regenerate costs GenAI cap; Due card has Mnemonic shortcut (same panel); no images, no user-owned mnemonics.
+- Coach packages build order: 1 interactive transcript + selection dictionary → 2 in-flight correction → 4 shadowing → 3 mnemonics (GenAI on demand; no images; no user-owned mnemonics).
 
 ## Learned Workspace Facts
 
-- `docs/architecture-for-cursor.md` is the authoritative business + technical project description for build work.
-- UX/UI specs and decisions live under `docs/ux/`.
+- Langy is **greenfield** (FastAPI + Next.js PWA); FreeLingo is reference-only, not a fork. ADR: `docs/technical/decisions/2026-08-27-greenfield-no-freelingo-fork.md`.
 - Product is a public free / personal-use language-learning app.
 - FSRS / spaced-repetition state must persist in Supabase Postgres (not process memory) across Render idle/cold starts.
-- Langfuse covers tracing, cost management, and prompt management; promptfoo is the pre-deploy prompt/eval gate.
+- Langfuse Cloud is the runtime prompt SoT (tracing, cost, prompt management); promptfoo fixtures in repo gate pre-deploy.
+- Pending vocab never auto-expires; Accept/Reject lives in Memo → Flashcards Pending (not end-of-chat); sources include `transcript_selection`, correction, `shadowing`, `lesson`, and chat extraction.
+- Global user memory (lasting facts + session summaries) updates after End session with the vocab-extraction job wave; agenda injects up to 50 facts and the last 3 summaries.
+- Default new-user `spend_cap_usd` is 10 per calendar month (Europe/Warsaw).
+- `VOICE_MODE` switches `speech_to_speech` (Gemini Live direct from browser) vs `chained` (via Render); Render Free cold start is accepted with a Chat “Waking up…” state; async jobs use Postgres (no Redis in MVP).
+- Optional CEFR placement + study plan (4/8/12/16 weeks) + lessons via Menu → Plan; Skip OK; lesson vocab → Pending `lesson`. Skills 1–5 and CEFR stay separate.
+- Chat transcript is always visible in-session; select word/span/sentence → Translate (PL + example) or Add to learning → Pending (`transcript_selection`); Add also available from the translate panel.
+- In-flight correction: auto after user turn for substantive errors only, plus on-demand Check; tip + optional Add → Pending; Live runs parallel with agent reply; chained runs after STT before LLM.
+- Memo hosts Flashcards (former Words: Due / Categories / Pending / export), Shadowing (line-by-line practice), and Mnemonics (sound-association library + Due shortcut).

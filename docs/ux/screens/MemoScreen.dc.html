@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/styles.css">
+<script src="_ds/classical-506c12f3-69ed-44ca-b0df-4ab107d78f54/_ds_bundle.js"></script>
+<style>
+@keyframes langyRise2 { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+</style>
+</helmet>
+<div style="{{ themeVars }}">
+  <div style="width:390px;height:844px;position:relative;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:'Lora',Georgia,serif;overflow:hidden;border:1px solid var(--line);border-radius:4px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:44px 22px 14px;border-bottom:1px solid var(--line)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:26px;height:19px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Garamond,serif;font-size:12px;letter-spacing:.06em;color:var(--gold);font-feature-settings:'tnum'">GB</div>
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:19px;font-weight:500;letter-spacing:.01em">English (UK)</div>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.25" stroke-linecap="round"><path d="m6 9 6 6 6-6"></path></svg>
+    </div>
+
+    <div style="display:flex;padding:0 14px;border-bottom:1px solid var(--line)">
+      <button style="{{ memoFlashStyle }}">Flashcards</button>
+      <button style="{{ memoShadowStyle }}">Shadowing</button>
+      <button style="{{ memoMnemStyle }}">Mnemonics</button>
+    </div>
+
+    <sc-if value="{{ isFlashcards }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;padding:0 22px;border-bottom:1px solid var(--line)">
+        <button onClick="{{ onDue }}" style="{{ dueTabStyle }}">Due today</button>
+        <button onClick="{{ onCats }}" style="{{ catTabStyle }}">Categories</button>
+        <button onClick="{{ onPending }}" style="{{ pendingTabStyle }}">Pending<span style="margin-left:6px;font-feature-settings:'tnum';color:var(--gold)">3</span></button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;flex-direction:column;padding:22px 22px 0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px">
+          <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);font-feature-settings:'tnum';white-space:nowrap;flex-shrink:0">Card 3 of 12</div>
+          <div style="display:flex;gap:4px;align-items:center;flex-shrink:1;min-width:0">
+            <div style="width:30px;height:2px;background:var(--gold);flex-shrink:0"></div>
+            <div style="width:100px;height:2px;background:var(--line);flex-shrink:1"></div>
+          </div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;border:1px solid var(--line);border-radius:4px;background:var(--surface);padding:30px 26px;margin-bottom:20px;text-align:center;max-height:360px">
+          <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px">From your chat · 4 Aug</div>
+          <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:46px;line-height:1.08;font-weight:400">ridge</div>
+          <sc-if value="{{ isBack }}" hint-placeholder-val="{{ true }}">
+            <div style="animation:langyRise2 .3s ease-out both">
+              <div style="height:1px;background:var(--line);margin:22px 0"></div>
+              <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:30px;line-height:1.15;margin-bottom:14px">grzbiet górski</div>
+              <div style="font-size:14px;line-height:1.65;color:var(--soft);font-style:italic;text-wrap:pretty">“We walked along the ridge until the sun went down.”</div>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ isFront }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ onReveal }}" style="width:100%;font-family:'Cormorant Garamond',Garamond,serif;font-size:19px;letter-spacing:.02em;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:14px;min-height:50px;cursor:pointer;white-space:nowrap;margin-bottom:24px" style-hover="background:var(--goldTint)">Show answer</button>
+        </sc-if>
+
+        <sc-if value="{{ isBack }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ onMnemonic }}" style="width:100%;font-family:'Lora',Georgia,serif;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);background:transparent;border:1px solid var(--line);border-radius:4px;padding:11px;min-height:44px;cursor:pointer;margin-bottom:12px;animation:langyRise2 .3s ease-out both" style-hover="border-color:var(--gold);color:var(--gold)">Mnemonic</button>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px;animation:langyRise2 .3s ease-out both">
+            <button onClick="{{ onGrade }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:transparent;border:1px solid var(--line);border-radius:4px;padding:11px 4px;min-height:52px;cursor:pointer;font-family:'Lora',Georgia,serif;color:var(--ink)" style-hover="border-color:var(--gold)"><span style="font-size:13px">Again</span><span style="font-size:11px;color:var(--soft);font-feature-settings:'tnum'">1m</span></button>
+            <button onClick="{{ onGrade }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:transparent;border:1px solid var(--line);border-radius:4px;padding:11px 4px;min-height:52px;cursor:pointer;font-family:'Lora',Georgia,serif;color:var(--ink)" style-hover="border-color:var(--gold)"><span style="font-size:13px">Hard</span><span style="font-size:11px;color:var(--soft);font-feature-settings:'tnum'">8m</span></button>
+            <button onClick="{{ onGrade }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:transparent;border:1px solid var(--gold);border-radius:4px;padding:11px 4px;min-height:52px;cursor:pointer;font-family:'Lora',Georgia,serif;color:var(--ink)" style-hover="background:var(--goldTint)"><span style="font-size:13px">Good</span><span style="font-size:11px;color:var(--soft);font-feature-settings:'tnum'">4d</span></button>
+            <button onClick="{{ onGrade }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:transparent;border:1px solid var(--line);border-radius:4px;padding:11px 4px;min-height:52px;cursor:pointer;font-family:'Lora',Georgia,serif;color:var(--ink)" style-hover="border-color:var(--gold)"><span style="font-size:13px">Easy</span><span style="font-size:11px;color:var(--soft);font-feature-settings:'tnum'">9d</span></button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 42px;text-align:center">
+        <svg width="120" height="120" viewBox="0 0 200 200" fill="none">
+          <circle cx="100" cy="100" r="72" stroke="var(--gold)" stroke-width="0.9" opacity="0.45"></circle>
+          <path d="M70 102l22 22 40-46" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"></path>
+        </svg>
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:34px;line-height:1.1">All caught up</div>
+        <div style="font-size:14px;line-height:1.6;color:var(--soft);text-wrap:pretty">Nothing due right now. Come back after your next chat and there will be more.</div>
+        <button onClick="{{ onCats }}" style="margin-top:6px;font-family:'Cormorant Garamond',Garamond,serif;font-size:18px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:12px 24px;min-height:46px;cursor:pointer;white-space:nowrap" style-hover="background:var(--goldTint)">Browse categories</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPending }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;overflow:hidden;padding:22px 22px 0">
+        <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin-bottom:16px;font-feature-settings:'tnum'">Accept or reject · 3 waiting</div>
+        <div style="display:flex;flex-direction:column">
+          <div style="padding:16px 0;border-top:1px solid var(--line)">
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">From chat</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div><div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:22px">ridge</div><div style="font-size:13px;color:var(--soft)">grzbiet górski</div></div>
+              <div style="display:flex;gap:8px"><button style="font-size:12px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:8px 12px;min-height:44px;cursor:pointer">Accept</button><button style="font-size:12px;color:var(--soft);background:transparent;border:1px solid var(--line);border-radius:4px;padding:8px 12px;min-height:44px;cursor:pointer">Reject</button></div>
+            </div>
+          </div>
+          <div style="padding:16px 0;border-top:1px solid var(--line)">
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">Transcript</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div><div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:22px">takeaway</div><div style="font-size:13px;color:var(--soft)">na wynos</div></div>
+              <div style="display:flex;gap:8px"><button style="font-size:12px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:8px 12px;min-height:44px;cursor:pointer">Accept</button><button style="font-size:12px;color:var(--soft);background:transparent;border:1px solid var(--line);border-radius:4px;padding:8px 12px;min-height:44px;cursor:pointer">Reject</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCats }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;overflow:hidden;padding:22px 22px 0">
+        <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin-bottom:16px;font-feature-settings:'tnum'">From your interests · 4 sets</div>
+        <div style="display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;border-top:1px solid var(--line)">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:24px;line-height:1.1">Technology</div>
+              <div style="font-size:12.5px;color:var(--soft);font-feature-settings:'tnum'">14 words · 3 due</div>
+            </div>
+            <button style="font-size:12.5px;letter-spacing:.05em;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:9px 13px;min-height:44px;cursor:pointer;white-space:nowrap;font-family:'Lora',Georgia,serif" style-hover="background:var(--goldTint)">Generate new</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:24px;line-height:1.1">Music</div>
+              <div style="font-size:12.5px;color:var(--soft);font-feature-settings:'tnum'">9 words</div>
+            </div>
+            <button style="font-size:12.5px;letter-spacing:.05em;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:9px 13px;min-height:44px;cursor:pointer;white-space:nowrap;font-family:'Lora',Georgia,serif" style-hover="background:var(--goldTint)">Generate new</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isShadowing }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 42px;text-align:center;gap:14px">
+        <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:32px;line-height:1.1">Shadowing</div>
+        <div style="font-size:14px;line-height:1.6;color:var(--soft)">Pick a topic or past conversation, then repeat line by line.</div>
+        <button style="font-family:'Cormorant Garamond',Garamond,serif;font-size:18px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:12px 24px;min-height:46px;cursor:pointer">Start session</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMnemonics }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;overflow:hidden;padding:22px 22px 0">
+        <div style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin-bottom:16px">Needs mnemonic · 2 terms</div>
+        <div style="padding:16px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-family:'Cormorant Garamond',Garamond,serif;font-size:24px">ridge</div>
+          <button style="font-size:12px;color:var(--gold);background:transparent;border:1px solid var(--gold);border-radius:4px;padding:8px 12px;min-height:44px;cursor:pointer">Generate</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;border-top:1px solid var(--line);padding:12px 0 30px;background:var(--paper)">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--soft);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Chat</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--gold);cursor:pointer;min-height:48px;justify-content:center;position:relative">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Memo</span>
+        <span style="position:absolute;top:2px;right:calc(50% - 22px);min-width:16px;height:16px;border-radius:8px;background:var(--gold);color:var(--paper);font-size:10px;display:flex;align-items:center;justify-content:center;font-feature-settings:'tnum'">3</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--soft);cursor:pointer;min-height:48px;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Menu</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;flashcards&quot;,&quot;shadowing&quot;,&quot;mnemonics&quot;],&quot;default&quot;:&quot;flashcards&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;front&quot;,&quot;back&quot;,&quot;empty&quot;,&quot;categories&quot;,&quot;pending&quot;],&quot;default&quot;:&quot;front&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onDue&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCats&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onPending&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onReveal&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onGrade&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMnemonic&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const dark = this.props.theme === 'dark';
+    const mode = this.props.mode || 'flashcards';
+    const state = this.props.state || 'front';
+    const themeVars = dark ? {
+      '--paper': '#16130f', '--surface': '#1e1a15', '--ink': '#ece7dd',
+      '--soft': 'rgba(236,231,221,0.56)', '--gold': '#d3a765',
+      '--line': 'rgba(236,231,221,0.16)', '--goldTint': 'rgba(211,167,101,0.12)'
+    } : {
+      '--paper': '#f3f2f2', '--surface': '#fbfaf9', '--ink': '#201f1d',
+      '--soft': 'rgba(32,31,29,0.58)', '--gold': '#b68235',
+      '--line': 'rgba(32,31,29,0.14)', '--goldTint': 'rgba(182,130,53,0.09)'
+    };
+    const memoTab = (active) => ({
+      flex: 1, background: 'transparent', border: 'none', cursor: 'pointer',
+      fontFamily: "'Lora', Georgia, serif", fontSize: '12px', letterSpacing: '.08em',
+      textTransform: 'uppercase', padding: '12px 0 10px', minHeight: '44px',
+      color: active ? 'var(--gold)' : 'var(--soft)',
+      borderBottom: '2px solid ' + (active ? 'var(--gold)' : 'transparent'),
+      marginBottom: '-1px'
+    });
+    const fcTab = (active) => ({
+      flex: 1, background: 'transparent', border: 'none', cursor: 'pointer',
+      fontFamily: "'Lora', Georgia, serif", fontSize: '13px', letterSpacing: '.09em',
+      textTransform: 'uppercase', padding: '15px 0 13px', minHeight: '48px',
+      color: active ? 'var(--gold)' : 'var(--soft)',
+      borderBottom: '2px solid ' + (active ? 'var(--gold)' : 'transparent'),
+      marginBottom: '-1px'
+    });
+    const isFlash = mode === 'flashcards';
+    const isShadow = mode === 'shadowing';
+    const isMnem = mode === 'mnemonics';
+    const isPending = isFlash && state === 'pending';
+    const isCats = isFlash && state === 'categories';
+    return {
+      themeVars,
+      isFlashcards: isFlash,
+      isShadowing: isShadow,
+      isMnemonics: isMnem,
+      memoFlashStyle: memoTab(isFlash),
+      memoShadowStyle: memoTab(isShadow),
+      memoMnemStyle: memoTab(isMnem),
+      isReview: isFlash && (state === 'front' || state === 'back'),
+      isFront: isFlash && state === 'front',
+      isBack: isFlash && state === 'back',
+      isEmpty: isFlash && state === 'empty',
+      isPending, isCats,
+      dueTabStyle: fcTab(!isCats && !isPending && state !== 'empty'),
+      catTabStyle: fcTab(isCats),
+      pendingTabStyle: fcTab(isPending),
+      onDue: this.props.onDue, onCats: this.props.onCats, onPending: this.props.onPending,
+      onReveal: this.props.onReveal, onGrade: this.props.onGrade, onMnemonic: this.props.onMnemonic
+    };
+  }
+}
+</script>
+</body>
+</html>

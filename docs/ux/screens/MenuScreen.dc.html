@@ -162,7 +162,7 @@
       </div>
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--soft);cursor:pointer;min-height:48px;justify-content:center">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Words</span>
+        <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase">Memo</span>
       </div>
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--gold);cursor:pointer;min-height:48px;justify-content:center">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>
@@ -274,7 +274,7 @@ class Component extends DCLogic {
       multiLang: true, aspects, langTabs,
       chipBlurb: isMotivation
         ? 'What keeps you at this. It steers what the Agent brings up.'
-        : 'Each topic is a word set in Words. Removing one keeps its words — it just stops generating new ones.',
+        : 'Each topic is a word set in Memo. Removing one keeps its words — it just stops generating new ones.',
       chips: chipSource.map(label => ({
         label, onClick: () => this.toggle(chipKey, label), style: this.chipStyle(chipSel.indexOf(label) > -1)
       })),

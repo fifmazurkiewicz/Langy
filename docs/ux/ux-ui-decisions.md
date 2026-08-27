@@ -8,6 +8,10 @@ Design system **Classical**: Cormorant Garamond / Lora, hairlines, złoto tylko 
 
 Classical jest SoT wizualnym (nadpisuje wcześniejszą ostrożność §11.6 w starym specu względem krem+serif).
 
+## IA (2026-08-27)
+
+Dolny pasek: **Chat / Memo / Menu**. Memo ma sub-taby: **Flashcards** · **Shadowing** · **Mnemonics**. Flashcards: Due / Categories / Pending / export.
+
 ## Ekrany
 
 Kanwa 390 × 844 (mobile), admin 1180 × 760. Hit targets ≥ 44 px.
@@ -23,30 +27,35 @@ Wskaźnik Agenta: **Breath**. Stany: Idle, Listening, Thinking, Speaking, Sessio
 - **End session** CTA; po End → Idle (bez Accept na Chacie)
 - Switcher Classical; jeden kontroler
 - Zapis słowa przez Agenta (tool), nie UI picker
+- Transkrypt zawsze widoczny (Package 1)
 
 ### Language switcher
 
-Jeden arkusz z nagłówka nauki — **zmiana skutkuje wszędzie** (Chat + Words + kontekst profilu). „Add a language” na dole.
+Jeden arkusz z nagłówka nauki — **zmiana skutkuje wszędzie** (Chat + Memo + kontekst profilu). „Add a language” na dole.
 
-### Words — `screens/WordsScreen.dc.html`
+### Memo — `screens/MemoScreen.dc.html`
 
-Due today + Categories. Interwały FSRS z silnika (nie hardcode 1m/8m/…).
+Sub-taby Memo: Flashcards (Due / Categories / Pending) · Shadowing · Mnemonics.
 
-**Do dodania w mockach:**
+**Flashcards mock (MemoScreen, stan flashcards):**
 
-- Sub-widok **Pending** + badge na Words
-- Accept/Reject + źródło (chat / category)
+- Due today + Categories + **Pending** (third sub-tab)
+- Badge Pending na dolnym **Memo**
+- Interwały FSRS z silnika (nie hardcode 1m/8m/…)
+- Przycisk **Mnemonic** na karcie Due (back state)
+- Accept/Reject + źródło (chat / category / transcript / …)
 - Export Quizlet (tab + newline)
 - Banner miesięcznego cap ($10 default)
-- Onboarding: ekran wyboru aktywnego języka
+
+**Shadowing / Mnemonics:** osobne stany mocka lub osobne pliki — do domknięcia w kolejnych turach UX.
 
 ### Menu — `screens/MenuScreen.dc.html`
 
-Languages · Profile (Motivation / Interests / Self-assessment **per język**) · **Memory** (global facts edit/delete + summaries) · Appearance · Admin · Sign out. Auto-save przy edycji.
+Languages · Profile (Motivation / Interests / Self-assessment **per język**) · **Plan** (opcjonalny) · **Memory** · Appearance · Admin · Sign out. Auto-save przy edycji.
 
 ### Onboarding — `screens/OnboardingScreen.dc.html`
 
-Języki → dla każdego języka: Motivation → Interests → Self-assessment (Skip na opcjonalnych). L1 niepytany (zawsze PL).
+Języki → dla każdego języka: Motivation → Interests → Self-assessment (Skip na opcjonalnych). L1 niepytany (zawsze PL). CEFR placement opcjonalny (Skip).
 
 ### Admin — `screens/AdminPanel.dc.html`
 
@@ -58,12 +67,11 @@ Angielski UI. Błędy = co się stało + co zrobić. Puste stany afirmatywne. Be
 
 ## Do domknięcia (UX mocki)
 
+- Shadowing + Mnemonics pełne ekrany
 - Formularz „Add your own category” + loading Generate
-- Accept/Reject + export `.txt` w mockach Words / Session end
-- Desktop Chat/Words
+- Desktop Chat/Memo
 - PWA: mic prompt, A2HS, offline
 - Tokeny CSS zamiast hardcode Classical
-- Banner spend cap
 
 ## Pliki
 
@@ -71,7 +79,8 @@ Angielski UI. Błędy = co się stało + co zrobić. Puste stany afirmatywne. Be
 | --- | --- |
 | `screens/Chat Mobile.dc.html` | plansza |
 | `screens/ChatScreen.dc.html` | Chat |
-| `screens/WordsScreen.dc.html` | Words |
+| `screens/MemoScreen.dc.html` | Memo (Flashcards focus) |
+| `screens/WordsScreen.dc.html` | **deprecated** — alias do MemoScreen |
 | `screens/MenuScreen.dc.html` | Menu |
 | `screens/OnboardingScreen.dc.html` | wizard |
 | `screens/AdminPanel.dc.html` | admin |
