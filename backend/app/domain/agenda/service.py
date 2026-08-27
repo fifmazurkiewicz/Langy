@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.fsrs.service import create_fsrs_card
 from app.domain.providers.text import TextCompletionProvider, get_text_provider
+from app.domain.plan.service import get_active_plan
 from app.models import Conversation, Job, User, UserLanguageProfile, UserMemoryFact, ConversationSummary, VocabItem
 
 
@@ -36,6 +37,21 @@ def build_agenda(db: Session, user: User, language: str) -> dict[str, Any]:
         .limit(3)
         .all()
     )
+    plan = get_active_plan(db, user.id, language)
+    plan_context = None
+    if plan:
+        slot = None
+        grid = plan.generated_plan or {}
+        for week in grid.get("weeks", []):
+            for day in week.get("days", []):
+                if day.get("day") == plan.progress_day:
+                    slot = day
+                    break
+        plan_context = {
+            "cefr_level": plan.cefr_level,
+            "progress_day": plan.progress_day,
+            "current_topic": slot.get("topic") if slot else None,
+        }
     return {
         "language": language,
         "profile": {
@@ -48,7 +64,9 @@ def build_agenda(db: Session, user: User, language: str) -> dict[str, Any]:
                 "listening": profile.skill_listening if profile else None,
                 "vocabulary": profile.skill_vocabulary if profile else None,
             },
+            "cefr_level": profile.cefr_level if profile else None,
         },
+        "study_plan": plan_context,
         "memory_facts": [f.content for f in facts],
         "recent_summaries": [s.summary for s in summaries],
         "opening_line_pool": OPENING_LINES,

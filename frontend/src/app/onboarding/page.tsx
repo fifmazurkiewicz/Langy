@@ -14,6 +14,8 @@ const LANGUAGES = [
 ];
 
 const INTERESTS = ["technology", "travel", "movies", "music", "sports", "food"];
+const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const DURATIONS = [4, 8, 12, 16];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -22,6 +24,9 @@ export default function OnboardingPage() {
   const [selected, setSelected] = useState<string[]>(["en-GB"]);
   const [activeLanguage, setActiveLanguage] = useState("en-GB");
   const [interests, setInterests] = useState<string[]>(["travel"]);
+  const [wantsPlan, setWantsPlan] = useState(false);
+  const [cefr, setCefr] = useState("A2");
+  const [planWeeks, setPlanWeeks] = useState(8);
   const [submitting, setSubmitting] = useState(false);
 
   async function complete() {
@@ -40,6 +45,8 @@ export default function OnboardingPage() {
             interests: language === activeLanguage ? interests : [],
             skill_listening: 2,
             skill_speaking: 2,
+            cefr_level: language === activeLanguage && wantsPlan ? cefr : null,
+            plan_duration_weeks: language === activeLanguage && wantsPlan ? planWeeks : null,
           })),
         },
       });
@@ -106,6 +113,41 @@ export default function OnboardingPage() {
               {item}
             </label>
           ))}
+          <button type="button" className="classical-btn classical-btn-primary w-full" onClick={() => setStep(2)}>
+            Continue
+          </button>
+        </section>
+      ) : null}
+      {step === 2 ? (
+        <section className="classical-card p-4 space-y-3">
+          <h2 className="text-lg">CEFR placement (optional)</h2>
+          <p className="text-sm opacity-70">Skip if you prefer Chat without a structured plan.</p>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={wantsPlan} onChange={(e) => setWantsPlan(e.target.checked)} />
+            Create a study plan
+          </label>
+          {wantsPlan ? (
+            <>
+              <select className="classical-input w-full" value={cefr} onChange={(e) => setCefr(e.target.value)}>
+                {CEFR.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="classical-input w-full"
+                value={planWeeks}
+                onChange={(e) => setPlanWeeks(Number(e.target.value))}
+              >
+                {DURATIONS.map((w) => (
+                  <option key={w} value={w}>
+                    {w} weeks
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
           <button
             type="button"
             className="classical-btn classical-btn-primary w-full"

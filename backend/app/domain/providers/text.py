@@ -41,6 +41,21 @@ class OpenRouterProvider:
 
 class MockTextProvider:
     def complete_json(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        if "Generate 5 vocabulary" in messages[0]["content"] or "category" in messages[1]["content"].lower():
+            return {
+                "candidates": [
+                    {"term": "journey", "translation_pl": "podróż", "context": "A long journey."},
+                    {"term": "ticket", "translation_pl": "bilet", "context": "Buy a ticket."},
+                ]
+            }
+        if "Create a short language lesson" in messages[0]["content"]:
+            return {
+                "title": "Practice lesson",
+                "content": "Read the examples and repeat aloud.",
+                "vocab_candidates": [
+                    {"term": "lesson", "translation_pl": "lekcja", "context": "This is a lesson."},
+                ],
+            }
         if "mnemonic" in messages[0]["content"].lower() and "association" in messages[0]["content"].lower():
             term = "word"
             if len(messages) > 1 and "term" in messages[1]["content"]:

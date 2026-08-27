@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
 from app.db import get_db
+from app.domain.category.service import enqueue_category_jobs_for_user, process_category_job
+from app.domain.plan.service import create_study_plan
 from app.models import FlashcardSet, User, UserLanguageProfile
 
 SUPPORTED_LANGUAGES = ["en-GB", "en-US", "de", "es", "it"]
@@ -24,6 +26,7 @@ class LanguageProfileInput(BaseModel):
     skill_listening: int | None = Field(None, ge=1, le=5)
     skill_vocabulary: int | None = Field(None, ge=1, le=5)
     cefr_level: str | None = None
+    plan_duration_weeks: int | None = Field(None, ge=4, le=16)
 
 
 class CompleteOnboardingRequest(BaseModel):
@@ -93,6 +96,18 @@ def complete_onboarding(
     user.active_language = body.active_language
     user.onboarding_completed_at = datetime.now(timezone.utc)
     db.commit()
+
+    for profile_in in body.profiles:
+        if profile_in.language not in body.languages:
+            continue
+        if profile_in.cefr_level and profile_in.plan_duration_weeks in (4, 8, 12, 16):
+            create_study_plan(
+                db, user, profile_in.language, profile_in.cefr_level, profile_in.plan_duration_weeks
+            )
+        jobs = enqueue_category_jobs_for_user(db, user.id, profile_in.language)
+        for job in jobs:
+            process_category_job(db, job)
+
     return {"ok": True, "active_language": user.active_language}
 
 

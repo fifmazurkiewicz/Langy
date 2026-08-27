@@ -1,20 +1,37 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
+from fsrs import Rating
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth.deps import get_current_user
 from app.db import get_db
-from app.domain.fsrs.service import create_fsrs_card
-from app.models import FsrsCard, User, VocabItem
+from app.domain.fsrs.service import create_fsrs_card, review_card
+from app.domain.vocab.export import accepted_vocab_for_export, format_quizlet_export
+from app.models import FlashcardSet, FsrsCard, User, VocabItem
 
 router = APIRouter()
 
 
 class VocabDecision(BaseModel):
     action: str  # accept | reject
+
+
+class ReviewRequest(BaseModel):
+    rating: str  # again | hard | good | easy
+
+
+RATING_MAP = {
+    "again": Rating.Again,
+    "hard": Rating.Hard,
+    "good": Rating.Good,
+    "easy": Rating.Easy,
+}
 
 
 @router.get("/pending")
@@ -50,15 +67,16 @@ def list_due(
     language: str | None = None,
 ) -> dict:
     lang = language or user.active_language
+    now = datetime.now(timezone.utc)
     q = (
         db.query(FsrsCard)
         .join(VocabItem)
         .options(joinedload(FsrsCard.vocab_item))
-        .filter(VocabItem.user_id == user.id, VocabItem.status == "accepted")
+        .filter(VocabItem.user_id == user.id, VocabItem.status == "accepted", FsrsCard.due_at <= now)
     )
     if lang:
         q = q.filter(VocabItem.language == lang)
-    cards = q.all()
+    cards = q.order_by(FsrsCard.due_at).all()
     return {
         "cards": [
             {
@@ -69,6 +87,85 @@ def list_due(
             }
             for c in cards
         ]
+    }
+
+
+@router.get("/export")
+def export_quizlet(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    language: str | None = None,
+    category_key: str | None = None,
+    download: bool = False,
+):
+    lang = language or user.active_language
+    items = accepted_vocab_for_export(db, user.id, lang, category_key)
+    content = format_quizlet_export(items)
+    if download:
+        filename = f"langy-{lang or 'all'}.txt"
+        return PlainTextResponse(
+            content,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            media_type="text/plain",
+        )
+    return {"content": content, "count": len(items)}
+
+
+@router.get("/categories")
+def list_vocab_categories(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    language: str | None = None,
+) -> dict:
+    lang = language or user.active_language
+    q = db.query(FlashcardSet).filter(FlashcardSet.user_id == user.id)
+    if lang:
+        q = q.filter(FlashcardSet.language == lang)
+    sets = q.order_by(FlashcardSet.category_key).all()
+    items = []
+    for card_set in sets:
+        accepted = (
+            db.query(func.count(VocabItem.id))
+            .filter(
+                VocabItem.flashcard_set_id == card_set.id,
+                VocabItem.status == "accepted",
+            )
+            .scalar()
+        )
+        items.append(
+            {
+                "id": str(card_set.id),
+                "category_key": card_set.category_key,
+                "language": card_set.language,
+                "accepted_count": int(accepted or 0),
+            }
+        )
+    return {"items": items}
+
+
+@router.post("/cards/{card_id}/review")
+def review_fsrs_card(
+    card_id: str,
+    body: ReviewRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    rating = RATING_MAP.get(body.rating.lower())
+    if rating is None:
+        raise HTTPException(status_code=400, detail="rating must be again, hard, good, or easy")
+    fsrs = (
+        db.query(FsrsCard)
+        .join(VocabItem)
+        .filter(FsrsCard.id == uuid.UUID(card_id), VocabItem.user_id == user.id)
+        .first()
+    )
+    if fsrs is None:
+        raise HTTPException(status_code=404, detail="Card not found")
+    updated = review_card(db, fsrs, rating)
+    return {
+        "id": str(updated.id),
+        "due_at": updated.due_at.isoformat(),
+        "stability": float(updated.stability),
     }
 
 

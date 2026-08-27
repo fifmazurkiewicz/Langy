@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 
 export default function MenuPage() {
-  const { token, email, signOut } = useAuth();
+  const { token, email, isAdmin, signOut } = useAuth();
   const [spend, setSpend] = useState<{ cap: number; used: number } | null>(null);
 
   useEffect(() => {
@@ -33,6 +34,16 @@ export default function MenuPage() {
               ${spend.used.toFixed(2)} / ${spend.cap.toFixed(2)} USD
             </p>
           </section>
+        ) : null}
+        <Link href="/plan" className="classical-card block p-4">
+          <h2 className="text-lg">Study plan</h2>
+          <p className="text-sm opacity-70">Optional CEFR path & lessons</p>
+        </Link>
+        {isAdmin ? (
+          <Link href="/menu/admin" className="classical-card block p-4">
+            <h2 className="text-lg">Admin</h2>
+            <p className="text-sm opacity-70">Users & spend caps</p>
+          </Link>
         ) : null}
         <button type="button" className="classical-btn w-full" onClick={() => void signOut()}>
           Sign out

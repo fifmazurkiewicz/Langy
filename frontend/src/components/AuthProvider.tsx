@@ -8,6 +8,7 @@ type SessionState = {
   token: string | null;
   userId: string | null;
   email: string | null;
+  isAdmin: boolean;
   onboardingCompleted: boolean;
   activeLanguage: string | null;
   loading: boolean;
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [activeLanguage, setActiveLanguage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,11 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         active_language: string | null;
         email: string | null;
         id: string;
+        is_admin: boolean;
       }>("/api/auth/me", { token });
       setOnboardingCompleted(Boolean(me.onboarding_completed_at));
       setActiveLanguage(me.active_language);
       setEmail(me.email);
       setUserId(me.id);
+      setIsAdmin(me.is_admin);
     } catch {
       /* dev without backend */
     }
@@ -72,11 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             active_language: string | null;
             email: string | null;
             id: string;
+            is_admin: boolean;
           }>("/api/auth/me", { token: access });
           setOnboardingCompleted(Boolean(me.onboarding_completed_at));
           setActiveLanguage(me.active_language);
           setEmail(me.email);
           setUserId(me.id);
+          setIsAdmin(me.is_admin);
         } catch {
           /* backend may be offline */
         }
@@ -112,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setEmail(null);
     setOnboardingCompleted(false);
     setActiveLanguage(null);
+    setIsAdmin(false);
   }, []);
 
   const value = useMemo(
@@ -119,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       userId,
       email,
+      isAdmin,
       onboardingCompleted,
       activeLanguage,
       loading,
@@ -126,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       refreshProfile,
     }),
-    [token, userId, email, onboardingCompleted, activeLanguage, loading, signInWithGoogle, signOut, refreshProfile]
+    [token, userId, email, isAdmin, onboardingCompleted, activeLanguage, loading, signInWithGoogle, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

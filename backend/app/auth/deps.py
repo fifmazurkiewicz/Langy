@@ -20,6 +20,7 @@ def _decode_token(token: str) -> dict:
             "sub": "00000000-0000-4000-8000-000000000001",
             "email": "dev@langy.local",
             "user_metadata": {"full_name": "Dev User"},
+            "is_admin": True,
         }
     if settings.supabase_jwt_secret:
         return jwt.decode(
@@ -48,7 +49,7 @@ def get_current_user(
     user = db.get(User, user_id)
     if user is None:
         email = payload.get("email")
-        is_admin = (email or "").lower() in settings.admin_email_set
+        is_admin = (email or "").lower() in settings.admin_email_set or payload.get("is_admin") is True
         user = User(
             id=user_id,
             email=email,
@@ -58,6 +59,18 @@ def get_current_user(
         db.add(user)
         db.commit()
         db.refresh(user)
+    elif creds.credentials == "dev-token" and not user.is_admin:
+        user.is_admin = True
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def get_admin_user(
+    user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
     return user
 
 
