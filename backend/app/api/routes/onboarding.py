@@ -1,0 +1,106 @@
+from datetime import datetime, timezone
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from app.auth.deps import get_current_user
+from app.db import get_db
+from app.models import FlashcardSet, User, UserLanguageProfile
+
+SUPPORTED_LANGUAGES = ["en-GB", "en-US", "de", "es", "it"]
+
+router = APIRouter()
+
+
+class LanguageProfileInput(BaseModel):
+    language: str
+    motivations: list[str] | None = None
+    interests: list[str] | None = None
+    skill_reading: int | None = Field(None, ge=1, le=5)
+    skill_speaking: int | None = Field(None, ge=1, le=5)
+    skill_writing: int | None = Field(None, ge=1, le=5)
+    skill_listening: int | None = Field(None, ge=1, le=5)
+    skill_vocabulary: int | None = Field(None, ge=1, le=5)
+    cefr_level: str | None = None
+
+
+class CompleteOnboardingRequest(BaseModel):
+    languages: list[str]
+    profiles: list[LanguageProfileInput]
+    active_language: str
+
+
+@router.post("/complete")
+def complete_onboarding(
+    body: CompleteOnboardingRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    if not body.languages:
+        raise HTTPException(status_code=400, detail="At least one language required")
+    for lang in body.languages:
+        if lang not in SUPPORTED_LANGUAGES:
+            raise HTTPException(status_code=400, detail=f"Unsupported language: {lang}")
+    if body.active_language not in body.languages:
+        raise HTTPException(status_code=400, detail="active_language must be in languages")
+
+    for profile_in in body.profiles:
+        if profile_in.language not in body.languages:
+            continue
+        profile = (
+            db.query(UserLanguageProfile)
+            .filter(UserLanguageProfile.user_id == user.id, UserLanguageProfile.language == profile_in.language)
+            .first()
+        )
+        if profile is None:
+            profile = UserLanguageProfile(user_id=user.id, language=profile_in.language)
+            db.add(profile)
+        profile.motivations = profile_in.motivations
+        profile.interests = profile_in.interests
+        profile.skill_reading = profile_in.skill_reading
+        profile.skill_speaking = profile_in.skill_speaking
+        profile.skill_writing = profile_in.skill_writing
+        profile.skill_listening = profile_in.skill_listening
+        profile.skill_vocabulary = profile_in.skill_vocabulary
+        profile.cefr_level = profile_in.cefr_level
+        profile.assessed_at = datetime.now(timezone.utc)
+
+        for interest in profile_in.interests or []:
+            key = interest.split(":", 1)[0] if interest else ""
+            if not key:
+                continue
+            exists = (
+                db.query(FlashcardSet)
+                .filter(
+                    FlashcardSet.user_id == user.id,
+                    FlashcardSet.language == profile_in.language,
+                    FlashcardSet.category_key == key,
+                )
+                .first()
+            )
+            if exists is None:
+                db.add(
+                    FlashcardSet(
+                        user_id=user.id,
+                        language=profile_in.language,
+                        category_key=key,
+                        is_custom=False,
+                    )
+                )
+
+    user.active_language = body.active_language
+    user.onboarding_completed_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"ok": True, "active_language": user.active_language}
+
+
+@router.get("/status")
+def onboarding_status(
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    return {
+        "completed": user.onboarding_completed_at is not None,
+        "active_language": user.active_language,
+    }

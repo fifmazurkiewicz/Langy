@@ -12,20 +12,21 @@ Voice/text: OpenRouter + Gemini Live (env `VOICE_MODE`). Langfuse Cloud = prompt
 
 ## Commands
 
-Repo is docs/design-first; app code is not checked in yet. When frontend/backend land:
-
 ```bash
-# Frontend (expected)
-cd frontend && npm install && npm run dev
-cd frontend && npm run lint && npm run test && npm run build
+# Backend
+cd backend && python -m pip install -r requirements.txt
+cd backend && python -m scripts.create_tables   # local Postgres/SQLite dev
+cd backend && uvicorn app.main:app --reload --port 8000
+cd backend && python -m pytest
 
-# Backend (expected)
-cd backend && pip install -r requirements.txt
-cd backend && pytest
-# health: GET /api/health
+# Frontend
+cd frontend && npm install && npm run dev
+cd frontend && npm run lint && npm run build
+
+# Health: GET http://localhost:8000/api/health
 ```
 
-Until then: no runnable app commands — treat `docs/` as the contract.
+Local dev without Supabase: frontend uses `dev-token`; backend accepts `Authorization: Bearer dev-token`.
 
 ## Docs map
 
