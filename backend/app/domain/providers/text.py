@@ -41,6 +41,14 @@ class OpenRouterProvider:
 
 class MockTextProvider:
     def complete_json(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        if "translation_pl" in messages[0]["content"] or "flashcard" in messages[0]["content"].lower():
+            span = messages[1]["content"].split(":", 1)[-1].strip() if len(messages) > 1 else "word"
+            return {
+                "translation_pl": "przykład",
+                "example_l2": f"I used {span} in a sentence.",
+                "example_pl": "Użyłem tego w zdaniu.",
+                "context_sentence": f"Example with {span}.",
+            }
         if "candidates" in messages[0]["content"]:
             return {
                 "candidates": [

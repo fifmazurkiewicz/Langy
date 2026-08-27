@@ -40,7 +40,7 @@ def monthly_spend_usd(db: Session, user_id) -> float:
 def check_spend_cap(db: Session, user, cost_usd: float = 0) -> None:
     spent = monthly_spend_usd(db, user.id)
     cap = float(user.spend_cap_usd)
-    if spent + cost_usd > cap:
+    if spent >= cap or spent + cost_usd > cap:
         raise SpendCapExceeded(f"Monthly spend cap reached ({cap:.2f} USD)")
 
 

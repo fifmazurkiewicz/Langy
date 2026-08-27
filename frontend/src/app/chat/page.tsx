@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, checkApiHealth } from "@/lib/api";
+import { addSelectionPending, translateSelection, type TranslateSelectionResponse } from "@/lib/api/selection";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SelectionActionSheet } from "@/components/chat/SelectionActionSheet";
+import { TranscriptPane, type TranscriptLine } from "@/components/chat/TranscriptPane";
+import { TranslatePanel } from "@/components/chat/TranslatePanel";
 
 type ChatState = "waking" | "idle" | "listening" | "thinking" | "speaking";
-
-type TranscriptLine = { role: "User" | "Agent"; text: string };
 
 export default function ChatPage() {
   const { token, activeLanguage, refreshProfile } = useAuth();
@@ -19,6 +21,10 @@ export default function ChatPage() {
   const [lines, setLines] = useState<TranscriptLine[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [selectedSpan, setSelectedSpan] = useState<string | null>(null);
+  const [translateResult, setTranslateResult] = useState<TranslateSelectionResponse | null>(null);
+  const [translateLoading, setTranslateLoading] = useState(false);
+  const [translateError, setTranslateError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
@@ -80,6 +86,8 @@ export default function ChatPage() {
   const endSession = useCallback(async () => {
     if (!conversationId || !token) return;
     setListening(false);
+    setSelectedSpan(null);
+    setTranslateResult(null);
     setState("idle");
     await apiFetch(`/api/chat/sessions/${conversationId}/end`, { method: "POST", token });
     setConversationId(null);
@@ -87,6 +95,50 @@ export default function ChatPage() {
     setPendingCount(count.count);
     alert(count.count > 0 ? "Session ended — check Memo → Pending" : "No new words from that chat");
   }, [conversationId, token]);
+
+  const handleTranslate = useCallback(async () => {
+    if (!token || !activeLanguage || !selectedSpan) return;
+    setTranslateLoading(true);
+    setTranslateError(null);
+    try {
+      const result = await translateSelection(token, {
+        span: selectedSpan,
+        language: activeLanguage,
+        conversation_id: conversationId ?? undefined,
+      });
+      setTranslateResult(result);
+      setSelectedSpan(null);
+    } catch (e) {
+      setTranslateError(e instanceof Error ? e.message : "Translation failed");
+    } finally {
+      setTranslateLoading(false);
+    }
+  }, [token, activeLanguage, selectedSpan, conversationId]);
+
+  const handleAddPending = useCallback(
+    async (span: string, translationPl?: string) => {
+      if (!token || !activeLanguage) return;
+      try {
+        const res = await addSelectionPending(token, {
+          span,
+          language: activeLanguage,
+          translation_pl: translationPl,
+          conversation_id: conversationId ?? undefined,
+        });
+        if (res.status === "already_exists") {
+          alert("Already in your list");
+        } else {
+          const count = await apiFetch<{ count: number }>("/api/vocab/pending/count", { token });
+          setPendingCount(count.count);
+        }
+        setSelectedSpan(null);
+        setTranslateResult(null);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Could not add word");
+      }
+    },
+    [token, activeLanguage, conversationId]
+  );
 
   useEffect(() => {
     if (!listening || !conversationId) return;
@@ -140,14 +192,11 @@ export default function ChatPage() {
           {state === "waking" ? "Waking up…" : `Agent: ${state}`}
         </div>
 
-        <div className="classical-card flex-1 space-y-2 overflow-y-auto p-4 text-sm">
-          {lines.length === 0 ? <p className="opacity-60">Transcript will appear here.</p> : null}
-          {lines.map((line, i) => (
-            <p key={`${line.role}-${i}`}>
-              <strong>{line.role}:</strong> {line.text}
-            </p>
-          ))}
-        </div>
+        <TranscriptPane
+          lines={lines}
+          enabled={Boolean(conversationId)}
+          onSelect={(text) => setSelectedSpan(text)}
+        />
 
         <div className="flex flex-wrap gap-2">
           {!conversationId ? (
@@ -182,6 +231,29 @@ export default function ChatPage() {
           )}
         </div>
       </main>
+
+      {selectedSpan ? (
+        <SelectionActionSheet
+          span={selectedSpan}
+          onTranslate={() => void handleTranslate()}
+          onAdd={() => void handleAddPending(selectedSpan)}
+          onDismiss={() => setSelectedSpan(null)}
+        />
+      ) : null}
+
+      {translateResult || translateLoading || translateError ? (
+        <TranslatePanel
+          result={translateResult ?? { span: "", translation_pl: "", example_l2: "", example_pl: "", from_cache: false }}
+          loading={translateLoading}
+          error={translateError}
+          onAdd={() => void handleAddPending(translateResult!.span, translateResult!.translation_pl)}
+          onClose={() => {
+            setTranslateResult(null);
+            setTranslateError(null);
+          }}
+          onRetry={() => void handleTranslate()}
+        />
+      ) : null}
 
       <BottomNav pendingCount={pendingCount} />
     </div>

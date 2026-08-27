@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 
@@ -109,7 +110,9 @@ export default function MemoPage() {
                     <li key={item.id} className="classical-card p-4">
                       <p className="font-serif text-lg">{item.term}</p>
                       <p className="text-sm opacity-80">{item.translation}</p>
-                      <p className="text-xs opacity-60 mt-1">Source: {item.source}</p>
+                      <p className="text-xs opacity-60 mt-1">
+                        <PendingSourceBadge source={item.source} />
+                      </p>
                       <div className="mt-3 flex gap-2">
                         <button type="button" className="classical-btn classical-btn-primary" onClick={() => void decide(item.id, "accept")}>
                           Accept
