@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 from app.models.selection_lookup_cache import SelectionLookupCache  # noqa: F401
 from app.models.shadowing_session import ShadowingSession  # noqa: F401
+from app.models.vocab_mnemonic import VocabMnemonic  # noqa: F401
 
 
 class User(Base):

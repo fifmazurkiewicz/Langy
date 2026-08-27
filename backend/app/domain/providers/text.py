@@ -41,6 +41,15 @@ class OpenRouterProvider:
 
 class MockTextProvider:
     def complete_json(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        if "mnemonic" in messages[0]["content"].lower() and "association" in messages[0]["content"].lower():
+            term = "word"
+            if len(messages) > 1 and "term" in messages[1]["content"]:
+                term = messages[1]["content"].split(":", 1)[-1].strip()
+            return {
+                "association_pl": f"Wyobraź sobie '{term}' jako zabawne skojarzenie dźwiękowe.",
+                "example_l2": f"I love using {term} every day.",
+                "example_pl": "Uwielbiam używać tego słowa każdego dnia.",
+            }
         if "shadowing" in messages[0]["content"].lower() or "dialogue" in messages[0]["content"].lower():
             return {
                 "lines": [

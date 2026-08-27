@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
+import { MnemonicsList } from "@/components/mnemonics/MnemonicsList";
+import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
 import { ShadowingFlow } from "@/components/shadowing/ShadowingFlow";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
@@ -23,6 +25,7 @@ export default function MemoPage() {
   const [subTab, setSubTab] = useState<"due" | "pending">("pending");
   const [pending, setPending] = useState<VocabItem[]>([]);
   const [due, setDue] = useState<{ id: string; term: string; translation: string }[]>([]);
+  const [mnemonicTerm, setMnemonicTerm] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -135,6 +138,15 @@ export default function MemoPage() {
                     <li key={card.id} className="classical-card p-4">
                       <p className="font-serif text-lg">{card.term}</p>
                       <p className="text-sm opacity-80">{card.translation}</p>
+                      {token && activeLanguage ? (
+                        <button
+                          type="button"
+                          className="classical-btn mt-3"
+                          onClick={() => setMnemonicTerm(card.term)}
+                        >
+                          Mnemonic
+                        </button>
+                      ) : null}
                     </li>
                   ))
                 )}
@@ -154,12 +166,27 @@ export default function MemoPage() {
           ) : (
             <p className="opacity-60">Sign in and set a language first.</p>
           )
+        ) : tab === "mnemonics" ? (
+          token && activeLanguage ? (
+            <MnemonicsList token={token} language={activeLanguage} />
+          ) : (
+            <p className="opacity-60">Sign in and set a language first.</p>
+          )
         ) : (
-          <p className="opacity-60">Mnemonics — Package 3 coming next.</p>
+          <p className="opacity-60">Unknown tab.</p>
         )}
       </main>
 
       <BottomNav pendingCount={pending.length} />
+
+      {mnemonicTerm && token && activeLanguage ? (
+        <MnemonicPanel
+          token={token}
+          language={activeLanguage}
+          term={mnemonicTerm}
+          onClose={() => setMnemonicTerm(null)}
+        />
+      ) : null}
     </div>
   );
 }
