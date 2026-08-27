@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
+import { ShadowingFlow } from "@/components/shadowing/ShadowingFlow";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 
@@ -17,7 +18,7 @@ type VocabItem = {
 type Tab = "flashcards" | "shadowing" | "mnemonics";
 
 export default function MemoPage() {
-  const { token } = useAuth();
+  const { token, activeLanguage } = useAuth();
   const [tab, setTab] = useState<Tab>("flashcards");
   const [subTab, setSubTab] = useState<"due" | "pending">("pending");
   const [pending, setPending] = useState<VocabItem[]>([]);
@@ -140,8 +141,21 @@ export default function MemoPage() {
               </ul>
             )}
           </>
+        ) : tab === "shadowing" ? (
+          token && activeLanguage ? (
+            <ShadowingFlow
+              token={token}
+              language={activeLanguage}
+              onDone={async (created) => {
+                await reload();
+                if (created > 0) alert(`${created} line(s) added to Pending`);
+              }}
+            />
+          ) : (
+            <p className="opacity-60">Sign in and set a language first.</p>
+          )
         ) : (
-          <p className="opacity-60">Coming in coach packages — scaffold ready.</p>
+          <p className="opacity-60">Mnemonics — Package 3 coming next.</p>
         )}
       </main>
 

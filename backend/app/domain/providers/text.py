@@ -41,6 +41,17 @@ class OpenRouterProvider:
 
 class MockTextProvider:
     def complete_json(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        if "shadowing" in messages[0]["content"].lower() or "dialogue" in messages[0]["content"].lower():
+            return {
+                "lines": [
+                    {"role": "agent", "text": "Welcome to our practice."},
+                    {"role": "user", "text": "Thanks!"},
+                    {"role": "agent", "text": "Let's begin."},
+                    {"role": "user", "text": "OK."},
+                ]
+            }
+        if "Compare learner" in messages[0]["content"]:
+            return {"ok": True, "corrected_text": None, "explanation_pl": None, "mark_hard": False}
         if "turn_correction" in messages[0]["content"] or "substantive" in messages[0]["content"].lower():
             text = messages[1]["content"]
             if "I go shop" in text:
