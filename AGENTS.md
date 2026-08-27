@@ -62,13 +62,13 @@ Local dev without Supabase: frontend uses `dev-token`; backend accepts `Authoriz
 ## Learned Workspace Facts
 
 - Langy is **greenfield** (FastAPI + Next.js PWA); FreeLingo is reference-only, not a fork. ADR: `docs/technical/decisions/2026-08-27-greenfield-no-freelingo-fork.md`.
-- Product is a public free / personal-use language-learning app.
+- Supabase RLS (`006_rls_policies.sql`, idempotent) enforces per-user access on all user tables; `jobs` admin-only; Render backend bypasses RLS via direct SQLAlchemy (defense in depth for direct Supabase client).
 - FSRS / spaced-repetition state must persist in Supabase Postgres (not process memory) across Render idle/cold starts.
-- Langfuse Cloud is the runtime prompt SoT (tracing, cost, prompt management); promptfoo fixtures in repo gate pre-deploy.
+- Langfuse Cloud is the runtime prompt SoT (tracing, cost, prompt management); seven promptfoo suites in `backend/promptfoo/suites/` with Python mock provider gate CI (`npm run promptfoo`, no API keys).
 - Pending vocab never auto-expires; Accept/Reject lives in Memo → Flashcards Pending (not end-of-chat); sources include `transcript_selection`, correction, `shadowing`, `lesson`, and chat extraction.
 - Global user memory (lasting facts + session summaries) updates after End session with the vocab-extraction job wave; agenda injects up to 50 facts and the last 3 summaries.
 - Default new-user `spend_cap_usd` is 10 per calendar month (Europe/Warsaw).
-- `VOICE_MODE` switches `speech_to_speech` (Gemini Live direct from browser) vs `chained` (via Render); Render Free cold start is accepted with a Chat “Waking up…” state; async jobs use Postgres (no Redis in MVP).
+- `VOICE_MODE` switches `speech_to_speech` (Gemini Live via `POST /api/chat/live-token` ephemeral token + `useGeminiLive`, Web Speech fallback) vs `chained` (via Render); Render Free cold start is accepted with a Chat “Waking up…” state; async jobs use Postgres (no Redis in MVP).
 - Optional CEFR placement + study plan (4/8/12/16 weeks) + lessons via Menu → Plan; Skip OK; lesson vocab → Pending `lesson`. Skills 1–5 and CEFR stay separate.
 - Chat transcript is always visible in-session; select word/span/sentence → Translate (PL + example) or Add to learning → Pending (`transcript_selection`); Add also available from the translate panel.
 - In-flight correction: auto after user turn for substantive errors only, plus on-demand Check; tip + optional Add → Pending; Live runs parallel with agent reply; chained runs after STT before LLM.
