@@ -41,6 +41,21 @@ class OpenRouterProvider:
 
 class MockTextProvider:
     def complete_json(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        if "turn_correction" in messages[0]["content"] or "substantive" in messages[0]["content"].lower():
+            text = messages[1]["content"]
+            if "I go shop" in text:
+                return {
+                    "is_corrected": True,
+                    "corrected_text": "I go to the shop",
+                    "explanation_pl": "Brakuje przyimka 'to'.",
+                    "mistake_type": "Grammar",
+                }
+            return {
+                "is_corrected": False,
+                "corrected_text": None,
+                "explanation_pl": None,
+                "mistake_type": None,
+            }
         if "translation_pl" in messages[0]["content"] or "flashcard" in messages[0]["content"].lower():
             span = messages[1]["content"].split(":", 1)[-1].strip() if len(messages) > 1 else "word"
             return {

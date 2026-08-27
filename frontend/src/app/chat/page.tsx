@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, checkApiHealth } from "@/lib/api";
+import {
+  addCorrectionPending,
+  runCorrection,
+  type CorrectionResponse,
+} from "@/lib/api/correction";
 import { addSelectionPending, translateSelection, type TranslateSelectionResponse } from "@/lib/api/selection";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
@@ -19,13 +24,37 @@ export default function ChatPage() {
   const [listening, setListening] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [lines, setLines] = useState<TranscriptLine[]>([]);
+  const [corrections, setCorrections] = useState<Record<number, CorrectionResponse>>({});
   const [languages, setLanguages] = useState<string[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [selectedSpan, setSelectedSpan] = useState<string | null>(null);
+  const [selectedLineIndex, setSelectedLineIndex] = useState<number | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"User" | "Agent" | null>(null);
   const [translateResult, setTranslateResult] = useState<TranslateSelectionResponse | null>(null);
   const [translateLoading, setTranslateLoading] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
+  const [checkResult, setCheckResult] = useState<CorrectionResponse | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  const triggerAutoCorrection = useCallback(
+    async (lineIndex: number, text: string) => {
+      if (!token || !activeLanguage) return;
+      try {
+        const result = await runCorrection(token, {
+          text,
+          language: activeLanguage,
+          mode: "auto",
+          conversation_id: conversationId ?? undefined,
+        });
+        if (result.is_corrected) {
+          setCorrections((prev) => ({ ...prev, [lineIndex]: result }));
+        }
+      } catch {
+        /* silent skip for auto per spec */
+      }
+    },
+    [token, activeLanguage, conversationId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -66,12 +95,17 @@ export default function ChatPage() {
     });
     setConversationId(session.conversation_id);
     setLines([{ role: "Agent", text: session.opening_line }]);
+    setCorrections({});
     setState("idle");
   }, [token, activeLanguage]);
 
   const appendLine = useCallback(
     async (role: "User" | "Agent", text: string) => {
-      setLines((prev) => [...prev, { role, text }]);
+      let lineIndex = 0;
+      setLines((prev) => {
+        lineIndex = prev.length;
+        return [...prev, { role, text }];
+      });
       if (conversationId && token) {
         await apiFetch(`/api/chat/sessions/${conversationId}/lines`, {
           method: "POST",
@@ -79,8 +113,12 @@ export default function ChatPage() {
           body: { role, text },
         });
       }
+      if (role === "User") {
+        void triggerAutoCorrection(lineIndex, text);
+      }
+      return lineIndex;
     },
-    [conversationId, token]
+    [conversationId, token, triggerAutoCorrection]
   );
 
   const endSession = useCallback(async () => {
@@ -88,6 +126,8 @@ export default function ChatPage() {
     setListening(false);
     setSelectedSpan(null);
     setTranslateResult(null);
+    setCheckResult(null);
+    setCorrections({});
     setState("idle");
     await apiFetch(`/api/chat/sessions/${conversationId}/end`, { method: "POST", token });
     setConversationId(null);
@@ -108,12 +148,39 @@ export default function ChatPage() {
       });
       setTranslateResult(result);
       setSelectedSpan(null);
+      setSelectedLineIndex(null);
+      setSelectedRole(null);
     } catch (e) {
       setTranslateError(e instanceof Error ? e.message : "Translation failed");
     } finally {
       setTranslateLoading(false);
     }
   }, [token, activeLanguage, selectedSpan, conversationId]);
+
+  const handleCheck = useCallback(async () => {
+    if (!token || !activeLanguage || !selectedSpan) return;
+    setTranslateLoading(true);
+    setTranslateError(null);
+    try {
+      const result = await runCorrection(token, {
+        text: selectedSpan,
+        language: activeLanguage,
+        mode: "check",
+        conversation_id: conversationId ?? undefined,
+      });
+      setCheckResult(result);
+      if (selectedLineIndex !== null && result.is_corrected) {
+        setCorrections((prev) => ({ ...prev, [selectedLineIndex]: result }));
+      }
+      setSelectedSpan(null);
+      setSelectedLineIndex(null);
+      setSelectedRole(null);
+    } catch (e) {
+      setTranslateError(e instanceof Error ? e.message : "Check failed");
+    } finally {
+      setTranslateLoading(false);
+    }
+  }, [token, activeLanguage, selectedSpan, conversationId, selectedLineIndex]);
 
   const handleAddPending = useCallback(
     async (span: string, translationPl?: string) => {
@@ -138,6 +205,32 @@ export default function ChatPage() {
       }
     },
     [token, activeLanguage, conversationId]
+  );
+
+  const handleAddFromCorrection = useCallback(
+    async (lineIndex: number) => {
+      const tip = corrections[lineIndex];
+      const original = lines[lineIndex]?.text;
+      if (!token || !activeLanguage || !tip?.corrected_text || !original) return;
+      try {
+        const res = await addCorrectionPending(token, {
+          original_text: original,
+          corrected_text: tip.corrected_text,
+          language: activeLanguage,
+          explanation_pl: tip.explanation_pl ?? undefined,
+          conversation_id: conversationId ?? undefined,
+        });
+        if (res.status === "already_exists") {
+          alert("Already in your list");
+        } else {
+          const count = await apiFetch<{ count: number }>("/api/vocab/pending/count", { token });
+          setPendingCount(count.count);
+        }
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Could not add word");
+      }
+    },
+    [token, activeLanguage, corrections, lines, conversationId]
   );
 
   useEffect(() => {
@@ -195,7 +288,13 @@ export default function ChatPage() {
         <TranscriptPane
           lines={lines}
           enabled={Boolean(conversationId)}
-          onSelect={(text) => setSelectedSpan(text)}
+          corrections={corrections}
+          onSelect={(text, lineIndex, role) => {
+            setSelectedSpan(text);
+            setSelectedLineIndex(lineIndex);
+            setSelectedRole(role);
+          }}
+          onAddFromCorrection={(lineIndex) => void handleAddFromCorrection(lineIndex)}
         />
 
         <div className="flex flex-wrap gap-2">
@@ -235,9 +334,15 @@ export default function ChatPage() {
       {selectedSpan ? (
         <SelectionActionSheet
           span={selectedSpan}
+          showCheck={selectedRole === "User"}
           onTranslate={() => void handleTranslate()}
+          onCheck={() => void handleCheck()}
           onAdd={() => void handleAddPending(selectedSpan)}
-          onDismiss={() => setSelectedSpan(null)}
+          onDismiss={() => {
+            setSelectedSpan(null);
+            setSelectedLineIndex(null);
+            setSelectedRole(null);
+          }}
         />
       ) : null}
 
@@ -253,6 +358,22 @@ export default function ChatPage() {
           }}
           onRetry={() => void handleTranslate()}
         />
+      ) : null}
+
+      {checkResult?.is_corrected && !translateResult ? (
+        <div className="fixed inset-x-0 bottom-24 z-30 mx-auto max-w-lg p-4">
+          <div className="classical-card p-4 text-sm">
+            <p className="font-serif">{checkResult.corrected_text}</p>
+            {checkResult.explanation_pl ? <p className="mt-1 opacity-80">{checkResult.explanation_pl}</p> : null}
+            <button
+              type="button"
+              className="classical-btn mt-2"
+              onClick={() => setCheckResult(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
       ) : null}
 
       <BottomNav pendingCount={pendingCount} />
