@@ -1,6 +1,7 @@
 import json
 
 from app.domain.agenda.service import build_agenda
+from app.domain.skills import skills_to_cefr
 
 
 def build_live_system_instruction(agenda: dict) -> str:
@@ -20,7 +21,8 @@ def build_live_system_instruction(agenda: dict) -> str:
             f"topic hint: {plan.get('current_topic') or 'flexible'}."
         )
     if skills:
-        parts.append(f"Self-assessed skills (1-5): {json.dumps(skills)}")
+        cefr_skills = skills_to_cefr(skills)
+        parts.append(f"Self-assessed skills (CEFR): {json.dumps(cefr_skills)}")
     facts = agenda.get("memory_facts") or []
     if facts:
         parts.append("Known facts about the learner: " + "; ".join(facts[:10]))

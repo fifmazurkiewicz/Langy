@@ -11,6 +11,7 @@ import {
   SUPPORTED_LANGUAGES,
 } from "@/lib/constants/profile";
 import { ChipToggleWithOther, resolveChipValues } from "@/components/profile/ChipToggleWithOther";
+import { SkillCefrSlider } from "@/components/profile/SkillCefrSlider";
 import { addLanguage, fetchProfiles, setActiveLanguage } from "@/lib/api/profile";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
@@ -123,21 +124,16 @@ export default function MenuLanguagesPage() {
             </h2>
             {addStep === "skills" ? (
               <>
-                <p className="text-sm text-[var(--color-soft)]">Rate each skill from 1 (beginner) to 5 (advanced).</p>
+                <p className="text-sm text-[var(--color-soft)]">
+                  Rate each skill on the CEFR scale (A1 beginner → C2 mastery).
+                </p>
                 {SKILL_ASPECTS.map(({ key, label }) => (
-                  <label key={key} className="block text-sm">
-                    {label}
-                    <input
-                      type="range"
-                      min={1}
-                      max={5}
-                      value={skills[key as keyof typeof skills]}
-                      onChange={(e) =>
-                        setSkills((s) => ({ ...s, [key]: Number(e.target.value) }))
-                      }
-                      className="mt-1 w-full"
-                    />
-                  </label>
+                  <SkillCefrSlider
+                    key={key}
+                    label={label}
+                    value={skills[key as keyof typeof skills]}
+                    onChange={(next) => setSkills((s) => ({ ...s, [key]: next }))}
+                  />
                 ))}
                 <div className="flex gap-2">
                   <button type="button" className="classical-btn flex-1" onClick={() => setAdding(null)}>

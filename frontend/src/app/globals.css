@@ -55,16 +55,40 @@ h1, h2, h3, h4 {
   background: transparent;
   border-radius: 4px;
   font-family: var(--font-body);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.1s ease;
+}
+
+.classical-btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-accent) 20%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text));
 }
 
 .classical-btn-primary {
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
+.classical-btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-accent) 28%, var(--color-surface));
+}
+
+.classical-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.classical-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
 .classical-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-  pointer-events: none;
 }
 
 .classical-input {
@@ -75,6 +99,47 @@ h1, h2, h3, h4 {
   background: var(--color-bg);
   color: var(--color-text);
   border-radius: 4px;
+}
+
+.nav-tab-link {
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.nav-tab-link:hover {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  color: var(--color-accent);
+}
+
+.nav-tab-link:active {
+  background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface));
+}
+
+.menu-row-link {
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.menu-row-link:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
+
+.menu-row-link:hover .menu-row-chevron {
+  color: var(--color-accent);
+}
+
+.menu-row-link:active {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+}
+
+.menu-row-link:focus-visible,
+.nav-tab-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: -2px;
 }
 
 @keyframes langyBreathe {

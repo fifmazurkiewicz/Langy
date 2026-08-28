@@ -17,11 +17,11 @@ router = APIRouter()
 class ProfileUpdate(BaseModel):
     motivations: list[str] | None = None
     interests: list[str] | None = None
-    skill_reading: int | None = Field(None, ge=1, le=5)
-    skill_speaking: int | None = Field(None, ge=1, le=5)
-    skill_writing: int | None = Field(None, ge=1, le=5)
-    skill_listening: int | None = Field(None, ge=1, le=5)
-    skill_vocabulary: int | None = Field(None, ge=1, le=5)
+    skill_reading: int | None = Field(None, ge=1, le=6)
+    skill_speaking: int | None = Field(None, ge=1, le=6)
+    skill_writing: int | None = Field(None, ge=1, le=6)
+    skill_listening: int | None = Field(None, ge=1, le=6)
+    skill_vocabulary: int | None = Field(None, ge=1, le=6)
 
 
 class ActiveLanguageUpdate(BaseModel):
@@ -32,11 +32,11 @@ class AddLanguageRequest(BaseModel):
     language: str
     motivations: list[str] = Field(default_factory=list)
     interests: list[str] = Field(default_factory=list)
-    skill_reading: int = Field(2, ge=1, le=5)
-    skill_speaking: int = Field(2, ge=1, le=5)
-    skill_writing: int = Field(2, ge=1, le=5)
-    skill_listening: int = Field(2, ge=1, le=5)
-    skill_vocabulary: int = Field(2, ge=1, le=5)
+    skill_reading: int = Field(2, ge=1, le=6)
+    skill_speaking: int = Field(2, ge=1, le=6)
+    skill_writing: int = Field(2, ge=1, le=6)
+    skill_listening: int = Field(2, ge=1, le=6)
+    skill_vocabulary: int = Field(2, ge=1, le=6)
     set_active: bool = False
 
 

@@ -20,11 +20,11 @@ class LanguageProfileInput(BaseModel):
     language: str
     motivations: list[str] | None = None
     interests: list[str] | None = None
-    skill_reading: int | None = Field(None, ge=1, le=5)
-    skill_speaking: int | None = Field(None, ge=1, le=5)
-    skill_writing: int | None = Field(None, ge=1, le=5)
-    skill_listening: int | None = Field(None, ge=1, le=5)
-    skill_vocabulary: int | None = Field(None, ge=1, le=5)
+    skill_reading: int | None = Field(None, ge=1, le=6)
+    skill_speaking: int | None = Field(None, ge=1, le=6)
+    skill_writing: int | None = Field(None, ge=1, le=6)
+    skill_listening: int | None = Field(None, ge=1, le=6)
+    skill_vocabulary: int | None = Field(None, ge=1, le=6)
     cefr_level: str | None = None
     plan_duration_weeks: int | None = Field(None, ge=4, le=16)
 

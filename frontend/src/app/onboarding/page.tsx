@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants/profile";
 import { ChipToggleWithOther, resolveChipValues } from "@/components/profile/ChipToggleWithOther";
 import { CefrPlacement } from "@/components/profile/CefrPlacement";
+import { SkillCefrSlider } from "@/components/profile/SkillCefrSlider";
 import { useAuth } from "@/components/AuthProvider";
 
 const DURATIONS = [4, 8, 12, 16] as const;
@@ -33,7 +34,7 @@ type Phase = "languages" | "profile" | "plan" | "active";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { token, refreshProfile } = useAuth();
+  const { token, loading, refreshProfile, markOnboardingComplete } = useAuth();
   const [phase, setPhase] = useState<Phase>("languages");
   const [selected, setSelected] = useState<string[]>(["en-GB"]);
   const [profileIndex, setProfileIndex] = useState(0);
@@ -46,6 +47,13 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [otherTexts, setOtherTexts] = useState<Record<string, Record<string, string>>>({});
   const [placementDone, setPlacementDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loading && !token) {
+      router.replace("/login");
+    }
+  }, [loading, token, router]);
 
   const currentLang = selected[profileIndex];
   const currentProfile = profiles[currentLang] ?? defaultProfile();
@@ -85,8 +93,13 @@ export default function OnboardingPage() {
   }
 
   async function complete() {
-    if (!token) return;
+    if (!token) {
+      setError("Please sign in first.");
+      router.replace("/login");
+      return;
+    }
     setSubmitting(true);
+    setError(null);
     try {
       await apiFetch("/api/onboarding/complete", {
         method: "POST",
@@ -116,14 +129,23 @@ export default function OnboardingPage() {
           }),
         },
       });
+      markOnboardingComplete();
       await refreshProfile();
       router.replace("/chat");
     } catch (e) {
       console.error(e);
-      alert("Could not complete onboarding. Is the API running?");
+      setError("Could not complete onboarding. Is the API running?");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <main className="mx-auto flex max-w-lg flex-1 flex-col gap-4 p-6 pb-12">
+        <p className="font-serif text-lg text-[var(--color-soft)]">Loading…</p>
+      </main>
+    );
   }
 
   return (
@@ -228,21 +250,16 @@ export default function OnboardingPage() {
           <div className="space-y-2">
             <h3 className="font-serif text-lg">Self-assessment</h3>
             {SKILL_ASPECTS.map(({ key, label }) => (
-              <label key={key} className="block text-sm">
-                {label}: {currentProfile.skills[key]}
-                <input
-                  type="range"
-                  min={1}
-                  max={5}
-                  value={currentProfile.skills[key]}
-                  onChange={(e) =>
-                    updateCurrent({
-                      skills: { ...currentProfile.skills, [key]: Number(e.target.value) },
-                    })
-                  }
-                  className="mt-1 w-full"
-                />
-              </label>
+              <SkillCefrSlider
+                key={key}
+                label={label}
+                value={currentProfile.skills[key]}
+                onChange={(next) =>
+                  updateCurrent({
+                    skills: { ...currentProfile.skills, [key]: next },
+                  })
+                }
+              />
             ))}
           </div>
 
@@ -341,11 +358,15 @@ export default function OnboardingPage() {
           <button
             type="button"
             className="classical-btn classical-btn-primary w-full"
-            disabled={submitting}
+            disabled={submitting || !token}
             onClick={() => void complete()}
           >
             {submitting ? "Saving…" : "Start practicing"}
           </button>
+          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {!token ? (
+            <p className="text-sm text-[var(--color-soft)]">Sign in to save your profile and continue.</p>
+          ) : null}
         </section>
       ) : null}
     </main>

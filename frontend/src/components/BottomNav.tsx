@@ -22,7 +22,7 @@ export function BottomNav({ pendingCount = 0 }: { pendingCount?: number }) {
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
-                className={`relative flex min-h-[52px] flex-col items-center justify-center text-sm ${
+                className={`nav-tab-link relative flex min-h-[52px] flex-col items-center justify-center text-sm ${
                   active ? "text-[var(--color-accent)]" : "text-[var(--color-text)]"
                 }`}
               >

@@ -13,6 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { MenuBackHeader } from "@/components/menu/MenuBackHeader";
 
 import { ChipToggle } from "@/components/profile/ChipToggle";
+import { SkillCefrSlider } from "@/components/profile/SkillCefrSlider";
 
 export default function MenuProfilePage() {
   const { token, activeLanguage } = useAuth();
@@ -114,21 +115,14 @@ export default function MenuProfilePage() {
                 const skillKey = key as keyof typeof profile.skills;
                 const val = profile.skills[skillKey] ?? 2;
                 return (
-                  <label key={key} className="block text-sm">
-                    {label}: {val}
-                    <input
-                      type="range"
-                      min={1}
-                      max={5}
-                      value={val}
-                      onChange={(e) =>
-                        void save({ [`skill_${key}`]: Number(e.target.value) } as Parameters<
-                          typeof updateProfile
-                        >[2])
-                      }
-                      className="mt-1 w-full"
-                    />
-                  </label>
+                  <SkillCefrSlider
+                    key={key}
+                    label={label}
+                    value={val}
+                    onChange={(next) =>
+                      void save({ [`skill_${key}`]: next } as Parameters<typeof updateProfile>[2])
+                    }
+                  />
                 );
               })}
             </section>

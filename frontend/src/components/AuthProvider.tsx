@@ -16,6 +16,7 @@ type SessionState = {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  markOnboardingComplete: () => void;
 };
 
 const AuthContext = createContext<SessionState | null>(null);
@@ -128,6 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAdmin(false);
   }, []);
 
+  const markOnboardingComplete = useCallback(() => {
+    setOnboardingCompleted(true);
+  }, []);
+
   const value = useMemo(
     () => ({
       token,
@@ -140,8 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       signOut,
       refreshProfile,
+      markOnboardingComplete,
     }),
-    [token, userId, email, isAdmin, onboardingCompleted, activeLanguage, loading, signInWithGoogle, signOut, refreshProfile]
+    [token, userId, email, isAdmin, onboardingCompleted, activeLanguage, loading, signInWithGoogle, signOut, refreshProfile, markOnboardingComplete]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

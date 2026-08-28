@@ -1,9 +1,18 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
-  const { signInWithGoogle } = useAuth();
+  const router = useRouter();
+  const { signInWithGoogle, token, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && token) {
+      router.replace("/");
+    }
+  }, [loading, token, router]);
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6">

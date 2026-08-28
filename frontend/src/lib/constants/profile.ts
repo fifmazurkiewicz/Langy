@@ -42,6 +42,13 @@ export const INTERESTS = [
   "other",
 ] as const;
 
+export const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+
+export type CefrLevel = (typeof CEFR_LEVELS)[number];
+
+/** Default self-assessment level (A2). Stored as 1–6 index in API/DB. Legacy 1–5 tops at C1. */
+export const DEFAULT_SKILL_LEVEL = 2;
+
 export const SKILL_ASPECTS = [
   { key: "reading", label: "Reading" },
   { key: "speaking", label: "Speaking" },
@@ -49,6 +56,15 @@ export const SKILL_ASPECTS = [
   { key: "listening", label: "Listening" },
   { key: "vocabulary", label: "Vocabulary" },
 ] as const;
+
+export function clampSkillLevel(level: number | null | undefined): number {
+  if (level == null || level < 1) return DEFAULT_SKILL_LEVEL;
+  return Math.min(level, CEFR_LEVELS.length);
+}
+
+export function skillLevelToCefr(level: number | null | undefined): CefrLevel {
+  return CEFR_LEVELS[clampSkillLevel(level) - 1];
+}
 
 export type ThemeMode = "system" | "light" | "dark";
 
