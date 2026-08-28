@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { useOnApiHealthy } from "@/components/ApiPulseProvider";
 import { createClient, DEV_TOKEN, DEV_USER_ID, isDevAuthMode } from "@/lib/supabase/client";
 
 type SessionState = {
@@ -47,6 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* dev without backend */
     }
   }, [token]);
+
+  useOnApiHealthy(
+    useCallback(() => {
+      if (token && !activeLanguage) void refreshProfile();
+    }, [token, activeLanguage, refreshProfile])
+  );
 
   useEffect(() => {
     async function init() {

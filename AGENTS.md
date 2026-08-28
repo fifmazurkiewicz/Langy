@@ -52,7 +52,7 @@ Local dev without Supabase: frontend uses `dev-token`; backend accepts `Authoriz
 - Motivation and interests are per target language; the motivation interview depends on the active language; Chat uses Interests only softly (opening = varied “what to talk about / learn?” with no Interests listed; soft suggestions only if silent or unsure).
 - Users can accept or reject extracted words; the agent may save a word to flashcards when the user asks; flashcard export to `.txt` as Quizlet paste: `term<TAB>definition` with newline between cards.
 - Monthly spend_cap is admin-configurable and sums TTS + ASR + gen AI; when exceeded, block costly actions for the rest of the month but allow browsing and reviewing existing flashcards.
-- Chat listening is an optional on/off toggle (on = VAD hands-free; off = mic idle), not push-to-talk or a mandatory Tap-to-start flow.
+- Chat listening is an optional on/off toggle (on = VAD hands-free; off = mic idle), not push-to-talk or a mandatory Tap-to-start flow; active sessions show MicStatusBanner (off / blocked / unsupported / listening); Web Speech voice input needs Chrome or Edge.
 - User manages global memory in Menu → Memory (view, edit, delete facts).
 - Bottom nav is Chat / Memo / Menu; Words renamed to Memo with sub-tabs Flashcards, Shadowing, and Mnemonics.
 - Shadowing: agent asks topic, then generated dialogue or pick past conversation; show-text on/off before session (default on); audio TTS|Live switch; tip + optional Add during session and hard-line batch at end → Pending (`shadowing`).
@@ -65,10 +65,10 @@ Local dev without Supabase: frontend uses `dev-token`; backend accepts `Authoriz
 - Supabase RLS (`006_rls_policies.sql`, idempotent) enforces per-user access on all user tables; `jobs` admin-only; Render backend bypasses RLS via direct SQLAlchemy (defense in depth for direct Supabase client).
 - FSRS / spaced-repetition state must persist in Supabase Postgres (not process memory) across Render idle/cold starts.
 - Langfuse Cloud is the runtime prompt SoT (tracing, cost, prompt management); seven promptfoo suites in `backend/promptfoo/suites/` with Python mock provider gate CI (`npm run promptfoo`, no API keys).
-- Pending vocab never auto-expires; Accept/Reject lives in Memo → Flashcards Pending (not end-of-chat); sources include `transcript_selection`, correction, `shadowing`, `lesson`, and chat extraction.
-- Global user memory (lasting facts + session summaries) updates after End session with the vocab-extraction job wave; agenda injects up to 50 facts and the last 3 summaries.
+- Pending vocab never auto-expires; Accept/Reject in Memo → Flashcards Pending (`category_generated` badges show topic name, e.g. travel, not generic Category); sources include `transcript_selection`, correction, `shadowing`, `lesson`, and chat extraction. Global user memory (facts + session summaries) updates after End session with the vocab-extraction job wave; agenda injects up to 50 facts and the last 3 summaries.
 - Default new-user `spend_cap_usd` is 10 per calendar month (Europe/Warsaw).
-- `VOICE_MODE` switches `speech_to_speech` (Gemini Live via `POST /api/chat/live-token` ephemeral token + `useGeminiLive`, Web Speech fallback) vs `chained` (via Render); Render Free cold start is accepted with a Chat “Waking up…” state; async jobs use Postgres (no Redis in MVP).
+- `VOICE_MODE` switches `speech_to_speech` (Gemini Live via ephemeral token + `useGeminiLive`, Web Speech fallback) vs `chained` (via Render). Global `ApiPulseProvider` polls `GET /api/health` (5 s waking / 30 s healthy) with `ApiPulseBanner`; optional `GET /api/health/ready` (DB, 503 degraded). Async jobs use Postgres (no Redis in MVP).
+- Default `TEXT_MODEL` is `google/gemini-2.5-flash` on OpenRouter; deprecated slugs (e.g. `gemini-2.0-flash-001`) return 404 — set explicitly in Render env after deploy.
 - Optional CEFR placement + study plan (4/8/12/16 weeks) + lessons via Menu → Plan; Skip OK; lesson vocab → Pending `lesson`. Skills 1–5 and CEFR stay separate.
 - Chat: transcript always visible in-session; select → Translate (PL + example) or Add → Pending (`transcript_selection`); in-flight correction auto on substantive errors + on-demand Check (Live parallel, chained after STT).
 - Langy production is live on Supabase + Render + Vercel + Cloudflare; Render Root Directory `backend`, Runtime Docker (never `Docker` as root); Cloudflare `api-langy` CNAME to Render DNS-only, `langy` CNAME to Vercel — separate records.

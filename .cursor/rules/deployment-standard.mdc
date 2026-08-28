@@ -67,8 +67,25 @@ Target architecture **for every project**:
 - **No local state** (SQLite, files on disk) — Render Free has no persistent disk; everything durable → Supabase Postgres.
 - `DATABASE_URL` as an environment variable → Supabase via the **connection pooler / Supavisor**, not directly `db.<ref>.supabase.co` (IPv6-only issue).
 - `ca-certificates` in the Docker image when using `python:slim` or similar — otherwise SSL to Supabase fails.
-- **Health check**: `/api/health` (or equivalent) — required by Render.
+- **Health check**: `/api/health` (liveness, fast, no DB) — required by Render. Optional `/api/health/ready` (DB ping, 503 when degraded).
 - **CORS**: the frontend domain on Vercel (`*.vercel.app` + the target domain `fmazurkiewicz.dev` / subdomains).
+
+### Frontend API pulse (all SPA projects)
+
+Render Free sleeps after ~15 min idle (30–60 s cold start). Every frontend **must** implement a shared pulse — not ad-hoc `fetch` per page.
+
+| Piece | Contract |
+|---|---|
+| **Liveness** | `GET /api/health` → `200` + `{ "status": "ok", "service": "<name>" }` |
+| **Readiness** (optional) | `GET /api/health/ready` → `200` when DB up, `503` when degraded |
+| **Provider** | `ApiPulseProvider` in root layout — single poll loop for the whole app |
+| **Hook** | `useApiPulse()` → `{ isHealthy, isWaking, status, checkNow }` |
+| **Banner** | `ApiPulseBanner` — global “Waking up API…” / retry when unhealthy |
+| **Intervals** | 5 s while unhealthy (cold start), 30 s while healthy (detect sleep) |
+| **Timeout** | 8 s per probe (`AbortSignal`) |
+| **On healthy** | Retry deferred loads (e.g. `refreshProfile()` after failed cold start) |
+
+Reference implementation: Langy `frontend/src/lib/api/pulse.ts`, `ApiPulseProvider`, `ApiPulseBanner`.
 
 ### Auth
 

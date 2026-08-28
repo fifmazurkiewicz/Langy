@@ -25,11 +25,7 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promi
   return res.json() as Promise<T>;
 }
 
-export async function checkApiHealth(): Promise<boolean> {
-  try {
-    const res = await fetch(`${API_URL}/api/health`, { cache: "no-store" });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+export { fetchApiLiveness, fetchApiPulse, fetchApiReady } from "@/lib/api/pulse";
+
+/** @deprecated Prefer useApiPulse() or fetchApiPulse() */
+export { fetchApiLiveness as checkApiHealth } from "@/lib/api/pulse";

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiFetch, checkApiHealth } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
+import { useApiPulse } from "@/components/ApiPulseProvider";
 import {
   addCorrectionPending,
   runCorrection,
@@ -48,8 +49,11 @@ async function probeMicrophone(): Promise<MicStatus> {
 
 export default function ChatPage() {
   const { token, activeLanguage, refreshProfile } = useAuth();
-  const [apiReady, setApiReady] = useState(false);
-  const [state, setState] = useState<ChatState>("waking");
+  const { isHealthy: apiReady, isWaking } = useApiPulse();
+  const [startingSession, setStartingSession] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [state, setState] = useState<ChatState>("idle");
+  const [profileLanguage, setProfileLanguage] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [lines, setLines] = useState<TranscriptLine[]>([]);
@@ -73,6 +77,9 @@ export default function ChatPage() {
     listeningRef.current = listening;
   }, [listening]);
 
+  const sessionLanguage = activeLanguage ?? profileLanguage ?? languages[0] ?? null;
+  const canStartSession = apiReady && Boolean(sessionLanguage) && Boolean(token) && !startingSession;
+
   const geminiLive = useGeminiLive({
     onAgentText: (text) => {
       setState("speaking");
@@ -85,11 +92,11 @@ export default function ChatPage() {
 
   const triggerAutoCorrection = useCallback(
     async (lineIndex: number, text: string) => {
-      if (!token || !activeLanguage) return;
+      if (!token || !sessionLanguage) return;
       try {
         const result = await runCorrection(token, {
           text,
-          language: activeLanguage,
+          language: sessionLanguage,
           mode: "auto",
           conversation_id: conversationId ?? undefined,
         });
@@ -100,30 +107,19 @@ export default function ChatPage() {
         /* silent skip for auto per spec */
       }
     },
-    [token, activeLanguage, conversationId]
+    [token, sessionLanguage, conversationId]
   );
 
   useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      const ok = await checkApiHealth();
-      if (!cancelled) {
-        setApiReady(ok);
-        setState(ok ? "idle" : "waking");
-      }
-    }
-    void poll();
-    const id = setInterval(poll, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!token) return;
-    apiFetch<{ profiles: { language: string }[] }>("/api/profile/languages", { token })
-      .then((data) => setLanguages(data.profiles.map((p) => p.language)))
+    apiFetch<{ active_language: string | null; profiles: { language: string }[] }>(
+      "/api/profile/languages",
+      { token }
+    )
+      .then((data) => {
+        setLanguages(data.profiles.map((p) => p.language));
+        if (data.active_language) setProfileLanguage(data.active_language);
+      })
       .catch(() => setLanguages(["en-GB"]));
     apiFetch<{ count: number }>("/api/vocab/pending/count", { token })
       .then((d) => setPendingCount(d.count))
@@ -131,33 +127,41 @@ export default function ChatPage() {
   }, [token]);
 
   const startSession = useCallback(async () => {
-    if (!token || !activeLanguage) return;
-    const session = await apiFetch<{
-      conversation_id: string;
-      opening_line: string;
-    }>("/api/chat/sessions", {
-      method: "POST",
-      token,
-      body: { language: activeLanguage },
-    });
-    setConversationId(session.conversation_id);
-    setLines([{ role: "Agent", text: session.opening_line }]);
-    setCorrections({});
-    setState("idle");
-
+    if (!token || !sessionLanguage) return;
+    setStartingSession(true);
+    setStartError(null);
     try {
-      const live = await fetchLiveToken(token, {
-        language: activeLanguage,
-        conversation_id: session.conversation_id,
+      const session = await apiFetch<{
+        conversation_id: string;
+        opening_line: string;
+      }>("/api/chat/sessions", {
+        method: "POST",
+        token,
+        body: { language: sessionLanguage },
       });
-      setLiveMode(live.mode === "live" && live.configured ? "live" : "mock");
-      if (live.mode === "live" && live.configured) {
-        await geminiLive.connect(live);
+      setConversationId(session.conversation_id);
+      setLines([{ role: "Agent", text: session.opening_line }]);
+      setCorrections({});
+      setState("idle");
+
+      try {
+        const live = await fetchLiveToken(token, {
+          language: sessionLanguage,
+          conversation_id: session.conversation_id,
+        });
+        setLiveMode(live.mode === "live" && live.configured ? "live" : "mock");
+        if (live.mode === "live" && live.configured) {
+          await geminiLive.connect(live);
+        }
+      } catch {
+        setLiveMode("mock");
       }
-    } catch {
-      setLiveMode("mock");
+    } catch (e) {
+      setStartError(e instanceof Error ? e.message : "Could not start session");
+    } finally {
+      setStartingSession(false);
     }
-  }, [token, activeLanguage, geminiLive]);
+  }, [token, sessionLanguage, geminiLive]);
 
   const appendLine = useCallback(
     async (role: "User" | "Agent", text: string) => {
@@ -204,13 +208,13 @@ export default function ChatPage() {
   }, [conversationId, token, geminiLive]);
 
   const handleTranslate = useCallback(async () => {
-    if (!token || !activeLanguage || !selectedSpan) return;
+    if (!token || !sessionLanguage || !selectedSpan) return;
     setTranslateLoading(true);
     setTranslateError(null);
     try {
       const result = await translateSelection(token, {
         span: selectedSpan,
-        language: activeLanguage,
+        language: sessionLanguage,
         conversation_id: conversationId ?? undefined,
       });
       setTranslateResult(result);
@@ -222,16 +226,16 @@ export default function ChatPage() {
     } finally {
       setTranslateLoading(false);
     }
-  }, [token, activeLanguage, selectedSpan, conversationId]);
+  }, [token, sessionLanguage, selectedSpan, conversationId]);
 
   const handleCheck = useCallback(async () => {
-    if (!token || !activeLanguage || !selectedSpan) return;
+    if (!token || !sessionLanguage || !selectedSpan) return;
     setTranslateLoading(true);
     setTranslateError(null);
     try {
       const result = await runCorrection(token, {
         text: selectedSpan,
-        language: activeLanguage,
+        language: sessionLanguage,
         mode: "check",
         conversation_id: conversationId ?? undefined,
       });
@@ -247,15 +251,15 @@ export default function ChatPage() {
     } finally {
       setTranslateLoading(false);
     }
-  }, [token, activeLanguage, selectedSpan, conversationId, selectedLineIndex]);
+  }, [token, sessionLanguage, selectedSpan, conversationId, selectedLineIndex]);
 
   const handleAddPending = useCallback(
     async (span: string, translationPl?: string) => {
-      if (!token || !activeLanguage) return;
+      if (!token || !sessionLanguage) return;
       try {
         const res = await addSelectionPending(token, {
           span,
-          language: activeLanguage,
+          language: sessionLanguage,
           translation_pl: translationPl,
           conversation_id: conversationId ?? undefined,
         });
@@ -271,19 +275,19 @@ export default function ChatPage() {
         alert(e instanceof Error ? e.message : "Could not add word");
       }
     },
-    [token, activeLanguage, conversationId]
+    [token, sessionLanguage, conversationId]
   );
 
   const handleAddFromCorrection = useCallback(
     async (lineIndex: number) => {
       const tip = corrections[lineIndex];
       const original = lines[lineIndex]?.text;
-      if (!token || !activeLanguage || !tip?.corrected_text || !original) return;
+      if (!token || !sessionLanguage || !tip?.corrected_text || !original) return;
       try {
         const res = await addCorrectionPending(token, {
           original_text: original,
           corrected_text: tip.corrected_text,
-          language: activeLanguage,
+          language: sessionLanguage,
           explanation_pl: tip.explanation_pl ?? undefined,
           conversation_id: conversationId ?? undefined,
         });
@@ -297,7 +301,7 @@ export default function ChatPage() {
         alert(e instanceof Error ? e.message : "Could not add word");
       }
     },
-    [token, activeLanguage, corrections, lines, conversationId]
+    [token, sessionLanguage, corrections, lines, conversationId]
   );
 
   const browserSpeechUnsupported = Boolean(conversationId) && !speechRecognitionSupported();
@@ -327,7 +331,7 @@ export default function ChatPage() {
 
       setMicStatus("ready");
       const recognition = new SpeechRecognitionCtor();
-      recognition.lang = activeLanguage?.startsWith("en") ? "en-GB" : activeLanguage ?? "en-GB";
+      recognition.lang = sessionLanguage.startsWith("en") ? "en-GB" : sessionLanguage;
       recognition.interimResults = false;
       recognition.continuous = true;
       recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -371,14 +375,14 @@ export default function ChatPage() {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
-  }, [listening, conversationId, activeLanguage, appendLine, geminiLive]);
+  }, [listening, conversationId, sessionLanguage, appendLine, geminiLive]);
 
   return (
     <div className="flex flex-1 flex-col pb-[calc(52px+env(safe-area-inset-bottom))]">
       <header className="flex items-center justify-between border-b border-[var(--color-divider)] p-4">
         <h1 className="text-xl">Chat</h1>
         <LanguageSwitcher
-          activeLanguage={activeLanguage}
+          activeLanguage={sessionLanguage}
           languages={languages.length ? languages : ["en-GB"]}
           onChange={async (lang) => {
             if (!token) return;
@@ -394,7 +398,7 @@ export default function ChatPage() {
 
       <main className="flex flex-1 flex-col gap-4 p-4">
         <div className="classical-card flex min-h-[48px] items-center justify-center p-3 text-sm">
-          {state === "waking"
+          {isWaking
             ? STATE_LABELS.waking
             : `${STATE_LABELS[state]}${conversationId ? ` · ${liveMode === "live" ? "Gemini Live" : "Web Speech"}` : ""}`}
         </div>
@@ -420,14 +424,23 @@ export default function ChatPage() {
 
         <div className="flex flex-wrap gap-2">
           {!conversationId ? (
-            <button
-              type="button"
-              className="classical-btn classical-btn-primary"
-              disabled={!apiReady || !activeLanguage}
-              onClick={() => void startSession()}
-            >
-              Start session
-            </button>
+            <>
+              <button
+                type="button"
+                className="classical-btn classical-btn-primary"
+                disabled={!canStartSession}
+                onClick={() => void startSession()}
+              >
+                {startingSession ? "Starting…" : "Start session"}
+              </button>
+              {!apiReady ? (
+                <p className="text-sm opacity-70 self-center">Waiting for API…</p>
+              ) : null}
+              {apiReady && !sessionLanguage ? (
+                <p className="text-sm opacity-70 self-center">Loading profile…</p>
+              ) : null}
+              {startError ? <p className="text-sm text-red-400">{startError}</p> : null}
+            </>
           ) : (
             <>
               <button

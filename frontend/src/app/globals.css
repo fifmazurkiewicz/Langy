@@ -59,6 +59,12 @@ h1, h2, h3, h4 {
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
+.classical-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .classical-input {
   width: 100%;
   min-height: 44px;
