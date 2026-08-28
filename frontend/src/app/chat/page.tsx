@@ -13,11 +13,38 @@ import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { MicStatusBanner, type MicStatus } from "@/components/chat/MicStatusBanner";
 import { SelectionActionSheet } from "@/components/chat/SelectionActionSheet";
 import { TranscriptPane, type TranscriptLine } from "@/components/chat/TranscriptPane";
 import { TranslatePanel } from "@/components/chat/TranslatePanel";
 
 type ChatState = "waking" | "idle" | "listening" | "thinking" | "speaking";
+
+const STATE_LABELS: Record<ChatState, string> = {
+  waking: "Waking up…",
+  idle: "Ready when you are",
+  listening: "Listening",
+  thinking: "Thinking",
+  speaking: "Speaking",
+};
+
+function speechRecognitionSupported() {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition);
+}
+
+async function probeMicrophone(): Promise<MicStatus> {
+  if (!speechRecognitionSupported()) return "unsupported";
+  if (!navigator.mediaDevices?.getUserMedia) return "unsupported";
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    return "ready";
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "NotAllowedError") return "blocked";
+    return "unsupported";
+  }
+}
 
 export default function ChatPage() {
   const { token, activeLanguage, refreshProfile } = useAuth();
@@ -37,6 +64,7 @@ export default function ChatPage() {
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [checkResult, setCheckResult] = useState<CorrectionResponse | null>(null);
   const [liveMode, setLiveMode] = useState<"live" | "mock">("mock");
+  const [micStatus, setMicStatus] = useState<MicStatus>("off");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
   const listeningRef = useRef(listening);
@@ -46,9 +74,6 @@ export default function ChatPage() {
   }, [listening]);
 
   const geminiLive = useGeminiLive({
-    onUserText: (text) => {
-      void appendLineRef.current("User", text);
-    },
     onAgentText: (text) => {
       setState("speaking");
       void appendLineRef.current("Agent", text).then(() =>
@@ -163,6 +188,7 @@ export default function ChatPage() {
   const endSession = useCallback(async () => {
     if (!conversationId || !token) return;
     setListening(false);
+    setMicStatus("off");
     geminiLive.disconnect();
     setLiveMode("mock");
     setSelectedSpan(null);
@@ -274,35 +300,75 @@ export default function ChatPage() {
     [token, activeLanguage, corrections, lines, conversationId]
   );
 
+  const browserSpeechUnsupported = Boolean(conversationId) && !speechRecognitionSupported();
+  const activeMicStatus: MicStatus = browserSpeechUnsupported ? "unsupported" : micStatus;
+
   useEffect(() => {
     if (!listening || !conversationId) return;
-    const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!SpeechRecognitionCtor) return;
 
-    const recognition = new SpeechRecognitionCtor();
-    recognition.lang = activeLanguage?.startsWith("en") ? "en-GB" : activeLanguage ?? "en-GB";
-    recognition.interimResults = false;
-    recognition.continuous = true;
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const text = event.results[event.results.length - 1][0].transcript.trim();
-      if (!text) return;
-      setState("thinking");
-      if (geminiLive.connected) {
-        void geminiLive.sendUserText(text);
-        setState(listening ? "listening" : "idle");
+    let cancelled = false;
+    const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
+    async function startListening() {
+      const status = await probeMicrophone();
+      if (cancelled) return;
+      if (status !== "ready") {
+        setMicStatus(status);
+        setListening(false);
+        setState("idle");
         return;
       }
-      void appendLine("User", text).then(() => {
-        const reply = `Good point about "${text}". Tell me more.`;
-        setState("speaking");
-        void appendLine("Agent", reply).then(() => setState(listening ? "listening" : "idle"));
-      });
-    };
-    recognition.onerror = () => setState("idle");
-    recognition.start();
-    recognitionRef.current = recognition;
+      if (!SpeechRecognitionCtor) {
+        setMicStatus("unsupported");
+        setListening(false);
+        setState("idle");
+        return;
+      }
+
+      setMicStatus("ready");
+      const recognition = new SpeechRecognitionCtor();
+      recognition.lang = activeLanguage?.startsWith("en") ? "en-GB" : activeLanguage ?? "en-GB";
+      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const text = event.results[event.results.length - 1][0].transcript.trim();
+        if (!text) return;
+        setState("thinking");
+        void appendLine("User", text).then(() => {
+          if (geminiLive.connected) {
+            void geminiLive.sendUserText(text);
+            setState(listeningRef.current ? "listening" : "idle");
+            return;
+          }
+          const reply = `Good point about "${text}". Tell me more.`;
+          setState("speaking");
+          void appendLine("Agent", reply).then(() => setState(listeningRef.current ? "listening" : "idle"));
+        });
+      };
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        if (event.error === "not-allowed") {
+          setMicStatus("blocked");
+          setListening(false);
+        }
+        setState("idle");
+      };
+      recognition.onend = () => {
+        if (!cancelled && listeningRef.current && recognitionRef.current === recognition) {
+          try {
+            recognition.start();
+          } catch {
+            /* ignore restart race */
+          }
+        }
+      };
+      recognition.start();
+      recognitionRef.current = recognition;
+    }
+
+    void startListening();
     return () => {
-      recognition.stop();
+      cancelled = true;
+      recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
   }, [listening, conversationId, activeLanguage, appendLine, geminiLive]);
@@ -329,9 +395,16 @@ export default function ChatPage() {
       <main className="flex flex-1 flex-col gap-4 p-4">
         <div className="classical-card flex min-h-[48px] items-center justify-center p-3 text-sm">
           {state === "waking"
-            ? "Waking up…"
-            : `Agent: ${state}${conversationId ? ` · ${liveMode === "live" ? "Gemini Live" : "Web Speech"}` : ""}`}
+            ? STATE_LABELS.waking
+            : `${STATE_LABELS[state]}${conversationId ? ` · ${liveMode === "live" ? "Gemini Live" : "Web Speech"}` : ""}`}
         </div>
+
+        <MicStatusBanner
+          status={activeMicStatus}
+          listening={listening}
+          hasSession={Boolean(conversationId)}
+          onDismissBlocked={() => setMicStatus("off")}
+        />
 
         <TranscriptPane
           lines={lines}

@@ -119,6 +119,8 @@ def process_category_job(db: Session, job: Job, provider: TextCompletionProvider
         job.status = "done"
     except SpendCapExceeded:
         job.status = "failed"
+    except Exception:
+        job.status = "failed"
     from datetime import datetime, timezone
 
     job.processed_at = datetime.now(timezone.utc)

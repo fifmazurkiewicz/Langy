@@ -24,6 +24,8 @@ class OpenRouterProvider:
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
+                "HTTP-Referer": "https://langy.fmazurkiewicz.dev",
+                "X-Title": "Langy",
             },
             json={
                 "model": self.model,
@@ -32,7 +34,13 @@ class OpenRouterProvider:
             },
             timeout=60.0,
         )
-        response.raise_for_status()
+        if response.is_error:
+            detail = response.text[:500]
+            raise httpx.HTTPStatusError(
+                f"OpenRouter {response.status_code} for model {self.model!r}: {detail}",
+                request=response.request,
+                response=response,
+            )
         content = response.json()["choices"][0]["message"]["content"]
         import json
 

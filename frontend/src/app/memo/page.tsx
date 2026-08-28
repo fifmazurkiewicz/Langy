@@ -16,6 +16,7 @@ type VocabItem = {
   translation: string;
   source: string;
   context_sentence?: string | null;
+  category_key?: string | null;
 };
 
 type Tab = "flashcards" | "shadowing" | "mnemonics";
@@ -163,7 +164,7 @@ export default function MemoPage() {
                       <p className="font-serif text-lg">{item.term}</p>
                       <p className="text-sm opacity-80">{item.translation}</p>
                       <p className="text-xs opacity-60 mt-1">
-                        <PendingSourceBadge source={item.source} />
+                        <PendingSourceBadge source={item.source} categoryKey={item.category_key} />
                       </p>
                       <div className="mt-3 flex gap-2">
                         <button type="button" className="classical-btn classical-btn-primary" onClick={() => void decide(item.id, "accept")}>

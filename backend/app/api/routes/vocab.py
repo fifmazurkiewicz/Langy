@@ -45,6 +45,11 @@ def list_pending(
     if lang:
         q = q.filter(VocabItem.language == lang)
     items = q.order_by(VocabItem.created_at.desc()).all()
+    set_ids = {i.flashcard_set_id for i in items if i.flashcard_set_id}
+    category_by_set_id: dict[uuid.UUID, str] = {}
+    if set_ids:
+        for card_set in db.query(FlashcardSet).filter(FlashcardSet.id.in_(set_ids)).all():
+            category_by_set_id[card_set.id] = card_set.category_key
     return {
         "items": [
             {
@@ -54,6 +59,7 @@ def list_pending(
                 "context_sentence": i.context_sentence,
                 "source": i.source,
                 "language": i.language,
+                "category_key": category_by_set_id.get(i.flashcard_set_id) if i.flashcard_set_id else None,
             }
             for i in items
         ]

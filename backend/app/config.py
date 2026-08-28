@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     allowed_admin_emails: str = "fifmazurkiewicz@gmail.com"
 
     text_provider: str = "openrouter"
-    text_model: str = "google/gemini-2.0-flash-001"
+    text_model: str = "google/gemini-2.5-flash"
     openrouter_api_key: str = ""
 
     voice_mode: str = "speech_to_speech"
