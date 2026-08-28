@@ -1,22 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-
-const LABELS: Record<string, string> = {
-  "en-GB": "English (British)",
-  "en-US": "English (American)",
-  de: "German",
-  es: "Spanish",
-  it: "Italian",
-};
-
-const MARKERS: Record<string, string> = {
-  "en-GB": "GB",
-  "en-US": "US",
-  de: "DE",
-  es: "ES",
-  it: "IT",
-};
+import { LANGUAGE_LABELS, LANGUAGE_MARKERS, SUPPORTED_LANGUAGES } from "@/lib/constants/profile";
 
 export function LanguageSwitcher({
   activeLanguage,
@@ -40,9 +26,9 @@ export function LanguageSwitcher({
         aria-expanded={open}
       >
         <span className="flex h-5 w-7 items-center justify-center border border-[var(--color-divider)] text-xs tracking-wide text-[var(--color-accent)]">
-          {MARKERS[activeLanguage] ?? "??"}
+          {LANGUAGE_MARKERS[activeLanguage] ?? "??"}
         </span>
-        <span className="font-serif text-lg">{LABELS[activeLanguage] ?? activeLanguage}</span>
+        <span className="font-serif text-lg">{LANGUAGE_LABELS[activeLanguage] ?? activeLanguage}</span>
       </button>
 
       {open ? (
@@ -66,13 +52,20 @@ export function LanguageSwitcher({
                     }}
                   >
                     <span className="flex h-5 w-7 items-center justify-center border border-[var(--color-divider)] text-xs tracking-wide">
-                      {MARKERS[lang] ?? "??"}
+                      {LANGUAGE_MARKERS[lang] ?? "??"}
                     </span>
-                    <span className="font-serif text-xl">{LABELS[lang] ?? lang}</span>
+                    <span className="font-serif text-xl">{LANGUAGE_LABELS[lang] ?? lang}</span>
                   </button>
                 </li>
               ))}
             </ul>
+            <Link
+              href="/menu/languages"
+              className="classical-btn classical-btn-primary mt-4 flex w-full items-center justify-center"
+              onClick={() => setOpen(false)}
+            >
+              Add a language
+            </Link>
           </div>
         </div>
       ) : null}

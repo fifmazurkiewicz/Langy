@@ -3,6 +3,7 @@ import "./globals.css";
 import { ApiPulseBanner } from "@/components/ApiPulseBanner";
 import { ApiPulseProvider } from "@/components/ApiPulseProvider";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Langy",
@@ -24,14 +25,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full dark">
+    <html lang="en" className="h-full dark" suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-[var(--color-bg)] text-[var(--color-text)]">
-        <ApiPulseProvider>
-          <AuthProvider>
-            <ApiPulseBanner />
-            {children}
-          </AuthProvider>
-        </ApiPulseProvider>
+        <ThemeProvider>
+          <ApiPulseProvider>
+            <AuthProvider>
+              <ApiPulseBanner />
+              {children}
+            </AuthProvider>
+          </ApiPulseProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

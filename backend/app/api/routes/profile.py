@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
 from app.db import get_db
-from app.models import User, UserLanguageProfile
+from app.api.routes.onboarding import SUPPORTED_LANGUAGES
+from app.models import FlashcardSet, User, UserLanguageProfile
 
 router = APIRouter()
 
@@ -23,6 +25,16 @@ class ProfileUpdate(BaseModel):
 
 class ActiveLanguageUpdate(BaseModel):
     active_language: str
+
+
+class AddLanguageRequest(BaseModel):
+    language: str
+    skill_reading: int = Field(2, ge=1, le=5)
+    skill_speaking: int = Field(2, ge=1, le=5)
+    skill_writing: int = Field(2, ge=1, le=5)
+    skill_listening: int = Field(2, ge=1, le=5)
+    skill_vocabulary: int = Field(2, ge=1, le=5)
+    set_active: bool = False
 
 
 @router.get("/languages")
@@ -68,6 +80,41 @@ def set_active_language(
     user.active_language = body.active_language
     db.commit()
     return {"active_language": user.active_language}
+
+
+@router.post("/languages")
+def add_language(
+    body: AddLanguageRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    if body.language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(status_code=400, detail=f"Unsupported language: {body.language}")
+    existing = (
+        db.query(UserLanguageProfile)
+        .filter(UserLanguageProfile.user_id == user.id, UserLanguageProfile.language == body.language)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Language already added")
+
+    profile = UserLanguageProfile(
+        user_id=user.id,
+        language=body.language,
+        motivations=[],
+        interests=[],
+        skill_reading=body.skill_reading,
+        skill_speaking=body.skill_speaking,
+        skill_writing=body.skill_writing,
+        skill_listening=body.skill_listening,
+        skill_vocabulary=body.skill_vocabulary,
+        assessed_at=datetime.now(timezone.utc),
+    )
+    db.add(profile)
+    if body.set_active:
+        user.active_language = body.language
+    db.commit()
+    return {"ok": True, "language": body.language, "active_language": user.active_language}
 
 
 @router.patch("/{language}")
