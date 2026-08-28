@@ -22,7 +22,7 @@ type AddStep = "skills" | "profile";
 
 export default function MenuLanguagesPage() {
   const router = useRouter();
-  const { getAccessToken, activeLanguage, refreshProfile } = useAuth();
+  const { token, getAccessToken, activeLanguage, refreshProfile } = useAuth();
   const [profiles, setProfiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
@@ -35,8 +35,12 @@ export default function MenuLanguagesPage() {
   const [interestOther, setInterestOther] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const resolveToken = useCallback(async () => {
+    return token ?? (await getAccessToken());
+  }, [token, getAccessToken]);
+
   const load = useCallback(async () => {
-    const accessToken = await getAccessToken();
+    const accessToken = await resolveToken();
     if (!accessToken) return;
     setLoading(true);
     try {
@@ -45,14 +49,14 @@ export default function MenuLanguagesPage() {
     } finally {
       setLoading(false);
     }
-  }, [getAccessToken]);
+  }, [resolveToken]);
 
   useDeferredEffect(() => load(), [load]);
 
   const available = SUPPORTED_LANGUAGES.filter((l) => !profiles.includes(l.id));
 
   async function activate(lang: string) {
-    const accessToken = await getAccessToken();
+    const accessToken = await resolveToken();
     if (!accessToken) return;
     await setActiveLanguage(accessToken, lang);
     await refreshProfile();
@@ -67,10 +71,9 @@ export default function MenuLanguagesPage() {
   }
 
   async function handleAdd(lang: string) {
-    const accessToken = await getAccessToken();
+    const accessToken = await resolveToken();
     if (!accessToken) {
-      setError("Session expired. Please sign in again.");
-      router.push("/login");
+      setError("Could not verify your session. Wait a moment and try again.");
       return;
     }
     if (profiles.includes(lang)) {
