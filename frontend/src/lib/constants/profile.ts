@@ -23,6 +23,7 @@ export const MOTIVATIONS = [
   "culture",
   "heritage",
   "fun",
+  "other",
 ] as const;
 
 export const INTERESTS = [
@@ -38,6 +39,7 @@ export const INTERESTS = [
   "gaming",
   "art",
   "nature",
+  "other",
 ] as const;
 
 export const SKILL_ASPECTS = [

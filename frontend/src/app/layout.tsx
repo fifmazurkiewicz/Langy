@@ -3,6 +3,7 @@ import "./globals.css";
 import { ApiPulseBanner } from "@/components/ApiPulseBanner";
 import { ApiPulseProvider } from "@/components/ApiPulseProvider";
 import { AuthProvider } from "@/components/AuthProvider";
+import { SpendCapBanner } from "@/components/SpendCapBanner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ApiPulseProvider>
             <AuthProvider>
               <ApiPulseBanner />
+              <SpendCapBanner />
               {children}
             </AuthProvider>
           </ApiPulseProvider>

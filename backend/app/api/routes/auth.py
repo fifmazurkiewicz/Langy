@@ -16,13 +16,16 @@ def me(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
+    cap = float(user.spend_cap_usd)
+    spent = monthly_spend_usd(db, user.id)
     return {
         "id": str(user.id),
         "email": user.email,
         "display_name": user.display_name,
         "is_admin": user.is_admin,
-        "spend_cap_usd": float(user.spend_cap_usd),
-        "monthly_spend_usd": monthly_spend_usd(db, user.id),
+        "spend_cap_usd": cap,
+        "monthly_spend_usd": spent,
+        "at_cap": cap > 0 and spent >= cap,
         "active_language": user.active_language,
         "onboarding_completed_at": user.onboarding_completed_at.isoformat() if user.onboarding_completed_at else None,
     }

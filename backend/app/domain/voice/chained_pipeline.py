@@ -28,4 +28,21 @@ def chained_user_turn(
         provider=provider,
     )
     reply = f'Good point about "{stt_text}". Tell me more.'
+    if provider is not None:
+        try:
+            data = provider.complete_json(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a friendly language tutor. Reply briefly in the learner's target language. "
+                            'Return JSON: {"reply": "your message"}'
+                        ),
+                    },
+                    {"role": "user", "content": stt_text},
+                ]
+            )
+            reply = str(data.get("reply") or reply)
+        except Exception:
+            pass
     return correction, reply

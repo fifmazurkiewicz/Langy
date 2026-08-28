@@ -2,6 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -12,6 +13,43 @@ from app.domain.spend_cap.service import SpendCapExceeded
 from app.models import FlashcardSet, Job, User, VocabItem
 
 router = APIRouter()
+
+
+class CreateCategoryRequest(BaseModel):
+    language: str = Field(min_length=2)
+    category_key: str = Field(min_length=1, max_length=64)
+
+
+@router.post("")
+def create_category(
+    body: CreateCategoryRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    key = body.category_key.strip().lower().replace(" ", "_")
+    if not key:
+        raise HTTPException(status_code=400, detail="Invalid category name")
+    existing = (
+        db.query(FlashcardSet)
+        .filter(
+            FlashcardSet.user_id == user.id,
+            FlashcardSet.language == body.language,
+            FlashcardSet.category_key == key,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Category already exists")
+    card_set = FlashcardSet(
+        user_id=user.id,
+        language=body.language,
+        category_key=key,
+        is_custom=True,
+    )
+    db.add(card_set)
+    db.commit()
+    db.refresh(card_set)
+    return {"id": str(card_set.id), "category_key": card_set.category_key}
 
 
 @router.get("")

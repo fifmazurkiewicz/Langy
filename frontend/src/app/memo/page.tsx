@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { exportQuizlet, generateCategory, listVocabCategories, reviewCard } from "@/lib/api/vocab";
+import { createCategory, exportQuizlet, generateCategory, listVocabCategories, reviewCard } from "@/lib/api/vocab";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
 import { MnemonicsList } from "@/components/mnemonics/MnemonicsList";
 import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
 import { ShadowingFlow } from "@/components/shadowing/ShadowingFlow";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
+import { setActiveLanguage } from "@/lib/api/profile";
 
 type VocabItem = {
   id: string;
@@ -23,7 +26,9 @@ type Tab = "flashcards" | "shadowing" | "mnemonics";
 type SubTab = "due" | "pending" | "categories";
 
 export default function MemoPage() {
-  const { token, activeLanguage } = useAuth();
+  const { token, refreshProfile } = useAuth();
+  const { sessionLanguage, languages } = useLearningLanguage();
+  const activeLanguage = sessionLanguage;
   const [tab, setTab] = useState<Tab>("flashcards");
   const [subTab, setSubTab] = useState<SubTab>("pending");
   const [pending, setPending] = useState<VocabItem[]>([]);
@@ -32,6 +37,9 @@ export default function MemoPage() {
   const [mnemonicTerm, setMnemonicTerm] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ id: string; term: string; translation: string } | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -110,7 +118,19 @@ export default function MemoPage() {
   return (
     <div className="flex flex-1 flex-col pb-[calc(52px+env(safe-area-inset-bottom))]">
       <header className="border-b border-[var(--color-divider)] p-4">
-        <h1 className="text-xl mb-3">Memo</h1>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h1 className="text-xl">Memo</h1>
+          {token && languages.length > 0 ? (
+            <LanguageSwitcher
+              activeLanguage={activeLanguage}
+              languages={languages}
+              onChange={async (lang) => {
+                await setActiveLanguage(token, lang);
+                await refreshProfile();
+              }}
+            />
+          ) : null}
+        </div>
         <div className="flex gap-2 text-sm">
           {(["flashcards", "shadowing", "mnemonics"] as Tab[]).map((t) => (
             <button
@@ -179,32 +199,71 @@ export default function MemoPage() {
                 )}
               </ul>
             ) : subTab === "categories" ? (
-              <ul className="space-y-3">
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <input
+                    className="classical-input flex-1"
+                    placeholder="Add your own category"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="classical-btn classical-btn-primary shrink-0"
+                    disabled={creatingCategory || !newCategoryName.trim() || !token || !activeLanguage}
+                    onClick={async () => {
+                      if (!token || !activeLanguage || !newCategoryName.trim()) return;
+                      setCreatingCategory(true);
+                      try {
+                        await createCategory(token, {
+                          language: activeLanguage,
+                          category_key: newCategoryName.trim(),
+                        });
+                        setNewCategoryName("");
+                        await reload();
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : "Could not create category");
+                      } finally {
+                        setCreatingCategory(false);
+                      }
+                    }}
+                  >
+                    {creatingCategory ? "Adding…" : "Add"}
+                  </button>
+                </div>
+                <ul className="space-y-3">
                 {categories.length === 0 ? (
-                  <p className="opacity-60">No categories yet — set interests in onboarding.</p>
+                  <p className="opacity-60">No categories yet — set interests in onboarding or add one above.</p>
                 ) : (
                   categories.map((cat) => (
                     <li key={cat.id} className="classical-card flex items-center justify-between gap-2 p-4">
                       <div>
-                        <p className="font-serif capitalize">{cat.category_key}</p>
+                        <p className="font-serif capitalize">{cat.category_key.replace(/^custom_/, "")}</p>
                         <p className="text-sm opacity-70">{cat.accepted_count} accepted</p>
                       </div>
                       <button
                         type="button"
                         className="classical-btn classical-btn-primary"
+                        disabled={generatingId === cat.id}
                         onClick={async () => {
                           if (!token) return;
-                          const res = await generateCategory(token, cat.id);
-                          await reload();
-                          alert(`${res.created} word(s) added to Pending`);
+                          setGeneratingId(cat.id);
+                          try {
+                            const res = await generateCategory(token, cat.id);
+                            await reload();
+                            alert(`${res.created} word(s) added to Pending`);
+                          } finally {
+                            setGeneratingId(null);
+                          }
                         }}
                       >
-                        Generate new
+                        {generatingId === cat.id ? "Generating…" : "Generate new"}
                       </button>
                     </li>
                   ))
                 )}
-              </ul>
+                </ul>
+              </div>
             ) : reviewing ? (
               <section className="classical-card space-y-4 p-6 text-center">
                 <p className="font-serif text-2xl">{reviewing.term}</p>

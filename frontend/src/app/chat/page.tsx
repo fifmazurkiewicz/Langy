@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import {
   appendChatLine,
+  chainedTurn,
   endChatSession,
   getChatSession,
   listChatConversations,
@@ -18,7 +20,8 @@ import {
   type CorrectionResponse,
 } from "@/lib/api/correction";
 import { addSelectionPending, translateSelection, type TranslateSelectionResponse } from "@/lib/api/selection";
-import { fetchLiveToken } from "@/lib/api/live";
+import { fetchLiveConfig, fetchLiveToken } from "@/lib/api/live";
+import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
@@ -55,17 +58,16 @@ async function probeMicrophone(): Promise<MicStatus> {
 }
 
 export default function ChatPage() {
-  const { token, activeLanguage, refreshProfile } = useAuth();
+  const { token, refreshProfile } = useAuth();
+  const { sessionLanguage, languages, status: languageStatus } = useLearningLanguage();
   const { isHealthy: apiReady, isWaking } = useApiPulse();
   const [startingSession, setStartingSession] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [chatState, setChatState] = useState<ChatVisualState>("idle");
-  const [profileLanguage, setProfileLanguage] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [lines, setLines] = useState<TranscriptLineData[]>([]);
   const [corrections, setCorrections] = useState<Record<number, CorrectionResponse>>({});
-  const [languages, setLanguages] = useState<string[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [selectedSpan, setSelectedSpan] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<number | null>(null);
@@ -92,13 +94,15 @@ export default function ChatPage() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
   const listeningRef = useRef(listening);
+  const voiceModeRef = useRef("speech_to_speech");
+  const lineIndexRef = useRef(0);
 
   useEffect(() => {
     listeningRef.current = listening;
   }, [listening]);
 
-  const sessionLanguage = activeLanguage ?? profileLanguage ?? languages[0] ?? null;
-  const canStartSession = apiReady && Boolean(sessionLanguage) && Boolean(token) && !startingSession;
+  const canStartSession =
+    apiReady && languageStatus === "ready" && Boolean(sessionLanguage) && Boolean(token) && !startingSession;
   const visualState: ChatVisualState = isWaking ? "waking" : chatState;
 
   const geminiLive = useGeminiLive({
@@ -115,13 +119,15 @@ export default function ChatPage() {
     async (convId: string) => {
       if (!token || !sessionLanguage) return;
       try {
+        const config = await fetchLiveConfig(token);
+        voiceModeRef.current = config.voice_mode;
         const live = await fetchLiveToken(token, {
           language: sessionLanguage,
           conversation_id: convId,
         });
         setLiveMode(live.mode === "live" && live.configured ? "live" : "mock");
         if (live.mode === "live" && live.configured) {
-          await geminiLive.connect(live);
+          await geminiLive.connect(live, { conversationId: convId, apiToken: token });
         }
       } catch {
         setLiveMode("mock");
@@ -152,17 +158,13 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!token) return;
-    apiFetch<{ active_language: string | null; profiles: { language: string }[] }>(
-      "/api/profile/languages",
-      { token }
-    )
-      .then((data) => {
-        setLanguages(data.profiles.map((p) => p.language));
-        if (data.active_language) setProfileLanguage(data.active_language);
-      })
-      .catch(() => setLanguages(["en-GB"]));
     apiFetch<{ count: number }>("/api/vocab/pending/count", { token })
       .then((d) => setPendingCount(d.count))
+      .catch(() => undefined);
+    fetchLiveConfig(token)
+      .then((c) => {
+        voiceModeRef.current = c.voice_mode;
+      })
       .catch(() => undefined);
   }, [token]);
 
@@ -440,10 +442,31 @@ export default function ChatPage() {
         const text = event.results[event.results.length - 1][0].transcript.trim();
         if (!text) return;
         setChatState("thinking");
-        void appendLine("User", text).then(() => {
+        void appendLine("User", text).then((lineIndex) => {
+          lineIndexRef.current = lineIndex;
           if (geminiLive.connected) {
             void geminiLive.sendUserText(text);
             setChatState(listeningRef.current ? "listening" : "idle");
+            return;
+          }
+          if (voiceModeRef.current === "chained" && token && sessionLanguage) {
+            void chainedTurn(token, { text, language: sessionLanguage, conversation_id: conversationId ?? undefined })
+              .then((res) => {
+                if (res.correction?.is_corrected) {
+                  setCorrections((prev) => ({ ...prev, [lineIndex]: res.correction as CorrectionResponse }));
+                }
+                setChatState("speaking");
+                void appendLine("Agent", res.agent_reply).then(() =>
+                  setChatState(listeningRef.current ? "listening" : "idle")
+                );
+              })
+              .catch(() => {
+                const reply = `Good point about "${text}". Tell me more.`;
+                setChatState("speaking");
+                void appendLine("Agent", reply).then(() =>
+                  setChatState(listeningRef.current ? "listening" : "idle")
+                );
+              });
             return;
           }
           const reply = `Good point about "${text}". Tell me more.`;
@@ -522,8 +545,16 @@ export default function ChatPage() {
           preSessionAction={
             <>
               {!apiReady ? <p className="text-center text-sm text-[var(--color-soft)]">Waiting for API…</p> : null}
-              {apiReady && !sessionLanguage ? (
+              {apiReady && languageStatus === "loading" ? (
                 <p className="text-center text-sm text-[var(--color-soft)]">Loading profile…</p>
+              ) : null}
+              {apiReady && languageStatus === "needs_setup" ? (
+                <div className="space-y-2 text-center text-sm">
+                  <p className="text-[var(--color-soft)]">Add a learning language to start chatting.</p>
+                  <Link href="/onboarding" className="classical-btn classical-btn-primary inline-block px-4 py-2">
+                    Set up languages
+                  </Link>
+                </div>
               ) : null}
               {startError ? <p className="text-center text-sm text-red-400">{startError}</p> : null}
             </>

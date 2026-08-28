@@ -3,15 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  INTERESTS,
   LANGUAGE_LABELS,
   LANGUAGE_MARKERS,
+  MOTIVATIONS,
   SKILL_ASPECTS,
   SUPPORTED_LANGUAGES,
 } from "@/lib/constants/profile";
+import { ChipToggleWithOther, resolveChipValues } from "@/components/profile/ChipToggleWithOther";
 import { addLanguage, fetchProfiles, setActiveLanguage } from "@/lib/api/profile";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { MenuBackHeader } from "@/components/menu/MenuBackHeader";
+
+type AddStep = "skills" | "profile";
 
 export default function MenuLanguagesPage() {
   const router = useRouter();
@@ -19,7 +24,12 @@ export default function MenuLanguagesPage() {
   const [profiles, setProfiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
+  const [addStep, setAddStep] = useState<AddStep>("skills");
   const [skills, setSkills] = useState({ reading: 2, speaking: 2, writing: 2, listening: 2, vocabulary: 2 });
+  const [motivations, setMotivations] = useState<string[]>(["fun"]);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [motivationOther, setMotivationOther] = useState("");
+  const [interestOther, setInterestOther] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -46,12 +56,21 @@ export default function MenuLanguagesPage() {
     void load();
   }
 
+  function toggleInList(field: "motivations" | "interests", value: string) {
+    const list = field === "motivations" ? motivations : interests;
+    const setter = field === "motivations" ? setMotivations : setInterests;
+    const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+    setter(next);
+  }
+
   async function handleAdd(lang: string) {
     if (!token) return;
     setError(null);
     try {
       await addLanguage(token, {
         language: lang,
+        motivations: resolveChipValues(motivations, { motivation_other: motivationOther }, "motivation_other"),
+        interests: resolveChipValues(interests, { interest_other: interestOther }, "interest_other"),
         skill_reading: skills.reading,
         skill_speaking: skills.speaking,
         skill_writing: skills.writing,
@@ -60,6 +79,11 @@ export default function MenuLanguagesPage() {
         set_active: profiles.length === 0,
       });
       setAdding(null);
+      setAddStep("skills");
+      setMotivations(["fun"]);
+      setInterests([]);
+      setMotivationOther("");
+      setInterestOther("");
       await refreshProfile();
       void load();
     } catch (e) {
@@ -94,41 +118,91 @@ export default function MenuLanguagesPage() {
 
         {adding ? (
           <section className="classical-card space-y-3 p-4">
-            <h2 className="font-serif text-lg">Self-assessment — {LANGUAGE_LABELS[adding]}</h2>
-            <p className="text-sm text-[var(--color-soft)]">Rate each skill from 1 (beginner) to 5 (advanced).</p>
-            {SKILL_ASPECTS.map(({ key, label }) => (
-              <label key={key} className="block text-sm">
-                {label}
-                <input
-                  type="range"
-                  min={1}
-                  max={5}
-                  value={skills[key as keyof typeof skills]}
-                  onChange={(e) =>
-                    setSkills((s) => ({ ...s, [key]: Number(e.target.value) }))
-                  }
-                  className="mt-1 w-full"
-                />
-              </label>
-            ))}
-            <div className="flex gap-2">
-              <button type="button" className="classical-btn flex-1" onClick={() => setAdding(null)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="classical-btn classical-btn-primary flex-1"
-                onClick={() => void handleAdd(adding)}
-              >
-                Add language
-              </button>
-            </div>
+            <h2 className="font-serif text-lg">
+              {addStep === "skills" ? "Self-assessment" : "Motivation & interests"} — {LANGUAGE_LABELS[adding]}
+            </h2>
+            {addStep === "skills" ? (
+              <>
+                <p className="text-sm text-[var(--color-soft)]">Rate each skill from 1 (beginner) to 5 (advanced).</p>
+                {SKILL_ASPECTS.map(({ key, label }) => (
+                  <label key={key} className="block text-sm">
+                    {label}
+                    <input
+                      type="range"
+                      min={1}
+                      max={5}
+                      value={skills[key as keyof typeof skills]}
+                      onChange={(e) =>
+                        setSkills((s) => ({ ...s, [key]: Number(e.target.value) }))
+                      }
+                      className="mt-1 w-full"
+                    />
+                  </label>
+                ))}
+                <div className="flex gap-2">
+                  <button type="button" className="classical-btn flex-1" onClick={() => setAdding(null)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="classical-btn classical-btn-primary flex-1" onClick={() => setAddStep("profile")}>
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <h3 className="font-serif">Motivation</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {MOTIVATIONS.map((m) => (
+                      <ChipToggleWithOther
+                        key={m}
+                        label={m}
+                        selected={motivations.includes(m)}
+                        onToggle={() => toggleInList("motivations", m)}
+                        otherText={motivationOther}
+                        onOtherTextChange={m === "other" ? setMotivationOther : undefined}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-serif">Interests</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {INTERESTS.map((i) => (
+                      <ChipToggleWithOther
+                        key={i}
+                        label={i}
+                        selected={interests.includes(i)}
+                        onToggle={() => toggleInList("interests", i)}
+                        otherText={interestOther}
+                        onOtherTextChange={i === "other" ? setInterestOther : undefined}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" className="classical-btn flex-1" onClick={() => setAddStep("skills")}>
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="classical-btn classical-btn-primary flex-1"
+                    onClick={() => void handleAdd(adding)}
+                  >
+                    Add language
+                  </button>
+                </div>
+              </>
+            )}
           </section>
         ) : available.length > 0 ? (
           <button
             type="button"
             className="classical-btn classical-btn-primary w-full"
-            onClick={() => setAdding(available[0].id)}
+            onClick={() => {
+              setAdding(available[0].id);
+              setAddStep("skills");
+            }}
           >
             Add a language
           </button>
@@ -152,7 +226,7 @@ export default function MenuLanguagesPage() {
         ) : null}
 
         <p className="text-xs text-[var(--color-soft)]">
-          Tap a language to make it active across Chat and Memo. New languages ask for a quick skill check.
+          Tap a language to make it active across Chat and Memo. New languages include a short interview.
         </p>
         <button type="button" className="classical-btn w-full" onClick={() => router.push("/menu/profile")}>
           Edit motivation & interests

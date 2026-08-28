@@ -69,3 +69,24 @@ export function resumeChatSession(token: string, conversationId: string) {
     voice_mode: string;
   }>(`/api/chat/sessions/${conversationId}/resume`, { method: "POST", token });
 }
+
+export function chainedTurn(
+  token: string,
+  body: { text: string; language?: string; conversation_id?: string }
+) {
+  return apiFetch<{
+    agent_reply: string;
+    correction: { is_corrected: boolean; corrected_text?: string; explanation_pl?: string };
+  }>("/api/chat/chained-turn", { method: "POST", token, body });
+}
+
+export function saveWord(
+  token: string,
+  conversationId: string,
+  body: { term: string; translation: string; context?: string }
+) {
+  return apiFetch<{ vocab_id: string; status: string }>(
+    `/api/chat/sessions/${conversationId}/save-word`,
+    { method: "POST", token, body }
+  );
+}

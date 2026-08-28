@@ -30,6 +30,8 @@ class ActiveLanguageUpdate(BaseModel):
 
 class AddLanguageRequest(BaseModel):
     language: str
+    motivations: list[str] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
     skill_reading: int = Field(2, ge=1, le=5)
     skill_speaking: int = Field(2, ge=1, le=5)
     skill_writing: int = Field(2, ge=1, le=5)
@@ -102,8 +104,8 @@ def add_language(
     profile = UserLanguageProfile(
         user_id=user.id,
         language=body.language,
-        motivations=[],
-        interests=[],
+        motivations=body.motivations or ["fun"],
+        interests=body.interests or [],
         skill_reading=body.skill_reading,
         skill_speaking=body.skill_speaking,
         skill_writing=body.skill_writing,
@@ -114,7 +116,11 @@ def add_language(
     db.add(profile)
     if body.set_active:
         user.active_language = body.language
+    db.flush()
+    new_keys = ensure_flashcard_sets_for_interests(db, user.id, body.language, body.interests)
     db.commit()
+    if new_keys:
+        enqueue_jobs_for_new_interest_sets(db, user.id, body.language, new_keys)
     return {"ok": True, "language": body.language, "active_language": user.active_language}
 
 

@@ -11,10 +11,10 @@ import {
   SKILL_ASPECTS,
   SUPPORTED_LANGUAGES,
 } from "@/lib/constants/profile";
-import { ChipToggle } from "@/components/profile/ChipToggle";
+import { ChipToggleWithOther, resolveChipValues } from "@/components/profile/ChipToggleWithOther";
+import { CefrPlacement } from "@/components/profile/CefrPlacement";
 import { useAuth } from "@/components/AuthProvider";
 
-const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 const DURATIONS = [4, 8, 12, 16] as const;
 
 type LangProfile = {
@@ -44,6 +44,8 @@ export default function OnboardingPage() {
   const [planWeeks, setPlanWeeks] = useState<number>(8);
   const [activeLanguage, setActiveLanguage] = useState("en-GB");
   const [submitting, setSubmitting] = useState(false);
+  const [otherTexts, setOtherTexts] = useState<Record<string, Record<string, string>>>({});
+  const [placementDone, setPlacementDone] = useState(false);
 
   const currentLang = selected[profileIndex];
   const currentProfile = profiles[currentLang] ?? defaultProfile();
@@ -94,10 +96,15 @@ export default function OnboardingPage() {
           active_language: activeLanguage,
           profiles: selected.map((language) => {
             const p = profiles[language] ?? defaultProfile();
+            const langOthers = otherTexts[language] ?? {};
             return {
               language,
-              motivations: p.motivations.length ? p.motivations : ["fun"],
-              interests: p.interests,
+              motivations: resolveChipValues(
+                p.motivations.length ? p.motivations : ["fun"],
+                langOthers,
+                "motivation_other"
+              ),
+              interests: resolveChipValues(p.interests, langOthers, "interest_other"),
               skill_reading: p.skills.reading,
               skill_speaking: p.skills.speaking,
               skill_writing: p.skills.writing,
@@ -174,11 +181,21 @@ export default function OnboardingPage() {
             <h3 className="font-serif text-lg">Motivation</h3>
             <div className="flex flex-wrap gap-2">
               {MOTIVATIONS.map((m) => (
-                <ChipToggle
+                <ChipToggleWithOther
                   key={m}
                   label={m}
                   selected={currentProfile.motivations.includes(m)}
                   onToggle={() => toggleInList("motivations", m)}
+                  otherText={otherTexts[currentLang]?.motivation_other}
+                  onOtherTextChange={
+                    m === "other"
+                      ? (value) =>
+                          setOtherTexts((prev) => ({
+                            ...prev,
+                            [currentLang]: { ...prev[currentLang], motivation_other: value },
+                          }))
+                      : undefined
+                  }
                 />
               ))}
             </div>
@@ -188,11 +205,21 @@ export default function OnboardingPage() {
             <h3 className="font-serif text-lg">Interests</h3>
             <div className="flex flex-wrap gap-2">
               {INTERESTS.map((i) => (
-                <ChipToggle
+                <ChipToggleWithOther
                   key={i}
                   label={i}
                   selected={currentProfile.interests.includes(i)}
                   onToggle={() => toggleInList("interests", i)}
+                  otherText={otherTexts[currentLang]?.interest_other}
+                  onOtherTextChange={
+                    i === "other"
+                      ? (value) =>
+                          setOtherTexts((prev) => ({
+                            ...prev,
+                            [currentLang]: { ...prev[currentLang], interest_other: value },
+                          }))
+                      : undefined
+                  }
                 />
               ))}
             </div>
@@ -235,7 +262,14 @@ export default function OnboardingPage() {
           <h2 className="font-serif text-xl">Study plan (optional)</h2>
           <p className="text-sm text-[var(--color-soft)]">CEFR placement and a structured path — or skip and use Chat freely.</p>
           <label className="flex min-h-[44px] items-center gap-2">
-            <input type="checkbox" checked={wantsPlan} onChange={(e) => setWantsPlan(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={wantsPlan}
+              onChange={(e) => {
+                setWantsPlan(e.target.checked);
+                setPlacementDone(false);
+              }}
+            />
             Create a study plan
           </label>
           {wantsPlan ? (
@@ -243,7 +277,10 @@ export default function OnboardingPage() {
               <select
                 className="classical-input"
                 value={planLanguage}
-                onChange={(e) => setPlanLanguage(e.target.value)}
+                onChange={(e) => {
+                  setPlanLanguage(e.target.value);
+                  setPlacementDone(false);
+                }}
               >
                 {selected.map((id) => (
                   <option key={id} value={id}>
@@ -251,24 +288,32 @@ export default function OnboardingPage() {
                   </option>
                 ))}
               </select>
-              <select className="classical-input" value={cefr} onChange={(e) => setCefr(e.target.value)}>
-                {CEFR.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="classical-input"
-                value={planWeeks}
-                onChange={(e) => setPlanWeeks(Number(e.target.value))}
-              >
-                {DURATIONS.map((w) => (
-                  <option key={w} value={w}>
-                    {w} weeks
-                  </option>
-                ))}
-              </select>
+              {!placementDone ? (
+                <CefrPlacement
+                  onResult={(level) => {
+                    setCefr(level);
+                    setPlacementDone(true);
+                  }}
+                  onSkip={() => setPlacementDone(true)}
+                />
+              ) : (
+                <>
+                  <p className="text-sm text-[var(--color-soft)]">
+                    Suggested level: <strong>{cefr}</strong>
+                  </p>
+                  <select
+                    className="classical-input"
+                    value={planWeeks}
+                    onChange={(e) => setPlanWeeks(Number(e.target.value))}
+                  >
+                    {DURATIONS.map((w) => (
+                      <option key={w} value={w}>
+                        {w} weeks
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
             </>
           ) : null}
           <button type="button" className="classical-btn classical-btn-primary w-full" onClick={() => setPhase("active")}>

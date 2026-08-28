@@ -33,6 +33,8 @@ export function addLanguage(
   token: string,
   body: {
     language: string;
+    motivations?: string[];
+    interests?: string[];
     skill_reading?: number;
     skill_speaking?: number;
     skill_writing?: number;

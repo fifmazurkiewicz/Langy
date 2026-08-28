@@ -27,3 +27,11 @@ export function listVocabCategories(token: string, language?: string) {
 export function generateCategory(token: string, setId: string) {
   return apiFetch<{ created: number }>(`/api/categories/${setId}/generate`, { method: "POST", token });
 }
+
+export function createCategory(token: string, body: { language: string; category_key: string }) {
+  return apiFetch<{ id: string; category_key: string }>("/api/categories", {
+    method: "POST",
+    token,
+    body,
+  });
+}

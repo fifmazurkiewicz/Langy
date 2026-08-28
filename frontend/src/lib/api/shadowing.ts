@@ -40,6 +40,14 @@ export function endShadowingSession(token: string, sessionId: string) {
   });
 }
 
+export function addShadowingPending(token: string, sessionId: string, lineIds: string[]) {
+  return apiFetch<{ created: number }>(`/api/shadowing/sessions/${sessionId}/pending`, {
+    method: "POST",
+    token,
+    body: { line_ids: lineIds },
+  });
+}
+
 export function listShadowingConversations(token: string, language?: string) {
   const q = language ? `?language=${encodeURIComponent(language)}` : "";
   return apiFetch<{ conversations: { id: string; preview: string }[] }>(
