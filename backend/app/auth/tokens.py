@@ -5,6 +5,8 @@ from jwt.exceptions import PyJWTError
 
 from app.config import Settings, get_settings
 
+DEV_TOKEN = "dev-token"
+
 _DEV_PAYLOAD = {
     "sub": "00000000-0000-4000-8000-000000000001",
     "email": "dev@langy.local",
@@ -13,10 +15,16 @@ _DEV_PAYLOAD = {
 }
 
 
+def _unauthorized(detail: str = "Invalid token") -> HTTPException:
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
+
 def decode_access_token(token: str, settings: Settings | None = None) -> dict:
     settings = settings or get_settings()
 
-    if token == "dev-token":
+    if token == DEV_TOKEN:
+        if not settings.dev_auth_allowed:
+            raise _unauthorized()
         return dict(_DEV_PAYLOAD)
 
     decode_errors: list[str] = []
@@ -38,13 +46,13 @@ def decode_access_token(token: str, settings: Settings | None = None) -> dict:
         except PyJWTError as exc:
             decode_errors.append(f"hs256:{exc.__class__.__name__}")
 
-    if not settings.supabase_url and not settings.supabase_jwt_secret:
+    if settings.dev_auth_allowed and not settings.supabase_jwt_secret:
         return jwt.decode(token, options={"verify_signature": False})
 
     detail = "Invalid token"
     if decode_errors:
         detail = f"Invalid token ({', '.join(decode_errors)})"
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+    raise _unauthorized(detail)
 
 
 def _decode_with_jwks(token: str, settings: Settings) -> dict:

@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.auth.tokens import decode_access_token
+from app.auth.tokens import DEV_TOKEN, decode_access_token
 from app.config import get_settings
 from app.db import get_db
 from app.models import User
@@ -40,7 +40,7 @@ def get_current_user(
         db.add(user)
         db.commit()
         db.refresh(user)
-    elif creds.credentials == "dev-token" and not user.is_admin:
+    elif settings.dev_auth_allowed and creds.credentials == DEV_TOKEN and not user.is_admin:
         user.is_admin = True
         db.commit()
         db.refresh(user)

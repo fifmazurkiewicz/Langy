@@ -13,7 +13,12 @@ cp .env.example .env
 cp frontend/.env.example frontend/.env.local
 ```
 
-Fill Supabase + OpenRouter + Google keys when wiring voice/AI. For UI-only dev, leave Supabase empty — app uses dev auth.
+Fill Supabase + OpenRouter + Google keys when wiring voice/AI.
+
+For UI-only dev without Supabase, leave `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` empty **and**
+set `DEV_AUTH_ENABLED=true` with an empty `SUPABASE_URL` in `.env`. The API rejects `dev-token` without that opt-in —
+that is deliberate, since the flag is what keeps production from accepting it (see
+`docs/technical/decisions/2026-08-28-session-gate-and-dev-auth.md`).
 
 ## 2. Database
 

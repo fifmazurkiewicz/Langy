@@ -548,10 +548,15 @@ export default function ChatPage() {
               {apiReady && languageStatus === "needs_setup" ? (
                 <div className="space-y-2 text-center text-sm">
                   <p className="text-[var(--color-soft)]">Add a learning language to start chatting.</p>
-                  <Link href="/onboarding" className="classical-btn classical-btn-primary inline-block px-4 py-2">
+                  <Link href="/menu/languages" className="classical-btn classical-btn-primary inline-block px-4 py-2">
                     Set up languages
                   </Link>
                 </div>
+              ) : null}
+              {apiReady && languageStatus === "error" ? (
+                <p className="text-center text-sm text-red-400">
+                  Could not load your languages. Check your connection and reload.
+                </p>
               ) : null}
               {startError ? <p className="text-center text-sm text-red-400">{startError}</p> : null}
             </>

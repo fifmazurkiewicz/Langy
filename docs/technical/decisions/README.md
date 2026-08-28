@@ -53,6 +53,14 @@ Short dated decisions. Living detail often lives in `docs/architecture-for-curso
 - Shadowing: topic → generate or pick conversation; show-text; TTS|Live; tip+Add + end batch → Pending `shadowing`
 - Spec: `docs/superpowers/specs/2026-08-27-shadowing-memo-design.md`
 
+## 2026-08-28 — Centralized session gate; dev auth opt-in
+
+- Single client-side `AuthGate` in root layout; pages never redirect for auth (routing rules unit tested in `lib/auth/routePolicy.ts`)
+- Session status enum incl. `profile_unknown` — Render cold start never misroutes
+- OAuth returns to `/`; gate sends new users to `/onboarding`, returning users to `/chat`
+- `DEV_AUTH_ENABLED` (default false) gates `dev-token` + unsigned JWTs; ignored when `SUPABASE_URL` is set
+- ADR: `docs/technical/decisions/2026-08-28-session-gate-and-dev-auth.md`
+
 ## 2026-08-27 — Mnemonics (Package 3)
 
 - Memo sub-tabs: Flashcards · Shadowing · **Mnemonics**

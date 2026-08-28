@@ -22,12 +22,13 @@ cd backend && npm install && npm run promptfoo   # mock provider, no API keys
 
 # Frontend
 cd frontend && npm install && npm run dev
-cd frontend && npm run lint && npm run build
+cd frontend && npm run lint && npm test && npm run build
 
 # Health: GET http://localhost:8000/api/health
 ```
 
-Local dev without Supabase: frontend uses `dev-token`; backend accepts `Authorization: Bearer dev-token`.
+Local dev without Supabase: leave `NEXT_PUBLIC_SUPABASE_*` empty so the frontend sends `dev-token`, and set
+`DEV_AUTH_ENABLED=true` (with empty `SUPABASE_URL`) so the backend accepts it. Production rejects `dev-token`.
 
 ## Docs map
 

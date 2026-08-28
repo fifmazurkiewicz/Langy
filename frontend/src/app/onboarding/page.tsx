@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import {
   INTERESTS,
@@ -33,8 +32,7 @@ const defaultProfile = (): LangProfile => ({
 type Phase = "languages" | "profile" | "plan" | "active";
 
 export default function OnboardingPage() {
-  const router = useRouter();
-  const { getAccessToken, loading: authLoading, refreshProfile, markOnboardingComplete } = useAuth();
+  const { getAccessToken, refreshProfile, markOnboardingComplete } = useAuth();
   const [phase, setPhase] = useState<Phase>("languages");
   const [selected, setSelected] = useState<string[]>(["en-GB"]);
   const [profileIndex, setProfileIndex] = useState(0);
@@ -48,14 +46,6 @@ export default function OnboardingPage() {
   const [otherTexts, setOtherTexts] = useState<Record<string, Record<string, string>>>({});
   const [placementDone, setPlacementDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!authLoading) {
-      void getAccessToken().then((access) => {
-        if (!access) router.replace("/login");
-      });
-    }
-  }, [authLoading, getAccessToken, router]);
 
   const currentLang = selected[profileIndex];
   const currentProfile = profiles[currentLang] ?? defaultProfile();
@@ -97,8 +87,7 @@ export default function OnboardingPage() {
   async function complete() {
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      setError("Session expired. Please sign in again.");
-      router.replace("/login");
+      setError("Your session could not be read. Reload the page and try again.");
       return;
     }
     setSubmitting(true);
@@ -132,23 +121,16 @@ export default function OnboardingPage() {
           }),
         },
       });
-      markOnboardingComplete();
+      // Refresh first so the server value wins, then assert completion locally in case the API
+      // call fails — AuthGate navigates to Chat as soon as the status turns "ready".
       await refreshProfile();
-      router.replace("/chat");
+      markOnboardingComplete();
     } catch (e) {
       console.error(e);
       setError("Could not complete onboarding. Is the API running?");
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (authLoading) {
-    return (
-      <main className="mx-auto flex max-w-lg flex-1 flex-col gap-4 p-6 pb-12">
-        <p className="font-serif text-lg text-[var(--color-soft)]">Loading…</p>
-      </main>
-    );
   }
 
   return (

@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = ""
     supabase_jwt_audience: str = "authenticated"
 
+    # Local-only escape hatch: accepts "dev-token" and unsigned JWTs. Never enable on Render.
+    dev_auth_enabled: bool = False
+
     spend_cap_tz: str = "Europe/Warsaw"
     allowed_admin_emails: str = "fifmazurkiewicz@gmail.com"
 
@@ -34,6 +37,11 @@ class Settings(BaseSettings):
     @property
     def admin_email_set(self) -> set[str]:
         return {e.strip().lower() for e in self.allowed_admin_emails.split(",") if e.strip()}
+
+    @property
+    def dev_auth_allowed(self) -> bool:
+        """Dev auth requires an explicit opt-in AND the absence of a real Supabase project."""
+        return self.dev_auth_enabled and not self.supabase_url
 
 
 @lru_cache
