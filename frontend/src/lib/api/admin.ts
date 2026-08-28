@@ -3,6 +3,7 @@ import { apiFetch } from "@/lib/api";
 export type AdminUser = {
   id: string;
   email: string | null;
+  display_name: string | null;
   spend_cap_usd: number;
   monthly_spend_usd: number;
   at_cap: boolean;

@@ -46,7 +46,8 @@ export default function AdminPage() {
       <p className="text-sm opacity-70">
         Costly features pause until next calendar month. Reviews stay available. Nothing is deleted.
       </p>
-      <div className="hidden gap-2 border-b border-[var(--color-divider)] pb-2 text-sm font-medium md:grid md:grid-cols-5">
+      <div className="hidden gap-2 border-b border-[var(--color-divider)] pb-2 text-sm font-medium md:grid md:grid-cols-6">
+        <div>Name</div>
         <div>Email</div>
         <div className="text-right">Cap (USD)</div>
         <div>Used</div>
@@ -57,8 +58,9 @@ export default function AdminPage() {
         {users.map((u) => (
           <li
             key={u.id}
-            className={`classical-card grid gap-2 p-4 md:grid-cols-5 md:items-center ${u.at_cap ? "border-red-400/50" : ""}`}
+            className={`classical-card grid gap-2 p-4 md:grid-cols-6 md:items-center ${u.at_cap ? "border-red-400/50" : ""}`}
           >
+            <div className="truncate text-sm font-serif">{u.display_name ?? "—"}</div>
             <div className="truncate text-sm">{u.email ?? u.id}</div>
             <div className="text-right text-sm">
               {editing === u.id ? (

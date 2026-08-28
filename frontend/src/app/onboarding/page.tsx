@@ -3,31 +3,84 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import {
+  INTERESTS,
+  LANGUAGE_LABELS,
+  LANGUAGE_MARKERS,
+  MOTIVATIONS,
+  SKILL_ASPECTS,
+  SUPPORTED_LANGUAGES,
+} from "@/lib/constants/profile";
+import { ChipToggle } from "@/components/profile/ChipToggle";
 import { useAuth } from "@/components/AuthProvider";
 
-const LANGUAGES = [
-  { id: "en-GB", label: "GB English" },
-  { id: "en-US", label: "US English" },
-  { id: "de", label: "DE German" },
-  { id: "es", label: "ES Spanish" },
-  { id: "it", label: "IT Italian" },
-];
+const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+const DURATIONS = [4, 8, 12, 16] as const;
 
-const INTERESTS = ["technology", "travel", "movies", "music", "sports", "food"];
-const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"];
-const DURATIONS = [4, 8, 12, 16];
+type LangProfile = {
+  motivations: string[];
+  interests: string[];
+  skills: Record<(typeof SKILL_ASPECTS)[number]["key"], number>;
+};
+
+const defaultProfile = (): LangProfile => ({
+  motivations: [],
+  interests: [],
+  skills: { reading: 2, speaking: 2, writing: 2, listening: 2, vocabulary: 2 },
+});
+
+type Phase = "languages" | "profile" | "plan" | "active";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { token, refreshProfile } = useAuth();
-  const [step, setStep] = useState(0);
+  const [phase, setPhase] = useState<Phase>("languages");
   const [selected, setSelected] = useState<string[]>(["en-GB"]);
-  const [activeLanguage, setActiveLanguage] = useState("en-GB");
-  const [interests, setInterests] = useState<string[]>(["travel"]);
+  const [profileIndex, setProfileIndex] = useState(0);
+  const [profiles, setProfiles] = useState<Record<string, LangProfile>>({});
   const [wantsPlan, setWantsPlan] = useState(false);
-  const [cefr, setCefr] = useState("A2");
-  const [planWeeks, setPlanWeeks] = useState(8);
+  const [planLanguage, setPlanLanguage] = useState("en-GB");
+  const [cefr, setCefr] = useState<string>("A2");
+  const [planWeeks, setPlanWeeks] = useState<number>(8);
+  const [activeLanguage, setActiveLanguage] = useState("en-GB");
   const [submitting, setSubmitting] = useState(false);
+
+  const currentLang = selected[profileIndex];
+  const currentProfile = profiles[currentLang] ?? defaultProfile();
+
+  function updateCurrent(patch: Partial<LangProfile>) {
+    if (!currentLang) return;
+    setProfiles((prev) => ({
+      ...prev,
+      [currentLang]: { ...defaultProfile(), ...prev[currentLang], ...patch },
+    }));
+  }
+
+  function toggleInList(field: "motivations" | "interests", value: string) {
+    const list = currentProfile[field];
+    const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+    updateCurrent({ [field]: next });
+  }
+
+  function skipProfileForLanguage() {
+    if (profileIndex < selected.length - 1) {
+      setProfileIndex((i) => i + 1);
+    } else {
+      setPlanLanguage(selected[0]);
+      setActiveLanguage(selected[0]);
+      setPhase("plan");
+    }
+  }
+
+  function nextProfileStep() {
+    if (profileIndex < selected.length - 1) {
+      setProfileIndex((i) => i + 1);
+    } else {
+      setPlanLanguage(selected[0]);
+      setActiveLanguage(selected[0]);
+      setPhase("plan");
+    }
+  }
 
   async function complete() {
     if (!token) return;
@@ -39,15 +92,21 @@ export default function OnboardingPage() {
         body: {
           languages: selected,
           active_language: activeLanguage,
-          profiles: selected.map((language) => ({
-            language,
-            motivations: ["fun"],
-            interests: language === activeLanguage ? interests : [],
-            skill_listening: 2,
-            skill_speaking: 2,
-            cefr_level: language === activeLanguage && wantsPlan ? cefr : null,
-            plan_duration_weeks: language === activeLanguage && wantsPlan ? planWeeks : null,
-          })),
+          profiles: selected.map((language) => {
+            const p = profiles[language] ?? defaultProfile();
+            return {
+              language,
+              motivations: p.motivations.length ? p.motivations : ["fun"],
+              interests: p.interests,
+              skill_reading: p.skills.reading,
+              skill_speaking: p.skills.speaking,
+              skill_writing: p.skills.writing,
+              skill_listening: p.skills.listening,
+              skill_vocabulary: p.skills.vocabulary,
+              cefr_level: wantsPlan && planLanguage === language ? cefr : null,
+              plan_duration_weeks: wantsPlan && planLanguage === language ? planWeeks : null,
+            };
+          }),
         },
       });
       await refreshProfile();
@@ -62,73 +121,137 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto flex max-w-lg flex-1 flex-col gap-4 p-6 pb-12">
-      <h1 className="text-2xl">Welcome</h1>
-      {step === 0 ? (
-        <section className="classical-card p-4 space-y-3">
-          <h2 className="text-lg">Choose languages</h2>
-          {LANGUAGES.map((lang) => (
+      <h1 className="font-serif text-3xl">Welcome</h1>
+
+      {phase === "languages" ? (
+        <section className="classical-card space-y-3 p-4">
+          <h2 className="font-serif text-xl">Choose languages</h2>
+          <p className="text-sm text-[var(--color-soft)]">Select every language you want to learn.</p>
+          {SUPPORTED_LANGUAGES.map((lang) => (
             <label key={lang.id} className="flex min-h-[44px] items-center gap-3">
               <input
                 type="checkbox"
                 checked={selected.includes(lang.id)}
                 onChange={(e) => {
-                  setSelected((prev) =>
-                    e.target.checked ? [...prev, lang.id] : prev.filter((l) => l !== lang.id)
-                  );
+                  setSelected((prev) => {
+                    const next = e.target.checked
+                      ? [...prev, lang.id]
+                      : prev.filter((l) => l !== lang.id);
+                    return next.length ? next : prev;
+                  });
                 }}
               />
+              <span className="mr-2 text-xs text-[var(--color-accent)]">{lang.marker}</span>
               {lang.label}
             </label>
           ))}
-          <button type="button" className="classical-btn classical-btn-primary w-full" onClick={() => setStep(1)}>
-            Continue
-          </button>
-        </section>
-      ) : null}
-      {step === 1 ? (
-        <section className="classical-card p-4 space-y-3">
-          <h2 className="text-lg">Interests (active language)</h2>
-          <select
-            className="classical-input"
-            value={activeLanguage}
-            onChange={(e) => setActiveLanguage(e.target.value)}
+          <button
+            type="button"
+            className="classical-btn classical-btn-primary w-full"
+            disabled={selected.length === 0}
+            onClick={() => {
+              setProfileIndex(0);
+              setPhase("profile");
+            }}
           >
-            {selected.map((id) => (
-              <option key={id} value={id}>
-                {LANGUAGES.find((l) => l.id === id)?.label ?? id}
-              </option>
-            ))}
-          </select>
-          {INTERESTS.map((item) => (
-            <label key={item} className="flex min-h-[44px] items-center gap-3 capitalize">
-              <input
-                type="checkbox"
-                checked={interests.includes(item)}
-                onChange={(e) =>
-                  setInterests((prev) =>
-                    e.target.checked ? [...prev, item] : prev.filter((i) => i !== item)
-                  )
-                }
-              />
-              {item}
-            </label>
-          ))}
-          <button type="button" className="classical-btn classical-btn-primary w-full" onClick={() => setStep(2)}>
             Continue
           </button>
         </section>
       ) : null}
-      {step === 2 ? (
-        <section className="classical-card p-4 space-y-3">
-          <h2 className="text-lg">CEFR placement (optional)</h2>
-          <p className="text-sm opacity-70">Skip if you prefer Chat without a structured plan.</p>
-          <label className="flex items-center gap-2">
+
+      {phase === "profile" && currentLang ? (
+        <section className="classical-card space-y-4 p-4">
+          <div>
+            <p className="text-xs text-[var(--color-soft)]">
+              Language {profileIndex + 1} of {selected.length}
+            </p>
+            <h2 className="font-serif text-xl">
+              {LANGUAGE_MARKERS[currentLang]} {LANGUAGE_LABELS[currentLang]}
+            </h2>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-serif text-lg">Motivation</h3>
+            <div className="flex flex-wrap gap-2">
+              {MOTIVATIONS.map((m) => (
+                <ChipToggle
+                  key={m}
+                  label={m}
+                  selected={currentProfile.motivations.includes(m)}
+                  onToggle={() => toggleInList("motivations", m)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-serif text-lg">Interests</h3>
+            <div className="flex flex-wrap gap-2">
+              {INTERESTS.map((i) => (
+                <ChipToggle
+                  key={i}
+                  label={i}
+                  selected={currentProfile.interests.includes(i)}
+                  onToggle={() => toggleInList("interests", i)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-serif text-lg">Self-assessment</h3>
+            {SKILL_ASPECTS.map(({ key, label }) => (
+              <label key={key} className="block text-sm">
+                {label}: {currentProfile.skills[key]}
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  value={currentProfile.skills[key]}
+                  onChange={(e) =>
+                    updateCurrent({
+                      skills: { ...currentProfile.skills, [key]: Number(e.target.value) },
+                    })
+                  }
+                  className="mt-1 w-full"
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button type="button" className="classical-btn classical-btn-primary w-full" onClick={nextProfileStep}>
+              Continue
+            </button>
+            <button type="button" className="classical-btn w-full opacity-80" onClick={skipProfileForLanguage}>
+              Skip for now
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {phase === "plan" ? (
+        <section className="classical-card space-y-3 p-4">
+          <h2 className="font-serif text-xl">Study plan (optional)</h2>
+          <p className="text-sm text-[var(--color-soft)]">CEFR placement and a structured path — or skip and use Chat freely.</p>
+          <label className="flex min-h-[44px] items-center gap-2">
             <input type="checkbox" checked={wantsPlan} onChange={(e) => setWantsPlan(e.target.checked)} />
             Create a study plan
           </label>
           {wantsPlan ? (
             <>
-              <select className="classical-input w-full" value={cefr} onChange={(e) => setCefr(e.target.value)}>
+              <select
+                className="classical-input"
+                value={planLanguage}
+                onChange={(e) => setPlanLanguage(e.target.value)}
+              >
+                {selected.map((id) => (
+                  <option key={id} value={id}>
+                    {LANGUAGE_LABELS[id]}
+                  </option>
+                ))}
+              </select>
+              <select className="classical-input" value={cefr} onChange={(e) => setCefr(e.target.value)}>
                 {CEFR.map((l) => (
                   <option key={l} value={l}>
                     {l}
@@ -136,7 +259,7 @@ export default function OnboardingPage() {
                 ))}
               </select>
               <select
-                className="classical-input w-full"
+                className="classical-input"
                 value={planWeeks}
                 onChange={(e) => setPlanWeeks(Number(e.target.value))}
               >
@@ -148,6 +271,28 @@ export default function OnboardingPage() {
               </select>
             </>
           ) : null}
+          <button type="button" className="classical-btn classical-btn-primary w-full" onClick={() => setPhase("active")}>
+            Continue
+          </button>
+        </section>
+      ) : null}
+
+      {phase === "active" ? (
+        <section className="classical-card space-y-3 p-4">
+          <h2 className="font-serif text-xl">Active language</h2>
+          <p className="text-sm text-[var(--color-soft)]">Which language should Chat and Memo use first?</p>
+          {selected.map((id) => (
+            <label key={id} className="flex min-h-[44px] items-center gap-3">
+              <input
+                type="radio"
+                name="active"
+                checked={activeLanguage === id}
+                onChange={() => setActiveLanguage(id)}
+              />
+              <span className="text-xs text-[var(--color-accent)]">{LANGUAGE_MARKERS[id]}</span>
+              {LANGUAGE_LABELS[id]}
+            </label>
+          ))}
           <button
             type="button"
             className="classical-btn classical-btn-primary w-full"

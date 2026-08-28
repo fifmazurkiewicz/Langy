@@ -12,27 +12,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { MenuBackHeader } from "@/components/menu/MenuBackHeader";
 
-function ChipToggle({
-  label,
-  selected,
-  onToggle,
-}: {
-  label: string;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`classical-btn min-h-[40px] px-3 py-1 text-sm capitalize ${
-        selected ? "classical-btn-primary" : ""
-      }`}
-      onClick={onToggle}
-    >
-      {label}
-    </button>
-  );
-}
+import { ChipToggle } from "@/components/profile/ChipToggle";
 
 export default function MenuProfilePage() {
   const { token, activeLanguage } = useAuth();

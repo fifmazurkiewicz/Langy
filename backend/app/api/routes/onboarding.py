@@ -8,10 +8,10 @@ from sqlalchemy.orm import Session
 from app.auth.deps import get_current_user
 from app.db import get_db
 from app.domain.category.service import enqueue_category_jobs_for_user, process_category_job
+from app.domain.languages import SUPPORTED_LANGUAGES
 from app.domain.plan.service import create_study_plan
-from app.models import FlashcardSet, User, UserLanguageProfile
-
-SUPPORTED_LANGUAGES = ["en-GB", "en-US", "de", "es", "it"]
+from app.domain.profile.service import ensure_flashcard_sets_for_interests
+from app.models import User, UserLanguageProfile
 
 router = APIRouter()
 
@@ -70,28 +70,11 @@ def complete_onboarding(
         profile.cefr_level = profile_in.cefr_level
         profile.assessed_at = datetime.now(timezone.utc)
 
-        for interest in profile_in.interests or []:
-            key = interest.split(":", 1)[0] if interest else ""
-            if not key:
-                continue
-            exists = (
-                db.query(FlashcardSet)
-                .filter(
-                    FlashcardSet.user_id == user.id,
-                    FlashcardSet.language == profile_in.language,
-                    FlashcardSet.category_key == key,
-                )
-                .first()
-            )
-            if exists is None:
-                db.add(
-                    FlashcardSet(
-                        user_id=user.id,
-                        language=profile_in.language,
-                        category_key=key,
-                        is_custom=False,
-                    )
-                )
+        new_keys = ensure_flashcard_sets_for_interests(
+            db, user.id, profile_in.language, profile_in.interests
+        )
+        if new_keys:
+            db.flush()
 
     user.active_language = body.active_language
     user.onboarding_completed_at = datetime.now(timezone.utc)

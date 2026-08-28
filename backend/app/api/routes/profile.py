@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
 from app.db import get_db
-from app.api.routes.onboarding import SUPPORTED_LANGUAGES
-from app.models import FlashcardSet, User, UserLanguageProfile
+from app.domain.languages import SUPPORTED_LANGUAGES
+from app.domain.profile.service import ensure_flashcard_sets_for_interests, enqueue_jobs_for_new_interest_sets
+from app.models import User, UserLanguageProfile
 
 router = APIRouter()
 
@@ -131,10 +132,14 @@ def update_profile(
     )
     if profile is None:
         raise HTTPException(status_code=404, detail="Language profile not found")
+    new_keys: list[str] = []
     if body.motivations is not None:
         profile.motivations = body.motivations
     if body.interests is not None:
+        old_interests = set(profile.interests or [])
         profile.interests = body.interests
+        new_interest_items = [i for i in body.interests if i not in old_interests]
+        new_keys = ensure_flashcard_sets_for_interests(db, user.id, language, new_interest_items)
     if body.skill_reading is not None:
         profile.skill_reading = body.skill_reading
     if body.skill_speaking is not None:
@@ -146,4 +151,6 @@ def update_profile(
     if body.skill_vocabulary is not None:
         profile.skill_vocabulary = body.skill_vocabulary
     db.commit()
-    return {"ok": True}
+    if new_keys:
+        enqueue_jobs_for_new_interest_sets(db, user.id, language, new_keys)
+    return {"ok": True, "new_categories": new_keys}
