@@ -5,6 +5,7 @@
   --color-bg: #f3f2f2;
   --color-surface: #eae9e9;
   --color-text: #201f1d;
+  --color-soft: color-mix(in srgb, #201f1d 55%, transparent);
   --color-accent: #b68235;
   --color-divider: color-mix(in srgb, #201f1d 16%, transparent);
   --font-heading: "Cormorant Garamond", serif;
@@ -15,6 +16,7 @@
   --color-bg: #16130f;
   --color-surface: #1e1a15;
   --color-text: #f3f2f2;
+  --color-soft: color-mix(in srgb, #f3f2f2 55%, transparent);
   --color-accent: #c28d41;
   --color-divider: color-mix(in srgb, #f3f2f2 16%, transparent);
 }
@@ -73,4 +75,16 @@ h1, h2, h3, h4 {
   background: var(--color-bg);
   color: var(--color-text);
   border-radius: 4px;
+}
+
+@keyframes langyBreathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { CorrectionResponse } from "@/lib/api/correction";
-import { CorrectionTip } from "@/components/chat/CorrectionTip";
+import { TranscriptLine } from "@/components/chat/TranscriptLine";
 
-export type TranscriptLine = { role: "User" | "Agent"; text: string };
+export type TranscriptLineData = { role: "User" | "Agent"; text: string };
 
 type Props = {
-  lines: TranscriptLine[];
+  lines: TranscriptLineData[];
   enabled: boolean;
   corrections: Record<number, CorrectionResponse>;
   onSelect: (text: string, lineIndex: number, role: "User" | "Agent") => void;
@@ -21,38 +21,33 @@ export function TranscriptPane({
   onSelect,
   onAddFromCorrection,
 }: Props) {
-  const [selectedText, setSelectedText] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseUp = useCallback(
-    (lineIndex: number, role: "User" | "Agent") => {
-      if (!enabled) return;
-      const sel = window.getSelection()?.toString().trim();
-      if (sel) {
-        setSelectedText(sel);
-        onSelect(sel, lineIndex, role);
-      }
-    },
-    [enabled, onSelect]
-  );
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [lines.length, corrections]);
 
   return (
-    <div className="classical-card flex-1 space-y-2 overflow-y-auto p-4 text-sm select-text">
-      {lines.length === 0 ? <p className="opacity-60">Transcript will appear here.</p> : null}
-      {lines.map((line, i) => (
-        <div key={`${line.role}-${i}`}>
-          <p
-            data-role={line.role}
-            onMouseUp={() => handleMouseUp(i, line.role)}
-            onTouchEnd={() => handleMouseUp(i, line.role)}
-          >
-            <strong>{line.role}:</strong> {line.text}
-          </p>
-          {line.role === "User" && corrections[i] ? (
-            <CorrectionTip tip={corrections[i]} onAdd={() => onAddFromCorrection(i)} />
-          ) : null}
+    <div className="min-h-0 flex-1 overflow-y-auto border-y border-[var(--color-divider)] py-3 select-text">
+      {lines.length === 0 ? (
+        <p className="px-1 text-sm text-[var(--color-soft)]">Transcript will appear here.</p>
+      ) : (
+        <div className="flex flex-col gap-3 px-1">
+          {lines.map((line, i) => (
+            <TranscriptLine
+              key={`${line.role}-${i}-${line.text.slice(0, 12)}`}
+              role={line.role}
+              text={line.text}
+              lineIndex={i}
+              enabled={enabled}
+              correction={corrections[i]}
+              onSelect={onSelect}
+              onAddFromCorrection={onAddFromCorrection}
+            />
+          ))}
         </div>
-      ))}
-      {selectedText ? <p className="text-xs opacity-50">Selected: {selectedText}</p> : null}
+      )}
+      <div ref={bottomRef} />
     </div>
   );
 }

@@ -16,6 +16,12 @@ OPENING_LINES = [
     "What's on your mind for today's practice?",
 ]
 
+RESUME_LINES = [
+    "Welcome back! Shall we pick up where we left off?",
+    "Good to see you again — ready to continue?",
+    "Let's continue — what would you like to talk about next?",
+]
+
 
 def build_agenda(db: Session, user: User, language: str) -> dict[str, Any]:
     profile = (

@@ -17,7 +17,7 @@ from app.domain.shadowing.service import (
     submit_turn,
 )
 from app.domain.spend_cap.service import SpendCapExceeded
-from app.models import ShadowingSession, User
+from app.models import Conversation, ShadowingSession, User
 
 router = APIRouter()
 

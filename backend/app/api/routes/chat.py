@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -12,16 +12,18 @@ from app.config import get_settings
 from app.db import get_db
 from app.domain.agenda.service import (
     OPENING_LINES,
+    RESUME_LINES,
     agent_save_word,
     append_transcript_line,
     build_agenda,
     enqueue_post_session_jobs,
     process_post_session_job,
 )
+from app.domain.chat.transcript import parse_transcript, preview_transcript
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
 from app.domain.voice.live_session import build_live_system_instruction
 from app.domain.voice.live_token import LiveTokenError, mint_ephemeral_live_token
-from app.models import Conversation, Job, User
+from app.models import Conversation, ConversationSummary, Job, User
 
 router = APIRouter()
 settings = get_settings()
@@ -76,6 +78,42 @@ def start_session(
     }
 
 
+@router.get("/conversations")
+def list_conversations(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    language: str | None = Query(default=None),
+) -> dict:
+    q = db.query(Conversation).filter(Conversation.user_id == user.id)
+    if language:
+        q = q.filter(Conversation.language == language)
+    convs = q.order_by(Conversation.started_at.desc()).limit(20).all()
+    conv_ids = [c.id for c in convs]
+    summaries: dict[uuid.UUID, str] = {}
+    if conv_ids:
+        rows = (
+            db.query(ConversationSummary)
+            .filter(ConversationSummary.conversation_id.in_(conv_ids))
+            .all()
+        )
+        for row in rows:
+            summaries[row.conversation_id] = row.summary
+    return {
+        "conversations": [
+            {
+                "id": str(c.id),
+                "language": c.language,
+                "started_at": c.started_at.isoformat() if c.started_at else None,
+                "ended_at": c.ended_at.isoformat() if c.ended_at else None,
+                "preview": preview_transcript(c.transcript),
+                "summary": summaries.get(c.id),
+                "is_active": c.ended_at is None,
+            }
+            for c in convs
+        ]
+    }
+
+
 @router.get("/sessions/{conversation_id}")
 def get_session(
     conversation_id: uuid.UUID,
@@ -89,7 +127,43 @@ def get_session(
         "conversation_id": str(conversation.id),
         "language": conversation.language,
         "transcript": conversation.transcript,
+        "lines": parse_transcript(conversation.transcript),
         "ended": conversation.ended_at is not None,
+        "started_at": conversation.started_at.isoformat() if conversation.started_at else None,
+        "ended_at": conversation.ended_at.isoformat() if conversation.ended_at else None,
+    }
+
+
+@router.post("/sessions/{conversation_id}/resume")
+def resume_session(
+    conversation_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    try:
+        check_spend_cap(db, user)
+    except SpendCapExceeded as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+
+    conversation = db.get(Conversation, conversation_id)
+    if not conversation or conversation.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if conversation.ended_at is None:
+        raise HTTPException(status_code=400, detail="Session still active")
+
+    conversation.ended_at = None
+    welcome = random.choice(RESUME_LINES)
+    append_transcript_line(conversation, "Agent", welcome)
+    db.commit()
+
+    lines = parse_transcript(conversation.transcript)
+    return {
+        "conversation_id": str(conversation.id),
+        "language": conversation.language,
+        "lines": lines,
+        "opening_line": welcome,
+        "resumed": True,
+        "voice_mode": settings.voice_mode,
     }
 
 

@@ -2,6 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import {
+  appendChatLine,
+  endChatSession,
+  getChatSession,
+  listChatConversations,
+  resumeChatSession,
+  startChatSession,
+  type ConversationListItem,
+} from "@/lib/api/chat";
 import { useApiPulse } from "@/components/ApiPulseProvider";
 import {
   addCorrectionPending,
@@ -14,20 +23,18 @@ import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import type { ChatVisualState } from "@/components/chat/AgentPresence";
+import { ChatControlBar } from "@/components/chat/ChatControlBar";
+import { ChatStage } from "@/components/chat/ChatStage";
+import { ConversationDetailSheet } from "@/components/chat/ConversationDetailSheet";
+import { EndSessionSheet } from "@/components/chat/EndSessionSheet";
+import { HistorySheet } from "@/components/chat/HistorySheet";
 import { MicStatusBanner, type MicStatus } from "@/components/chat/MicStatusBanner";
 import { SelectionActionSheet } from "@/components/chat/SelectionActionSheet";
-import { TranscriptPane, type TranscriptLine } from "@/components/chat/TranscriptPane";
+import { SessionSummarySheet } from "@/components/chat/SessionSummarySheet";
+import { TranscriptPane, type TranscriptLineData } from "@/components/chat/TranscriptPane";
 import { TranslatePanel } from "@/components/chat/TranslatePanel";
-
-type ChatState = "waking" | "idle" | "listening" | "thinking" | "speaking";
-
-const STATE_LABELS: Record<ChatState, string> = {
-  waking: "Waking up…",
-  idle: "Ready when you are",
-  listening: "Listening",
-  thinking: "Thinking",
-  speaking: "Speaking",
-};
+import { formatConversationDate } from "@/lib/chat/transcript";
 
 function speechRecognitionSupported() {
   if (typeof window === "undefined") return false;
@@ -52,11 +59,11 @@ export default function ChatPage() {
   const { isHealthy: apiReady, isWaking } = useApiPulse();
   const [startingSession, setStartingSession] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-  const [state, setState] = useState<ChatState>("idle");
+  const [chatState, setChatState] = useState<ChatVisualState>("idle");
   const [profileLanguage, setProfileLanguage] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [lines, setLines] = useState<TranscriptLine[]>([]);
+  const [lines, setLines] = useState<TranscriptLineData[]>([]);
   const [corrections, setCorrections] = useState<Record<number, CorrectionResponse>>({});
   const [languages, setLanguages] = useState<string[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
@@ -69,6 +76,19 @@ export default function ChatPage() {
   const [checkResult, setCheckResult] = useState<CorrectionResponse | null>(null);
   const [liveMode, setLiveMode] = useState<"live" | "mock">("mock");
   const [micStatus, setMicStatus] = useState<MicStatus>("off");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyItems, setHistoryItems] = useState<ConversationListItem[]>([]);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLines, setDetailLines] = useState<TranscriptLineData[]>([]);
+  const [detailItem, setDetailItem] = useState<ConversationListItem | null>(null);
+  const [endSheetOpen, setEndSheetOpen] = useState(false);
+  const [endSheetMode, setEndSheetMode] = useState<"end" | "switch">("end");
+  const [pendingResumeId, setPendingResumeId] = useState<string | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryPendingCount, setSummaryPendingCount] = useState(0);
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
   const listeningRef = useRef(listening);
@@ -79,16 +99,36 @@ export default function ChatPage() {
 
   const sessionLanguage = activeLanguage ?? profileLanguage ?? languages[0] ?? null;
   const canStartSession = apiReady && Boolean(sessionLanguage) && Boolean(token) && !startingSession;
+  const visualState: ChatVisualState = isWaking ? "waking" : chatState;
 
   const geminiLive = useGeminiLive({
     onAgentText: (text) => {
-      setState("speaking");
+      setChatState("speaking");
       void appendLineRef.current("Agent", text).then(() =>
-        setState(listeningRef.current ? "listening" : "idle")
+        setChatState(listeningRef.current ? "listening" : "idle")
       );
     },
     onError: (message) => console.warn("Gemini Live:", message),
   });
+
+  const connectLive = useCallback(
+    async (convId: string) => {
+      if (!token || !sessionLanguage) return;
+      try {
+        const live = await fetchLiveToken(token, {
+          language: sessionLanguage,
+          conversation_id: convId,
+        });
+        setLiveMode(live.mode === "live" && live.configured ? "live" : "mock");
+        if (live.mode === "live" && live.configured) {
+          await geminiLive.connect(live);
+        }
+      } catch {
+        setLiveMode("mock");
+      }
+    },
+    [token, sessionLanguage, geminiLive]
+  );
 
   const triggerAutoCorrection = useCallback(
     async (lineIndex: number, text: string) => {
@@ -126,43 +166,6 @@ export default function ChatPage() {
       .catch(() => undefined);
   }, [token]);
 
-  const startSession = useCallback(async () => {
-    if (!token || !sessionLanguage) return;
-    setStartingSession(true);
-    setStartError(null);
-    try {
-      const session = await apiFetch<{
-        conversation_id: string;
-        opening_line: string;
-      }>("/api/chat/sessions", {
-        method: "POST",
-        token,
-        body: { language: sessionLanguage },
-      });
-      setConversationId(session.conversation_id);
-      setLines([{ role: "Agent", text: session.opening_line }]);
-      setCorrections({});
-      setState("idle");
-
-      try {
-        const live = await fetchLiveToken(token, {
-          language: sessionLanguage,
-          conversation_id: session.conversation_id,
-        });
-        setLiveMode(live.mode === "live" && live.configured ? "live" : "mock");
-        if (live.mode === "live" && live.configured) {
-          await geminiLive.connect(live);
-        }
-      } catch {
-        setLiveMode("mock");
-      }
-    } catch (e) {
-      setStartError(e instanceof Error ? e.message : "Could not start session");
-    } finally {
-      setStartingSession(false);
-    }
-  }, [token, sessionLanguage, geminiLive]);
-
   const appendLine = useCallback(
     async (role: "User" | "Agent", text: string) => {
       let lineIndex = 0;
@@ -171,11 +174,7 @@ export default function ChatPage() {
         return [...prev, { role, text }];
       });
       if (conversationId && token) {
-        await apiFetch(`/api/chat/sessions/${conversationId}/lines`, {
-          method: "POST",
-          token,
-          body: { role, text },
-        });
+        await appendChatLine(token, conversationId, { role, text });
       }
       if (role === "User") {
         void triggerAutoCorrection(lineIndex, text);
@@ -189,8 +188,37 @@ export default function ChatPage() {
     appendLineRef.current = appendLine;
   }, [appendLine]);
 
-  const endSession = useCallback(async () => {
+  const loadSession = useCallback(
+    async (convId: string, sessionLines: TranscriptLineData[]) => {
+      setConversationId(convId);
+      setLines(sessionLines);
+      setCorrections({});
+      setChatState("idle");
+      setListening(false);
+      setDetailOpen(false);
+      setHistoryOpen(false);
+      await connectLive(convId);
+    },
+    [connectLive]
+  );
+
+  const startSession = useCallback(async () => {
+    if (!token || !sessionLanguage) return;
+    setStartingSession(true);
+    setStartError(null);
+    try {
+      const session = await startChatSession(token, { language: sessionLanguage });
+      await loadSession(session.conversation_id, [{ role: "Agent", text: session.opening_line }]);
+    } catch (e) {
+      setStartError(e instanceof Error ? e.message : "Could not start session");
+    } finally {
+      setStartingSession(false);
+    }
+  }, [token, sessionLanguage, loadSession]);
+
+  const performEndSession = useCallback(async () => {
     if (!conversationId || !token) return;
+    const endedId = conversationId;
     setListening(false);
     setMicStatus("off");
     geminiLive.disconnect();
@@ -199,13 +227,87 @@ export default function ChatPage() {
     setTranslateResult(null);
     setCheckResult(null);
     setCorrections({});
-    setState("idle");
-    await apiFetch(`/api/chat/sessions/${conversationId}/end`, { method: "POST", token });
+    setChatState("idle");
     setConversationId(null);
+    setLines([]);
+    await endChatSession(token, endedId);
     const count = await apiFetch<{ count: number }>("/api/vocab/pending/count", { token });
     setPendingCount(count.count);
-    alert(count.count > 0 ? "Session ended — check Memo → Pending" : "No new words from that chat");
+    setSummaryPendingCount(count.count);
+    setSummaryOpen(true);
   }, [conversationId, token, geminiLive]);
+
+  const requestEndSession = useCallback(() => {
+    setEndSheetMode("end");
+    setEndSheetOpen(true);
+  }, []);
+
+  const confirmEndSession = useCallback(async () => {
+    setEndSheetOpen(false);
+    await performEndSession();
+    if (pendingResumeId && token) {
+      const resumeId = pendingResumeId;
+      setPendingResumeId(null);
+      try {
+        const resumed = await resumeChatSession(token, resumeId);
+        await loadSession(resumed.conversation_id, resumed.lines);
+      } catch (e) {
+        setStartError(e instanceof Error ? e.message : "Could not resume session");
+      }
+    }
+  }, [performEndSession, pendingResumeId, token, loadSession]);
+
+  const openHistory = useCallback(async () => {
+    if (!token) return;
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+      const data = await listChatConversations(token, sessionLanguage ?? undefined);
+      setHistoryItems(data.conversations);
+    } catch {
+      setHistoryItems([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [token, sessionLanguage]);
+
+  const openConversationDetail = useCallback(
+    async (item: ConversationListItem) => {
+      if (!token) return;
+      setDetailItem(item);
+      setDetailOpen(true);
+      setDetailLoading(true);
+      try {
+        const session = await getChatSession(token, item.id);
+        setDetailLines(session.lines);
+      } catch {
+        setDetailLines([]);
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [token]
+  );
+
+  const continueConversation = useCallback(async () => {
+    if (!token || !detailItem) return;
+    if (detailItem.is_active) {
+      await loadSession(detailItem.id, detailLines);
+      return;
+    }
+    if (conversationId) {
+      setPendingResumeId(detailItem.id);
+      setEndSheetMode("switch");
+      setEndSheetOpen(true);
+      return;
+    }
+    try {
+      const resumed = await resumeChatSession(token, detailItem.id);
+      await loadSession(resumed.conversation_id, resumed.lines);
+    } catch (e) {
+      setStartError(e instanceof Error ? e.message : "Could not resume session");
+    }
+  }, [token, detailItem, detailLines, conversationId, loadSession]);
 
   const handleTranslate = useCallback(async () => {
     if (!token || !sessionLanguage || !selectedSpan) return;
@@ -319,34 +421,34 @@ export default function ChatPage() {
       if (status !== "ready") {
         setMicStatus(status);
         setListening(false);
-        setState("idle");
+        setChatState("idle");
         return;
       }
       if (!SpeechRecognitionCtor) {
         setMicStatus("unsupported");
         setListening(false);
-        setState("idle");
+        setChatState("idle");
         return;
       }
 
       setMicStatus("ready");
       const recognition = new SpeechRecognitionCtor();
-      recognition.lang = sessionLanguage.startsWith("en") ? "en-GB" : sessionLanguage;
+      recognition.lang = sessionLanguage?.startsWith("en") ? "en-GB" : (sessionLanguage ?? "en-GB");
       recognition.interimResults = false;
       recognition.continuous = true;
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         const text = event.results[event.results.length - 1][0].transcript.trim();
         if (!text) return;
-        setState("thinking");
+        setChatState("thinking");
         void appendLine("User", text).then(() => {
           if (geminiLive.connected) {
             void geminiLive.sendUserText(text);
-            setState(listeningRef.current ? "listening" : "idle");
+            setChatState(listeningRef.current ? "listening" : "idle");
             return;
           }
           const reply = `Good point about "${text}". Tell me more.`;
-          setState("speaking");
-          void appendLine("Agent", reply).then(() => setState(listeningRef.current ? "listening" : "idle"));
+          setChatState("speaking");
+          void appendLine("Agent", reply).then(() => setChatState(listeningRef.current ? "listening" : "idle"));
         });
       };
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -354,7 +456,7 @@ export default function ChatPage() {
           setMicStatus("blocked");
           setListening(false);
         }
-        setState("idle");
+        setChatState("idle");
       };
       recognition.onend = () => {
         if (!cancelled && listeningRef.current && recognitionRef.current === recognition) {
@@ -377,10 +479,13 @@ export default function ChatPage() {
     };
   }, [listening, conversationId, sessionLanguage, appendLine, geminiLive]);
 
+  const detailTitle = detailItem
+    ? formatConversationDate(detailItem.started_at) || "Conversation"
+    : "Conversation";
+
   return (
-    <div className="flex flex-1 flex-col pb-[calc(52px+env(safe-area-inset-bottom))]">
-      <header className="flex items-center justify-between border-b border-[var(--color-divider)] p-4">
-        <h1 className="text-xl">Chat</h1>
+    <div className="flex flex-1 flex-col pb-[calc(120px+env(safe-area-inset-bottom))]">
+      <header className="flex items-center gap-2 border-b border-[var(--color-divider)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <LanguageSwitcher
           activeLanguage={sessionLanguage}
           languages={languages.length ? languages : ["en-GB"]}
@@ -394,76 +499,102 @@ export default function ChatPage() {
             await refreshProfile();
           }}
         />
+        <button
+          type="button"
+          className="classical-btn min-h-[44px] shrink-0 px-3 text-sm"
+          onClick={() => void openHistory()}
+          aria-label="Conversation history"
+        >
+          History
+        </button>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 p-4">
-        <div className="classical-card flex min-h-[48px] items-center justify-center p-3 text-sm">
-          {isWaking
-            ? STATE_LABELS.waking
-            : `${STATE_LABELS[state]}${conversationId ? ` · ${liveMode === "live" ? "Gemini Live" : "Web Speech"}` : ""}`}
-        </div>
-
+      <main className="flex min-h-0 flex-1 flex-col gap-3 px-4 pt-3">
         <MicStatusBanner
           status={activeMicStatus}
-          listening={listening}
           hasSession={Boolean(conversationId)}
           onDismissBlocked={() => setMicStatus("off")}
         />
 
-        <TranscriptPane
-          lines={lines}
-          enabled={Boolean(conversationId)}
-          corrections={corrections}
-          onSelect={(text, lineIndex, role) => {
-            setSelectedSpan(text);
-            setSelectedLineIndex(lineIndex);
-            setSelectedRole(role);
-          }}
-          onAddFromCorrection={(lineIndex) => void handleAddFromCorrection(lineIndex)}
-        />
-
-        <div className="flex flex-wrap gap-2">
-          {!conversationId ? (
+        <ChatStage
+          visualState={visualState}
+          hasSession={Boolean(conversationId)}
+          preSessionAction={
             <>
-              <button
-                type="button"
-                className="classical-btn classical-btn-primary"
-                disabled={!canStartSession}
-                onClick={() => void startSession()}
-              >
-                {startingSession ? "Starting…" : "Start session"}
-              </button>
-              {!apiReady ? (
-                <p className="text-sm opacity-70 self-center">Waiting for API…</p>
-              ) : null}
+              {!apiReady ? <p className="text-center text-sm text-[var(--color-soft)]">Waiting for API…</p> : null}
               {apiReady && !sessionLanguage ? (
-                <p className="text-sm opacity-70 self-center">Loading profile…</p>
+                <p className="text-center text-sm text-[var(--color-soft)]">Loading profile…</p>
               ) : null}
-              {startError ? <p className="text-sm text-red-400">{startError}</p> : null}
+              {startError ? <p className="text-center text-sm text-red-400">{startError}</p> : null}
             </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className={`classical-btn ${listening ? "classical-btn-primary" : ""}`}
-                onClick={() => {
-                  setListening((v) => {
-                    const next = !v;
-                    if (next && conversationId) setState("listening");
-                    if (!next) setState("idle");
-                    return next;
-                  });
-                }}
-              >
-                Listening {listening ? "on" : "off"}
-              </button>
-              <button type="button" className="classical-btn" onClick={() => void endSession()}>
-                End session
-              </button>
-            </>
-          )}
-        </div>
+          }
+          transcript={
+            <TranscriptPane
+              lines={lines}
+              enabled={Boolean(conversationId)}
+              corrections={corrections}
+              onSelect={(text, lineIndex, role) => {
+                setSelectedSpan(text);
+                setSelectedLineIndex(lineIndex);
+                setSelectedRole(role);
+              }}
+              onAddFromCorrection={(lineIndex) => void handleAddFromCorrection(lineIndex)}
+            />
+          }
+        />
       </main>
+
+      <ChatControlBar
+        hasSession={Boolean(conversationId)}
+        listening={listening}
+        startingSession={startingSession}
+        canStartSession={canStartSession}
+        onStart={() => void startSession()}
+        onToggleListening={() => {
+          setListening((v) => {
+            const next = !v;
+            if (next && conversationId) setChatState("listening");
+            if (!next) setChatState("idle");
+            return next;
+          });
+        }}
+        onEnd={requestEndSession}
+      />
+
+      <HistorySheet
+        open={historyOpen}
+        loading={historyLoading}
+        conversations={historyItems}
+        onClose={() => setHistoryOpen(false)}
+        onSelect={(item) => void openConversationDetail(item)}
+      />
+
+      <ConversationDetailSheet
+        open={detailOpen}
+        title={detailTitle}
+        lines={detailLines}
+        isActive={detailItem?.is_active ?? false}
+        loading={detailLoading}
+        onClose={() => setDetailOpen(false)}
+        onContinue={() => void continueConversation()}
+        onReturnToSession={() => void continueConversation()}
+      />
+
+      <EndSessionSheet
+        open={endSheetOpen}
+        mode={endSheetMode}
+        onConfirm={() => void confirmEndSession()}
+        onCancel={() => {
+          setEndSheetOpen(false);
+          setPendingResumeId(null);
+        }}
+      />
+
+      <SessionSummarySheet
+        open={summaryOpen}
+        pendingCount={summaryPendingCount}
+        onClose={() => setSummaryOpen(false)}
+      />
 
       {selectedSpan ? (
         <SelectionActionSheet
@@ -482,7 +613,15 @@ export default function ChatPage() {
 
       {translateResult || translateLoading || translateError ? (
         <TranslatePanel
-          result={translateResult ?? { span: "", translation_pl: "", example_l2: "", example_pl: "", from_cache: false }}
+          result={
+            translateResult ?? {
+              span: "",
+              translation_pl: "",
+              example_l2: "",
+              example_pl: "",
+              from_cache: false,
+            }
+          }
           loading={translateLoading}
           error={translateError}
           onAdd={() => void handleAddPending(translateResult!.span, translateResult!.translation_pl)}
@@ -495,15 +634,11 @@ export default function ChatPage() {
       ) : null}
 
       {checkResult?.is_corrected && !translateResult ? (
-        <div className="fixed inset-x-0 bottom-24 z-30 mx-auto max-w-lg p-4">
+        <div className="fixed inset-x-0 bottom-36 z-30 mx-auto max-w-lg p-4">
           <div className="classical-card p-4 text-sm">
             <p className="font-serif">{checkResult.corrected_text}</p>
             {checkResult.explanation_pl ? <p className="mt-1 opacity-80">{checkResult.explanation_pl}</p> : null}
-            <button
-              type="button"
-              className="classical-btn mt-2"
-              onClick={() => setCheckResult(null)}
-            >
+            <button type="button" className="classical-btn mt-2" onClick={() => setCheckResult(null)}>
               Dismiss
             </button>
           </div>
