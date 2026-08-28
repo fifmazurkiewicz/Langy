@@ -1,36 +1,17 @@
 import uuid
 from typing import Annotated
 
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.auth.tokens import decode_access_token
 from app.config import get_settings
 from app.db import get_db
 from app.models import User
 
 security = HTTPBearer(auto_error=False)
 settings = get_settings()
-
-
-def _decode_token(token: str) -> dict:
-    if token == "dev-token":
-        return {
-            "sub": "00000000-0000-4000-8000-000000000001",
-            "email": "dev@langy.local",
-            "user_metadata": {"full_name": "Dev User"},
-            "is_admin": True,
-        }
-    if settings.supabase_jwt_secret:
-        return jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            audience=settings.supabase_jwt_audience,
-        )
-    # Dev fallback: unsigned parse for local testing without Supabase
-    return jwt.decode(token, options={"verify_signature": False})
 
 
 def get_current_user(
@@ -40,7 +21,7 @@ def get_current_user(
     if creds is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authorization")
 
-    payload = _decode_token(creds.credentials)
+    payload = decode_access_token(creds.credentials, settings)
     sub = payload.get("sub")
     if not sub:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")

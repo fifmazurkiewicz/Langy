@@ -70,6 +70,6 @@ Local dev without Supabase: frontend uses `dev-token`; backend accepts `Authoriz
 - Default new-user `spend_cap_usd` is 10 per calendar month (Europe/Warsaw).
 - `VOICE_MODE` switches `speech_to_speech` (Gemini Live via `POST /api/chat/live-token` ephemeral token + `useGeminiLive`, Web Speech fallback) vs `chained` (via Render); Render Free cold start is accepted with a Chat “Waking up…” state; async jobs use Postgres (no Redis in MVP).
 - Optional CEFR placement + study plan (4/8/12/16 weeks) + lessons via Menu → Plan; Skip OK; lesson vocab → Pending `lesson`. Skills 1–5 and CEFR stay separate.
-- Chat transcript is always visible in-session; select word/span/sentence → Translate (PL + example) or Add to learning → Pending (`transcript_selection`); Add also available from the translate panel.
-- In-flight correction: auto after user turn for substantive errors only, plus on-demand Check; tip + optional Add → Pending; Live runs parallel with agent reply; chained runs after STT before LLM.
+- Chat: transcript always visible in-session; select → Translate (PL + example) or Add → Pending (`transcript_selection`); in-flight correction auto on substantive errors + on-demand Check (Live parallel, chained after STT).
+- Langy production is live on Supabase + Render + Vercel + Cloudflare; Render Root Directory `backend`, Runtime Docker (never `Docker` as root); Cloudflare `api-langy` CNAME to Render DNS-only, `langy` CNAME to Vercel — separate records.
 - Memo hosts Flashcards (former Words: Due / Categories / Pending / export), Shadowing (line-by-line practice), and Mnemonics (sound-association library + Due shortcut).
