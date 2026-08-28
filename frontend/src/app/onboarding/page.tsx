@@ -34,7 +34,7 @@ type Phase = "languages" | "profile" | "plan" | "active";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { token, loading, refreshProfile, markOnboardingComplete } = useAuth();
+  const { getAccessToken, loading: authLoading, refreshProfile, markOnboardingComplete } = useAuth();
   const [phase, setPhase] = useState<Phase>("languages");
   const [selected, setSelected] = useState<string[]>(["en-GB"]);
   const [profileIndex, setProfileIndex] = useState(0);
@@ -50,10 +50,12 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && !token) {
-      router.replace("/login");
+    if (!authLoading) {
+      void getAccessToken().then((access) => {
+        if (!access) router.replace("/login");
+      });
     }
-  }, [loading, token, router]);
+  }, [authLoading, getAccessToken, router]);
 
   const currentLang = selected[profileIndex];
   const currentProfile = profiles[currentLang] ?? defaultProfile();
@@ -93,8 +95,9 @@ export default function OnboardingPage() {
   }
 
   async function complete() {
-    if (!token) {
-      setError("Please sign in first.");
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setError("Session expired. Please sign in again.");
       router.replace("/login");
       return;
     }
@@ -103,7 +106,7 @@ export default function OnboardingPage() {
     try {
       await apiFetch("/api/onboarding/complete", {
         method: "POST",
-        token,
+        token: accessToken,
         body: {
           languages: selected,
           active_language: activeLanguage,
@@ -140,7 +143,7 @@ export default function OnboardingPage() {
     }
   }
 
-  if (loading) {
+  if (authLoading) {
     return (
       <main className="mx-auto flex max-w-lg flex-1 flex-col gap-4 p-6 pb-12">
         <p className="font-serif text-lg text-[var(--color-soft)]">Loading…</p>
@@ -358,15 +361,12 @@ export default function OnboardingPage() {
           <button
             type="button"
             className="classical-btn classical-btn-primary w-full"
-            disabled={submitting || !token}
+            disabled={submitting}
             onClick={() => void complete()}
           >
             {submitting ? "Saving…" : "Start practicing"}
           </button>
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
-          {!token ? (
-            <p className="text-sm text-[var(--color-soft)]">Sign in to save your profile and continue.</p>
-          ) : null}
         </section>
       ) : null}
     </main>

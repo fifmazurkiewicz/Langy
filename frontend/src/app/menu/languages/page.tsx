@@ -22,7 +22,7 @@ type AddStep = "skills" | "profile";
 
 export default function MenuLanguagesPage() {
   const router = useRouter();
-  const { token, activeLanguage, refreshProfile } = useAuth();
+  const { getAccessToken, activeLanguage, refreshProfile } = useAuth();
   const [profiles, setProfiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
@@ -36,23 +36,25 @@ export default function MenuLanguagesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    const accessToken = await getAccessToken();
+    if (!accessToken) return;
     setLoading(true);
     try {
-      const data = await fetchProfiles(token);
+      const data = await fetchProfiles(accessToken);
       setProfiles(data.profiles.map((p) => p.language));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [getAccessToken]);
 
   useDeferredEffect(() => load(), [load]);
 
   const available = SUPPORTED_LANGUAGES.filter((l) => !profiles.includes(l.id));
 
   async function activate(lang: string) {
-    if (!token) return;
-    await setActiveLanguage(token, lang);
+    const accessToken = await getAccessToken();
+    if (!accessToken) return;
+    await setActiveLanguage(accessToken, lang);
     await refreshProfile();
     void load();
   }
@@ -65,8 +67,10 @@ export default function MenuLanguagesPage() {
   }
 
   async function handleAdd(lang: string) {
-    if (!token) {
-      setError("Please sign in to add a language.");
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setError("Session expired. Please sign in again.");
+      router.push("/login");
       return;
     }
     if (profiles.includes(lang)) {
@@ -78,7 +82,7 @@ export default function MenuLanguagesPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await addLanguage(token, {
+      await addLanguage(accessToken, {
         language: lang,
         motivations: resolveChipValues(motivations, { motivation_other: motivationOther }, "motivation_other"),
         interests: resolveChipValues(interests, { interest_other: interestOther }, "interest_other"),
