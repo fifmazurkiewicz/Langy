@@ -20,9 +20,23 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promi
   });
   if (!res.ok) {
     const detail = await res.text();
-    throw new Error(detail || res.statusText);
+    throw new Error(parseApiError(detail, res.statusText));
   }
   return res.json() as Promise<T>;
+}
+
+function parseApiError(body: string, fallback: string): string {
+  if (!body) return fallback;
+  try {
+    const json = JSON.parse(body) as { detail?: string | Array<{ msg?: string }> };
+    if (typeof json.detail === "string") return json.detail;
+    if (Array.isArray(json.detail)) {
+      return json.detail.map((item) => item.msg).filter(Boolean).join(", ") || fallback;
+    }
+  } catch {
+    /* plain-text error body */
+  }
+  return body;
 }
 
 export { fetchApiLiveness, fetchApiPulse, fetchApiReady } from "@/lib/api/pulse";

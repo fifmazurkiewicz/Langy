@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   INTERESTS,
@@ -16,6 +16,7 @@ import { addLanguage, fetchProfiles, setActiveLanguage } from "@/lib/api/profile
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { MenuBackHeader } from "@/components/menu/MenuBackHeader";
+import { useDeferredEffect } from "@/lib/hooks/useDeferredEffect";
 
 type AddStep = "skills" | "profile";
 
@@ -23,9 +24,10 @@ export default function MenuLanguagesPage() {
   const router = useRouter();
   const { token, activeLanguage, refreshProfile } = useAuth();
   const [profiles, setProfiles] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
   const [addStep, setAddStep] = useState<AddStep>("skills");
+  const [submitting, setSubmitting] = useState(false);
   const [skills, setSkills] = useState({ reading: 2, speaking: 2, writing: 2, listening: 2, vocabulary: 2 });
   const [motivations, setMotivations] = useState<string[]>(["fun"]);
   const [interests, setInterests] = useState<string[]>([]);
@@ -44,9 +46,7 @@ export default function MenuLanguagesPage() {
     }
   }, [token]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useDeferredEffect(() => load(), [load]);
 
   const available = SUPPORTED_LANGUAGES.filter((l) => !profiles.includes(l.id));
 
@@ -65,8 +65,18 @@ export default function MenuLanguagesPage() {
   }
 
   async function handleAdd(lang: string) {
-    if (!token) return;
+    if (!token) {
+      setError("Please sign in to add a language.");
+      return;
+    }
+    if (profiles.includes(lang)) {
+      setError("This language is already on your profile.");
+      setAdding(null);
+      void load();
+      return;
+    }
     setError(null);
+    setSubmitting(true);
     try {
       await addLanguage(token, {
         language: lang,
@@ -81,15 +91,33 @@ export default function MenuLanguagesPage() {
       });
       setAdding(null);
       setAddStep("skills");
+      setSkills({ reading: 2, speaking: 2, writing: 2, listening: 2, vocabulary: 2 });
       setMotivations(["fun"]);
       setInterests([]);
       setMotivationOther("");
       setInterestOther("");
       await refreshProfile();
-      void load();
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not add language");
+    } finally {
+      setSubmitting(false);
     }
+  }
+
+  function startAdding(languageId: string) {
+    if (profiles.includes(languageId)) {
+      setError("This language is already on your profile.");
+      return;
+    }
+    setError(null);
+    setAdding(languageId);
+    setAddStep("skills");
+    setSkills({ reading: 2, speaking: 2, writing: 2, listening: 2, vocabulary: 2 });
+    setMotivations(["fun"]);
+    setInterests([]);
+    setMotivationOther("");
+    setInterestOther("");
   }
 
   return (
@@ -177,17 +205,19 @@ export default function MenuLanguagesPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" className="classical-btn flex-1" onClick={() => setAddStep("skills")}>
+                  <button type="button" className="classical-btn flex-1" onClick={() => setAddStep("skills")} disabled={submitting}>
                     Back
                   </button>
                   <button
                     type="button"
                     className="classical-btn classical-btn-primary flex-1"
+                    disabled={submitting}
                     onClick={() => void handleAdd(adding)}
                   >
-                    Add language
+                    {submitting ? "Adding…" : "Add language"}
                   </button>
                 </div>
+                {error ? <p className="text-sm text-red-400">{error}</p> : null}
               </>
             )}
           </section>
@@ -195,16 +225,14 @@ export default function MenuLanguagesPage() {
           <button
             type="button"
             className="classical-btn classical-btn-primary w-full"
-            onClick={() => {
-              setAdding(available[0].id);
-              setAddStep("skills");
-            }}
+            disabled={loading}
+            onClick={() => startAdding(available[0].id)}
           >
             Add a language
           </button>
         ) : null}
 
-        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+        {error && !adding ? <p className="text-sm text-red-400">{error}</p> : null}
 
         {available.length > 1 && adding ? (
           <div className="flex flex-wrap gap-2">
@@ -213,7 +241,7 @@ export default function MenuLanguagesPage() {
                 key={l.id}
                 type="button"
                 className={`classical-btn text-sm ${adding === l.id ? "classical-btn-primary" : ""}`}
-                onClick={() => setAdding(l.id)}
+                onClick={() => startAdding(l.id)}
               >
                 {l.marker}
               </button>

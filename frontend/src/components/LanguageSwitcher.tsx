@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { LANGUAGE_LABELS, LANGUAGE_MARKERS, SUPPORTED_LANGUAGES } from "@/lib/constants/profile";
+import { LANGUAGE_LABELS, LANGUAGE_MARKERS } from "@/lib/constants/profile";
 
 export function LanguageSwitcher({
   activeLanguage,

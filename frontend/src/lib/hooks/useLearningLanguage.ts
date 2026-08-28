@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { fetchProfiles } from "@/lib/api/profile";
 import { useAuth } from "@/components/AuthProvider";
+import { useDeferredEffect } from "@/lib/hooks/useDeferredEffect";
 
 export type LearningLanguageStatus = "loading" | "ready" | "needs_setup";
 
@@ -34,9 +35,7 @@ export function useLearningLanguage() {
     }
   }, [token, activeLanguage, refreshProfile]);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  useDeferredEffect(() => reload(), [reload]);
 
   return { sessionLanguage, languages, status, reload };
 }

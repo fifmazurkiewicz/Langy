@@ -76,7 +76,6 @@ export default function ChatPage() {
   const [translateLoading, setTranslateLoading] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [checkResult, setCheckResult] = useState<CorrectionResponse | null>(null);
-  const [liveMode, setLiveMode] = useState<"live" | "mock">("mock");
   const [micStatus, setMicStatus] = useState<MicStatus>("off");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -125,12 +124,11 @@ export default function ChatPage() {
           language: sessionLanguage,
           conversation_id: convId,
         });
-        setLiveMode(live.mode === "live" && live.configured ? "live" : "mock");
         if (live.mode === "live" && live.configured) {
           await geminiLive.connect(live, { conversationId: convId, apiToken: token });
         }
       } catch {
-        setLiveMode("mock");
+        /* fall back to mock / chained */
       }
     },
     [token, sessionLanguage, geminiLive]
@@ -224,7 +222,6 @@ export default function ChatPage() {
     setListening(false);
     setMicStatus("off");
     geminiLive.disconnect();
-    setLiveMode("mock");
     setSelectedSpan(null);
     setTranslateResult(null);
     setCheckResult(null);
@@ -500,7 +497,7 @@ export default function ChatPage() {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
-  }, [listening, conversationId, sessionLanguage, appendLine, geminiLive]);
+  }, [listening, conversationId, sessionLanguage, token, appendLine, geminiLive]);
 
   const detailTitle = detailItem
     ? formatConversationDate(detailItem.started_at) || "Conversation"

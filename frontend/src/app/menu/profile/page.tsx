@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   INTERESTS,
   LANGUAGE_LABELS,
@@ -11,6 +11,7 @@ import { fetchProfiles, updateProfile, type LanguageProfile } from "@/lib/api/pr
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { MenuBackHeader } from "@/components/menu/MenuBackHeader";
+import { useDeferredEffect } from "@/lib/hooks/useDeferredEffect";
 
 import { ChipToggle } from "@/components/profile/ChipToggle";
 import { SkillCefrSlider } from "@/components/profile/SkillCefrSlider";
@@ -18,24 +19,20 @@ import { SkillCefrSlider } from "@/components/profile/SkillCefrSlider";
 export default function MenuProfilePage() {
   const { token, activeLanguage } = useAuth();
   const [profiles, setProfiles] = useState<LanguageProfile[]>([]);
-  const [language, setLanguage] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const language = selectedLanguage ?? activeLanguage ?? profiles[0]?.language ?? null;
 
   const load = useCallback(async () => {
     if (!token) return;
     const data = await fetchProfiles(token);
     setProfiles(data.profiles);
-    setLanguage((prev) => prev ?? data.active_language ?? data.profiles[0]?.language ?? null);
+    setSelectedLanguage((prev) => prev ?? data.active_language ?? data.profiles[0]?.language ?? null);
   }, [token]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (activeLanguage && !language) setLanguage(activeLanguage);
-  }, [activeLanguage, language]);
+  useDeferredEffect(() => load(), [load]);
 
   const profile = profiles.find((p) => p.language === language);
 
@@ -67,7 +64,7 @@ export default function MenuProfilePage() {
           <select
             className="classical-input"
             value={language ?? ""}
-            onChange={(e) => setLanguage(e.target.value)}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
           >
             {profiles.map((p) => (
               <option key={p.language} value={p.language}>

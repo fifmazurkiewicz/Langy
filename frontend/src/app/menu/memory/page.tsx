@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { LANGUAGE_MARKERS } from "@/lib/constants/profile";
 import {
   deleteMemoryFact,
@@ -14,6 +14,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { MenuBackHeader } from "@/components/menu/MenuBackHeader";
 import { formatConversationDate } from "@/lib/chat/transcript";
+import { useDeferredEffect } from "@/lib/hooks/useDeferredEffect";
 
 export default function MenuMemoryPage() {
   const { token, activeLanguage } = useAuth();
@@ -38,9 +39,7 @@ export default function MenuMemoryPage() {
     }
   }, [token, activeLanguage]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useDeferredEffect(() => load(), [load]);
 
   async function saveEdit(id: string) {
     if (!token || !editText.trim()) return;
