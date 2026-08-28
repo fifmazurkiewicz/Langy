@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { LANGUAGE_LABELS } from "@/lib/constants/profile";
 import { fetchProfiles } from "@/lib/api/profile";
@@ -9,6 +10,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { MenuRow } from "@/components/menu/MenuRow";
 
 export default function MenuPage() {
+  const router = useRouter();
   const { token, email, isAdmin, signOut } = useAuth();
   const [spend, setSpend] = useState<{ cap: number; used: number } | null>(null);
   const [languageSummary, setLanguageSummary] = useState("");
@@ -59,8 +61,10 @@ export default function MenuPage() {
 
         <button
           type="button"
-          className="mt-8 text-xs uppercase tracking-wide text-[var(--color-soft)]"
-          onClick={() => void signOut()}
+          className="classical-btn mt-8 w-full"
+          onClick={() => {
+            void signOut().then(() => router.replace("/login"));
+          }}
         >
           Sign out
         </button>
