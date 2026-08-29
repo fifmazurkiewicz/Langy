@@ -30,7 +30,7 @@ def get_current_user(
     user = db.get(User, user_id)
     if user is None:
         email = payload.get("email")
-        is_admin = (email or "").lower() in settings.admin_email_set or payload.get("is_admin") is True
+        is_admin = (email or "").lower() in settings.admin_email_set
         user = User(
             id=user_id,
             email=email,

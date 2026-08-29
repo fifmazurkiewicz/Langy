@@ -6,6 +6,16 @@ export type ApiOptions = {
   token?: string | null;
 };
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -20,7 +30,7 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promi
   });
   if (!res.ok) {
     const detail = await res.text();
-    throw new Error(parseApiError(detail, res.statusText));
+    throw new ApiError(parseApiError(detail, res.statusText), res.status);
   }
   return res.json() as Promise<T>;
 }

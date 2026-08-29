@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { useOnApiHealthy } from "@/components/ApiPulseProvider";
+import { hasPendingOAuthRedirect } from "@/lib/auth/oauth";
 import { createClient, DEV_TOKEN, DEV_USER_ID, isDevAuthMode } from "@/lib/supabase/client";
 
 /**
@@ -37,8 +38,19 @@ type SessionState = {
 
 const AuthContext = createContext<SessionState | null>(null);
 
+const AUTH_INIT_TIMEOUT_MS = 15_000;
+
+function createInitGate() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const devMode = isDevAuthMode();
+  const initGateRef = useRef(createInitGate());
   const [sessionResolved, setSessionResolved] = useState(devMode);
   const [token, setToken] = useState<string | null>(() => (devMode ? DEV_TOKEN : null));
   const [userId, setUserId] = useState<string | null>(() => (devMode ? DEV_USER_ID : null));
@@ -48,6 +60,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profileState, setProfileState] = useState<ProfileState>("unknown");
   /** Token whose /api/auth/me result we already hold — keeps cold starts to one request. */
   const profileTokenRef = useRef<string | null>(null);
+
+  const finishInit = useCallback(() => {
+    setSessionResolved(true);
+    initGateRef.current.resolve();
+  }, []);
 
   const clearSession = useCallback(() => {
     profileTokenRef.current = null;
@@ -59,29 +76,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfileState("unknown");
   }, []);
 
-  const applyMe = useCallback(async (access: string, force = false) => {
-    if (!force && profileTokenRef.current === access) return;
-    profileTokenRef.current = access;
-    try {
-      const me = await apiFetch<MeResponse>("/api/auth/me", { token: access });
-      setUserId(me.id);
-      setEmail(me.email);
-      setIsAdmin(me.is_admin);
-      setActiveLanguage(me.active_language);
-      setProfileState(me.onboarding_completed_at ? "ready" : "needs_onboarding");
-    } catch {
-      // Render cold start or offline API: stay explicitly unknown instead of assuming "not onboarded".
-      profileTokenRef.current = null;
-      setProfileState("unknown");
+  const rejectSession = useCallback(async () => {
+    clearSession();
+    finishInit();
+    if (!isDevAuthMode()) {
+      await createClient()?.auth.signOut();
     }
-  }, []);
+  }, [clearSession, finishInit]);
 
-  /**
-   * Supabase's own storage is the source of truth, so this never depends on React state having
-   * settled — callers cannot observe a spurious `null` while the provider is still initializing.
-   */
+  const applyMe = useCallback(
+    async (access: string, force = false) => {
+      if (!force && profileTokenRef.current === access) return;
+      profileTokenRef.current = access;
+      try {
+        const me = await apiFetch<MeResponse>("/api/auth/me", { token: access });
+        setUserId(me.id);
+        setEmail(me.email);
+        setIsAdmin(me.is_admin);
+        setActiveLanguage(me.active_language);
+        setProfileState(me.onboarding_completed_at ? "ready" : "needs_onboarding");
+      } catch (err) {
+        profileTokenRef.current = null;
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          await rejectSession();
+          return;
+        }
+        // Render cold start or offline API — stay unknown, never assume "not onboarded".
+        setProfileState("unknown");
+      }
+    },
+    [rejectSession]
+  );
+
   const getAccessToken = useCallback(async (): Promise<string | null> => {
     if (isDevAuthMode()) return DEV_TOKEN;
+    await initGateRef.current.promise;
+
     const supabase = createClient();
     if (!supabase) return null;
 
@@ -91,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const access = session?.access_token ?? null;
     setToken(access);
     setUserId(session?.user?.id ?? null);
+    setEmail(session?.user?.email ?? null);
     return access;
   }, []);
 
@@ -102,58 +133,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useOnApiHealthy(
     useCallback(() => {
-      if (profileState === "unknown") void refreshProfile();
-    }, [profileState, refreshProfile])
+      if (profileState === "unknown" && token) void refreshProfile();
+    }, [profileState, token, refreshProfile])
   );
 
   useEffect(() => {
     if (devMode) {
+      initGateRef.current.resolve();
       queueMicrotask(() => void applyMe(DEV_TOKEN));
       return;
     }
 
     const supabase = createClient();
     if (!supabase) {
-      queueMicrotask(() => setSessionResolved(true));
+      queueMicrotask(() => finishInit());
       return;
     }
 
+    const timeoutId = setTimeout(() => {
+      finishInit();
+    }, AUTH_INIT_TIMEOUT_MS);
+
     void supabase.auth.getSession().then(({ data }) => {
       const access = data.session?.access_token ?? null;
-      setToken(access);
-      setUserId(data.session?.user?.id ?? null);
-      setEmail(data.session?.user?.email ?? null);
-      setSessionResolved(true);
-      if (access) void applyMe(access);
+      if (access) {
+        setToken(access);
+        setUserId(data.session?.user?.id ?? null);
+        setEmail(data.session?.user?.email ?? null);
+        finishInit();
+        void applyMe(access);
+        return;
+      }
+      // PKCE: ?code= in URL but session not ready — wait for onAuthStateChange, not anonymous.
+      if (hasPendingOAuthRedirect()) return;
+      finishInit();
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.access_token) {
+        clearTimeout(timeoutId);
         setToken(session.access_token);
         setUserId(session.user.id);
         setEmail(session.user.email ?? null);
-        setSessionResolved(true);
+        finishInit();
         if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
           void applyMe(session.access_token);
         }
         return;
       }
       if (event === "SIGNED_OUT") {
+        clearTimeout(timeoutId);
         clearSession();
-        setSessionResolved(true);
+        finishInit();
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [applyMe, clearSession, devMode]);
+    return () => {
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
+  }, [applyMe, clearSession, devMode, finishInit]);
 
   const signInWithGoogle = useCallback(async () => {
     if (isDevAuthMode()) {
       setToken(DEV_TOKEN);
       setUserId(DEV_USER_ID);
       setEmail("dev@langy.local");
+      finishInit();
       await applyMe(DEV_TOKEN);
       return;
     }
@@ -161,18 +209,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      // Land on the app root and let AuthGate decide onboarding vs chat.
       options: { redirectTo: `${window.location.origin}/` },
     });
-  }, [applyMe]);
+  }, [applyMe, finishInit]);
 
   const signOut = useCallback(async () => {
     if (!isDevAuthMode()) {
-      const supabase = createClient();
-      await supabase?.auth.signOut();
+      await createClient()?.auth.signOut();
     }
     clearSession();
-  }, [clearSession]);
+    finishInit();
+  }, [clearSession, finishInit]);
 
   const markOnboardingComplete = useCallback(() => {
     setProfileState("ready");

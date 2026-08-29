@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { resolveRedirect } from "@/lib/auth/routePolicy";
@@ -23,9 +23,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const redirectTo = resolveRedirect(status, pathname);
+  const navigatedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (redirectTo) router.replace(redirectTo);
+    if (!redirectTo) {
+      navigatedRef.current = null;
+      return;
+    }
+    if (navigatedRef.current === redirectTo) return;
+    navigatedRef.current = redirectTo;
+    router.replace(redirectTo);
   }, [redirectTo, router]);
 
   if (redirectTo) return <Splash label="Taking you to the right place…" />;
