@@ -56,7 +56,14 @@ Open http://localhost:3000 — Login (dev) → Onboarding → Chat / Memo / Menu
 3. Start Chat session → toggle Listening → End session
 4. Memo → Pending → Accept/Reject
 
-## 6. Production alignment
+## 6. Supabase OAuth redirect URLs
+
+Add to Supabase → Authentication → URL Configuration → **Redirect URLs**:
+
+- `https://langy.fmazurkiewicz.dev/auth/callback`
+- `http://localhost:3000/auth/callback` (local)
+
+## 7. Production alignment
 
 - Frontend: Vercel (`langy.fmazurkiewicz.dev`)
 - Backend: Render Docker (`api-langy.fmazurkiewicz.dev`)

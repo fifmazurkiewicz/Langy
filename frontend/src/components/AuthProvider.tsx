@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useOnApiHealthy } from "@/components/ApiPulseProvider";
-import { hasPendingOAuthRedirect } from "@/lib/auth/oauth";
+import { clearOAuthRedirectParams, hasPendingOAuthRedirect } from "@/lib/auth/oauth";
 import { createClient, DEV_TOKEN, DEV_USER_ID, isDevAuthMode } from "@/lib/supabase/client";
 
 /**
@@ -151,6 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const timeoutId = setTimeout(() => {
+      if (hasPendingOAuthRedirect()) {
+        clearOAuthRedirectParams();
+      }
       finishInit();
     }, AUTH_INIT_TIMEOUT_MS);
 
@@ -209,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   }, [applyMe, finishInit]);
 
