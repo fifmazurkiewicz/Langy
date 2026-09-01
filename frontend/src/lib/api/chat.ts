@@ -77,6 +77,13 @@ export function resumeChatSession(token: string, conversationId: string) {
   }>(`/api/chat/sessions/${conversationId}/resume`, { method: "POST", token });
 }
 
+export function textTurn(
+  token: string,
+  body: { text: string; language?: string; conversation_id?: string }
+) {
+  return apiFetch<{ agent_reply: string }>("/api/chat/text-turn", { method: "POST", token, body });
+}
+
 export function chainedTurn(
   token: string,
   body: { text: string; language?: string; conversation_id?: string }

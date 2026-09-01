@@ -20,6 +20,7 @@ from app.domain.agenda.service import (
     process_post_session_job,
 )
 from app.domain.chat.service import ConversationDeleteError, delete_conversation
+from app.domain.chat.text_turn import text_user_turn
 from app.domain.chat.transcript import parse_transcript, preview_transcript
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
 from app.domain.providers.text import get_text_provider
@@ -50,6 +51,12 @@ class SaveWordRequest(BaseModel):
 class ChainedTurnRequest(BaseModel):
     text: str
     language: str | None = None
+
+
+class TextTurnRequest(BaseModel):
+    text: str
+    language: str | None = None
+    conversation_id: str | None = None
 
 
 @router.post("/sessions")
@@ -226,6 +233,41 @@ def end_session(
     job = enqueue_post_session_jobs(db, conversation.id, user.id)
     process_post_session_job(db, job)
     return {"ok": True, "job_id": str(job.id)}
+
+
+@router.post("/text-turn")
+def text_turn(
+    body: TextTurnRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """OpenRouter text reply when Live is not connected (any VOICE_MODE)."""
+    try:
+        check_spend_cap(db, user)
+    except SpendCapExceeded as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+
+    if not body.conversation_id:
+        raise HTTPException(status_code=400, detail="conversation_id required")
+
+    try:
+        conversation_id = uuid.UUID(body.conversation_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid conversation_id") from exc
+
+    conversation = db.get(Conversation, conversation_id)
+    if not conversation or conversation.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if conversation.ended_at:
+        raise HTTPException(status_code=400, detail="Session ended")
+
+    language = body.language or user.active_language
+    if language and conversation.language != language:
+        raise HTTPException(status_code=400, detail="Language mismatch")
+
+    reply = text_user_turn(db, user, conversation, body.text, provider=get_text_provider())
+    record_usage(db, user.id, "gen_ai", 0.002, provider="text_turn")
+    return {"agent_reply": reply}
 
 
 @router.post("/chained-turn")

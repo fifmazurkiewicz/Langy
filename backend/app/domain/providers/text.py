@@ -131,6 +131,15 @@ class MockTextProvider:
                     }
                 ]
             }
+        if "language tutor" in system.lower() or "langy" in system.lower():
+            user_msg = user or ""
+            if "grammar" in user_msg.lower():
+                return {
+                    "reply": "Sure! Let's practice grammar. Can you make a sentence using the present perfect?"
+                }
+            return {"reply": f"Thanks for sharing! You said: {user_msg}. What would you like to practice next?"}
+        if "friendly language tutor" in system.lower():
+            return {"reply": "Great point! Tell me more about that."}
         return {"summary": "Practiced greetings.", "facts": ["User enjoys travel topics."]}
 
 

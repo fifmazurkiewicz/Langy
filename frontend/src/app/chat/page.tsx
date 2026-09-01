@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import {
   appendChatLine,
   chainedTurn,
+  textTurn,
   deleteChatConversation,
   endChatSession,
   getChatSession,
@@ -270,12 +271,30 @@ export default function ChatPage() {
             }
             await deliverAgentReply(lineIndex, res.agent_reply);
           } catch {
-            await deliverAgentReply(lineIndex, `Good point about "${text}". Tell me more.`);
+            await deliverAgentReply(
+              lineIndex,
+              "I'm having trouble responding right now. Could you try again?"
+            );
           }
           return;
         }
 
-        await deliverAgentReply(lineIndex, `Good point about "${text}". Tell me more.`);
+        if (token && sessionLanguage) {
+          try {
+            const res = await textTurn(token, {
+              text,
+              language: sessionLanguage,
+              conversation_id: conversationId,
+            });
+            await deliverAgentReply(lineIndex, res.agent_reply);
+          } catch {
+            await deliverAgentReply(
+              lineIndex,
+              "I'm having trouble responding right now. Could you try again?"
+            );
+          }
+          return;
+        }
       } finally {
         setSending(false);
       }
