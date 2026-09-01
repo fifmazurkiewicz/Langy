@@ -10,9 +10,11 @@ type Props = {
   lines: TranscriptLineData[];
   isActive: boolean;
   loading: boolean;
+  deleting: boolean;
   onClose: () => void;
   onContinue: () => void;
   onReturnToSession: () => void;
+  onDelete: () => void;
 };
 
 export function ConversationDetailSheet({
@@ -21,9 +23,11 @@ export function ConversationDetailSheet({
   lines,
   isActive,
   loading,
+  deleting,
   onClose,
   onContinue,
   onReturnToSession,
+  onDelete,
 }: Props) {
   return (
     <ClassicalBottomSheet
@@ -31,15 +35,28 @@ export function ConversationDetailSheet({
       title={title}
       onClose={onClose}
       footer={
-        isActive ? (
-          <button type="button" className="classical-btn classical-btn-primary w-full" onClick={onReturnToSession}>
-            Return to session
+        <div className="space-y-2">
+          {isActive ? (
+            <button type="button" className="classical-btn classical-btn-primary w-full" onClick={onReturnToSession}>
+              Return to session
+            </button>
+          ) : (
+            <button type="button" className="classical-btn classical-btn-primary w-full" onClick={onContinue}>
+              Continue conversation
+            </button>
+          )}
+          <button
+            type="button"
+            className="classical-btn w-full opacity-80"
+            disabled={deleting || isActive}
+            onClick={onDelete}
+          >
+            {deleting ? "Deleting…" : "Delete conversation"}
           </button>
-        ) : (
-          <button type="button" className="classical-btn classical-btn-primary w-full" onClick={onContinue}>
-            Continue conversation
-          </button>
-        )
+          {isActive ? (
+            <p className="text-center text-xs text-[var(--color-soft)]">End the session before deleting it.</p>
+          ) : null}
+        </div>
       }
     >
       {loading ? <p className="text-sm text-[var(--color-soft)]">Loading transcript…</p> : null}

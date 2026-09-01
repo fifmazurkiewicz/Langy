@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from app.domain.mnemonics.prompts import build_mnemonic_messages
 from app.domain.mnemonics.schemas import GenerateMnemonicRequest, MnemonicResponse
 from app.domain.providers.text import TextCompletionProvider, get_text_provider
 from app.domain.selection.normalize import normalize_span
@@ -30,17 +31,7 @@ def _get_cache(db: Session, user_id: uuid.UUID, language: str, term: str) -> Voc
 
 
 def _call_mnemonic_prompt(provider: TextCompletionProvider, term: str, language: str) -> dict[str, str]:
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Create a sound-association mnemonic in Polish for a language learner. "
-                'Return JSON: {"association_pl":"","example_l2":"","example_pl":""}'
-            ),
-        },
-        {"role": "user", "content": f"term ({language}): {term}"},
-    ]
-    data = provider.complete_json(messages)
+    data = provider.complete_json(build_mnemonic_messages(term, language))
     return {
         "association_pl": data.get("association_pl", ""),
         "example_l2": data.get("example_l2", f"I use {term} often."),

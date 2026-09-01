@@ -59,6 +59,13 @@ export function listChatConversations(token: string, language?: string) {
   });
 }
 
+export function deleteChatConversation(token: string, conversationId: string) {
+  return apiFetch<{ ok: boolean }>(`/api/chat/conversations/${conversationId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 export function resumeChatSession(token: string, conversationId: string) {
   return apiFetch<{
     conversation_id: string;

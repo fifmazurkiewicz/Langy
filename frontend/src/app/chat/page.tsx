@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import {
   appendChatLine,
   chainedTurn,
+  deleteChatConversation,
   endChatSession,
   getChatSession,
   listChatConversations,
@@ -23,6 +24,12 @@ import { addSelectionPending, translateSelection, type TranslateSelectionRespons
 import { fetchLiveConfig, fetchLiveToken } from "@/lib/api/live";
 import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
+import {
+  bindDebouncedContinuousRecognition,
+  getSpeechRecognitionCtor,
+  runOneShotRecognition,
+  speechRecognitionSupported,
+} from "@/lib/voice/webSpeechTurn";
 import { useAuth } from "@/components/AuthProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -38,11 +45,6 @@ import { SessionSummarySheet } from "@/components/chat/SessionSummarySheet";
 import { TranscriptPane, type TranscriptLineData } from "@/components/chat/TranscriptPane";
 import { TranslatePanel } from "@/components/chat/TranslatePanel";
 import { formatConversationDate } from "@/lib/chat/transcript";
-
-function speechRecognitionSupported() {
-  if (typeof window === "undefined") return false;
-  return Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition);
-}
 
 async function probeMicrophone(): Promise<MicStatus> {
   if (!speechRecognitionSupported()) return "unsupported";
@@ -89,8 +91,14 @@ export default function ChatPage() {
   const [pendingResumeId, setPendingResumeId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryPendingCount, setSummaryPendingCount] = useState(0);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [speakOnceActive, setSpeakOnceActive] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const oneShotRef = useRef<SpeechRecognition | null>(null);
+  const unbindSpeechRef = useRef<(() => void) | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
   const listeningRef = useRef(listening);
   const voiceModeRef = useRef("speech_to_speech");
@@ -188,6 +196,112 @@ export default function ChatPage() {
     appendLineRef.current = appendLine;
   }, [appendLine]);
 
+  const speechLang = sessionLanguage?.startsWith("en") ? "en-GB" : (sessionLanguage ?? "en-GB");
+
+  const deliverAgentReply = useCallback(
+    async (lineIndex: number, reply: string) => {
+      setChatState("speaking");
+      await appendLine("Agent", reply);
+      setChatState(listeningRef.current ? "listening" : "idle");
+      if (lineIndex >= 0) lineIndexRef.current = lineIndex;
+    },
+    [appendLine]
+  );
+
+  const submitUserMessage = useCallback(
+    async (rawText: string) => {
+      const text = rawText.trim();
+      if (!text || !conversationId || sending) return;
+
+      setSending(true);
+      setChatState("thinking");
+      try {
+        const lineIndex = await appendLine("User", text);
+        lineIndexRef.current = lineIndex;
+
+        if (geminiLive.connected) {
+          await geminiLive.sendUserText(text);
+          setChatState(listeningRef.current ? "listening" : "idle");
+          return;
+        }
+
+        if (voiceModeRef.current === "chained" && token && sessionLanguage) {
+          try {
+            const res = await chainedTurn(token, {
+              text,
+              language: sessionLanguage,
+              conversation_id: conversationId,
+            });
+            if (res.correction?.is_corrected) {
+              setCorrections((prev) => ({ ...prev, [lineIndex]: res.correction as CorrectionResponse }));
+            }
+            await deliverAgentReply(lineIndex, res.agent_reply);
+          } catch {
+            await deliverAgentReply(lineIndex, `Good point about "${text}". Tell me more.`);
+          }
+          return;
+        }
+
+        await deliverAgentReply(lineIndex, `Good point about "${text}". Tell me more.`);
+      } finally {
+        setSending(false);
+      }
+    },
+    [conversationId, sending, appendLine, geminiLive, token, sessionLanguage, deliverAgentReply]
+  );
+
+  const handleSendText = useCallback(() => {
+    const text = draft.trim();
+    if (!text) return;
+    setDraft("");
+    void submitUserMessage(text);
+  }, [draft, submitUserMessage]);
+
+  const handleSpeakOnce = useCallback(async () => {
+    if (!conversationId || speakOnceActive || sending || listening) return;
+
+    const status = await probeMicrophone();
+    if (status !== "ready") {
+      setMicStatus(status);
+      return;
+    }
+
+    oneShotRef.current?.stop();
+    oneShotRef.current = null;
+    setSpeakOnceActive(true);
+    setChatState("listening");
+
+    const recognition = runOneShotRecognition(
+      speechLang,
+      (text) => {
+        setSpeakOnceActive(false);
+        setChatState("idle");
+        oneShotRef.current = null;
+        void submitUserMessage(text);
+      },
+      (code) => {
+        setSpeakOnceActive(false);
+        setChatState("idle");
+        oneShotRef.current = null;
+        if (code === "not-allowed") setMicStatus("blocked");
+      }
+    );
+
+    if (!recognition) {
+      setSpeakOnceActive(false);
+      setChatState("idle");
+      setMicStatus("unsupported");
+      return;
+    }
+
+    recognition.onend = () => {
+      setSpeakOnceActive(false);
+      if (!sending) setChatState("idle");
+      oneShotRef.current = null;
+    };
+    oneShotRef.current = recognition;
+  }, [conversationId, speakOnceActive, sending, listening, speechLang, submitUserMessage]);
+
   const loadSession = useCallback(
     async (convId: string, sessionLines: TranscriptLineData[]) => {
       setConversationId(convId);
@@ -195,6 +309,8 @@ export default function ChatPage() {
       setCorrections({});
       setChatState("idle");
       setListening(false);
+      setDraft("");
+      setSpeakOnceActive(false);
       setDetailOpen(false);
       setHistoryOpen(false);
       await connectLive(convId);
@@ -221,6 +337,10 @@ export default function ChatPage() {
     const endedId = conversationId;
     setListening(false);
     setMicStatus("off");
+    setDraft("");
+    setSpeakOnceActive(false);
+    oneShotRef.current?.stop();
+    oneShotRef.current = null;
     geminiLive.disconnect();
     setSelectedSpan(null);
     setTranslateResult(null);
@@ -307,6 +427,38 @@ export default function ChatPage() {
       setStartError(e instanceof Error ? e.message : "Could not resume session");
     }
   }, [token, detailItem, detailLines, conversationId, loadSession]);
+
+  const handleDeleteConversation = useCallback(
+    async (item: ConversationListItem) => {
+      if (!token || deletingConversationId) return;
+      if (item.is_active) {
+        alert("End the session before deleting it.");
+        return;
+      }
+      if (!confirm("Delete this conversation? This cannot be undone.")) return;
+
+      setDeletingConversationId(item.id);
+      try {
+        await deleteChatConversation(token, item.id);
+        setHistoryItems((prev) => prev.filter((c) => c.id !== item.id));
+        if (detailItem?.id === item.id) {
+          setDetailOpen(false);
+          setDetailItem(null);
+          setDetailLines([]);
+        }
+        if (conversationId === item.id) {
+          setConversationId(null);
+          setLines([]);
+          setChatState("idle");
+        }
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Could not delete conversation");
+      } finally {
+        setDeletingConversationId(null);
+      }
+    },
+    [token, deletingConversationId, detailItem, conversationId]
+  );
 
   const handleTranslate = useCallback(async () => {
     if (!token || !sessionLanguage || !selectedSpan) return;
@@ -412,7 +564,7 @@ export default function ChatPage() {
     if (!listening || !conversationId) return;
 
     let cancelled = false;
-    const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    const SpeechRecognitionCtor = getSpeechRecognitionCtor();
 
     async function startListening() {
       const status = await probeMicrophone();
@@ -432,45 +584,19 @@ export default function ChatPage() {
 
       setMicStatus("ready");
       const recognition = new SpeechRecognitionCtor();
-      recognition.lang = sessionLanguage?.startsWith("en") ? "en-GB" : (sessionLanguage ?? "en-GB");
-      recognition.interimResults = false;
-      recognition.continuous = true;
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const text = event.results[event.results.length - 1][0].transcript.trim();
-        if (!text) return;
-        setChatState("thinking");
-        void appendLine("User", text).then((lineIndex) => {
-          lineIndexRef.current = lineIndex;
-          if (geminiLive.connected) {
-            void geminiLive.sendUserText(text);
-            setChatState(listeningRef.current ? "listening" : "idle");
-            return;
+      recognition.lang = speechLang;
+      unbindSpeechRef.current?.();
+      unbindSpeechRef.current = bindDebouncedContinuousRecognition(recognition, (text) => {
+        void submitUserMessage(text).finally(() => {
+          if (!cancelled && listeningRef.current && recognitionRef.current === recognition) {
+            try {
+              recognition.stop();
+            } catch {
+              /* restart via onend */
+            }
           }
-          if (voiceModeRef.current === "chained" && token && sessionLanguage) {
-            void chainedTurn(token, { text, language: sessionLanguage, conversation_id: conversationId ?? undefined })
-              .then((res) => {
-                if (res.correction?.is_corrected) {
-                  setCorrections((prev) => ({ ...prev, [lineIndex]: res.correction as CorrectionResponse }));
-                }
-                setChatState("speaking");
-                void appendLine("Agent", res.agent_reply).then(() =>
-                  setChatState(listeningRef.current ? "listening" : "idle")
-                );
-              })
-              .catch(() => {
-                const reply = `Good point about "${text}". Tell me more.`;
-                setChatState("speaking");
-                void appendLine("Agent", reply).then(() =>
-                  setChatState(listeningRef.current ? "listening" : "idle")
-                );
-              });
-            return;
-          }
-          const reply = `Good point about "${text}". Tell me more.`;
-          setChatState("speaking");
-          void appendLine("Agent", reply).then(() => setChatState(listeningRef.current ? "listening" : "idle"));
         });
-      };
+      });
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === "not-allowed") {
           setMicStatus("blocked");
@@ -494,17 +620,19 @@ export default function ChatPage() {
     void startListening();
     return () => {
       cancelled = true;
+      unbindSpeechRef.current?.();
+      unbindSpeechRef.current = null;
       recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
-  }, [listening, conversationId, sessionLanguage, token, appendLine, geminiLive]);
+  }, [listening, conversationId, speechLang, submitUserMessage]);
 
   const detailTitle = detailItem
     ? formatConversationDate(detailItem.started_at) || "Conversation"
     : "Conversation";
 
   return (
-    <div className="flex flex-1 flex-col pb-[calc(120px+env(safe-area-inset-bottom))]">
+    <div className="flex flex-1 flex-col pb-[calc(196px+env(safe-area-inset-bottom))]">
       <header className="flex items-center gap-2 border-b border-[var(--color-divider)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <LanguageSwitcher
           activeLanguage={sessionLanguage}
@@ -582,8 +710,20 @@ export default function ChatPage() {
         listening={listening}
         startingSession={startingSession}
         canStartSession={canStartSession}
+        draft={draft}
+        sending={sending}
+        speakOnceActive={speakOnceActive}
+        speechAvailable={speechRecognitionSupported()}
+        onDraftChange={setDraft}
+        onSendText={handleSendText}
+        onSpeakOnce={() => void handleSpeakOnce()}
         onStart={() => void startSession()}
         onToggleListening={() => {
+          if (speakOnceActive) {
+            oneShotRef.current?.stop();
+            oneShotRef.current = null;
+            setSpeakOnceActive(false);
+          }
           setListening((v) => {
             const next = !v;
             if (next && conversationId) setChatState("listening");
@@ -598,8 +738,10 @@ export default function ChatPage() {
         open={historyOpen}
         loading={historyLoading}
         conversations={historyItems}
+        deletingId={deletingConversationId}
         onClose={() => setHistoryOpen(false)}
         onSelect={(item) => void openConversationDetail(item)}
+        onDelete={(item) => void handleDeleteConversation(item)}
       />
 
       <ConversationDetailSheet
@@ -608,9 +750,11 @@ export default function ChatPage() {
         lines={detailLines}
         isActive={detailItem?.is_active ?? false}
         loading={detailLoading}
+        deleting={deletingConversationId === detailItem?.id}
         onClose={() => setDetailOpen(false)}
         onContinue={() => void continueConversation()}
         onReturnToSession={() => void continueConversation()}
+        onDelete={() => detailItem && void handleDeleteConversation(detailItem)}
       />
 
       <EndSessionSheet

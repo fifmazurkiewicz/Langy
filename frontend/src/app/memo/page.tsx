@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { createCategory, exportQuizlet, generateCategory, listVocabCategories, reviewCard } from "@/lib/api/vocab";
+import { createCategory, exportQuizlet, generateCategory, listDueCards, listVocabCategories, reviewCard } from "@/lib/api/vocab";
+import { formatCategoryLabel, UNCATEGORIZED_DUE_CATEGORY_KEY } from "@/lib/memo/categories";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
 import { MnemonicsList } from "@/components/mnemonics/MnemonicsList";
 import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
@@ -33,28 +34,27 @@ export default function MemoPage() {
   const [subTab, setSubTab] = useState<SubTab>("pending");
   const [pending, setPending] = useState<VocabItem[]>([]);
   const [due, setDue] = useState<{ id: string; term: string; translation: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: string; category_key: string; accepted_count: number }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; category_key: string; accepted_count: number; due_count: number }[]>([]);
+  const [otherDueCount, setOtherDueCount] = useState(0);
+  const [dueCategoryKey, setDueCategoryKey] = useState<string | null>(null);
   const [mnemonicTerm, setMnemonicTerm] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{ id: string; term: string; translation: string } | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
     async function fetchVocab() {
       const p = await apiFetch<{ items: VocabItem[] }>("/api/vocab/pending", { token: token! });
-      const d = await apiFetch<{ cards: { id: string; term: string; translation: string }[] }>(
-        "/api/vocab/due",
-        { token: token! }
-      );
       const c = await listVocabCategories(token!, activeLanguage ?? undefined);
       if (!cancelled) {
         setPending(p.items);
-        setDue(d.cards);
         setCategories(c.items);
+        setOtherDueCount(c.other_due_count);
       }
     }
     void fetchVocab();
@@ -63,17 +63,33 @@ export default function MemoPage() {
     };
   }, [token, activeLanguage]);
 
+  useEffect(() => {
+    if (!token || subTab !== "due" || !dueCategoryKey) {
+      setDue([]);
+      return;
+    }
+    let cancelled = false;
+    void listDueCards(token, activeLanguage ?? undefined, dueCategoryKey).then((d) => {
+      if (!cancelled) setDue(d.cards);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeLanguage, subTab, dueCategoryKey]);
+
   async function reload() {
     if (!token) return;
     const p = await apiFetch<{ items: VocabItem[] }>("/api/vocab/pending", { token });
     setPending(p.items);
-    const d = await apiFetch<{ cards: { id: string; term: string; translation: string }[] }>(
-      "/api/vocab/due",
-      { token }
-    );
-    setDue(d.cards);
     const c = await listVocabCategories(token, activeLanguage ?? undefined);
     setCategories(c.items);
+    setOtherDueCount(c.other_due_count);
+    if (dueCategoryKey) {
+      const d = await listDueCards(token, activeLanguage ?? undefined, dueCategoryKey);
+      setDue(d.cards);
+    } else {
+      setDue([]);
+    }
   }
 
   async function decide(id: string, action: "accept" | "reject") {
@@ -108,11 +124,18 @@ export default function MemoPage() {
   }
 
   async function submitReview(rating: "again" | "hard" | "good" | "easy") {
-    if (!token || !reviewing) return;
-    await reviewCard(token, reviewing.id, rating);
-    setReviewing(null);
-    setRevealed(false);
-    await reload();
+    if (!token || !reviewing || reviewSubmitting) return;
+    setReviewSubmitting(true);
+    try {
+      await reviewCard(token, reviewing.id, rating);
+      setReviewing(null);
+      setRevealed(false);
+      await reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Could not save review");
+    } finally {
+      setReviewSubmitting(false);
+    }
   }
 
   return (
@@ -152,7 +175,12 @@ export default function MemoPage() {
               <button
                 type="button"
                 className={`classical-btn px-3 ${subTab === "due" ? "classical-btn-primary" : ""}`}
-                onClick={() => setSubTab("due")}
+                onClick={() => {
+                  setSubTab("due");
+                  setDueCategoryKey(null);
+                  setReviewing(null);
+                  setRevealed(false);
+                }}
               >
                 Due today
               </button>
@@ -264,6 +292,46 @@ export default function MemoPage() {
                 )}
                 </ul>
               </div>
+            ) : subTab === "due" && !dueCategoryKey && !reviewing ? (
+              <div className="space-y-3">
+                <p className="text-sm opacity-70">Choose a category to review today&apos;s cards.</p>
+                {categories.filter((cat) => cat.due_count > 0).length === 0 && otherDueCount === 0 ? (
+                  <p className="opacity-60">Nothing due today.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {categories
+                      .filter((cat) => cat.due_count > 0)
+                      .map((cat) => (
+                        <li key={cat.id}>
+                          <button
+                            type="button"
+                            className="classical-card w-full p-4 text-left"
+                            onClick={() => setDueCategoryKey(cat.category_key)}
+                          >
+                            <p className="font-serif text-lg capitalize">{formatCategoryLabel(cat.category_key)}</p>
+                            <p className="text-sm opacity-70">
+                              {cat.accepted_count} word{cat.accepted_count === 1 ? "" : "s"} · {cat.due_count} due
+                            </p>
+                          </button>
+                        </li>
+                      ))}
+                    {otherDueCount > 0 ? (
+                      <li>
+                        <button
+                          type="button"
+                          className="classical-card w-full p-4 text-left"
+                          onClick={() => setDueCategoryKey(UNCATEGORIZED_DUE_CATEGORY_KEY)}
+                        >
+                          <p className="font-serif text-lg">Other</p>
+                          <p className="text-sm opacity-70">
+                            {otherDueCount} due · from chat and other sources
+                          </p>
+                        </button>
+                      </li>
+                    ) : null}
+                  </ul>
+                )}
+              </div>
             ) : reviewing ? (
               <section className="classical-card space-y-4 p-6 text-center">
                 <p className="font-serif text-2xl">{reviewing.term}</p>
@@ -277,20 +345,51 @@ export default function MemoPage() {
                 {revealed ? (
                   <div className="grid grid-cols-2 gap-2">
                     {(["again", "hard", "good", "easy"] as const).map((r) => (
-                      <button key={r} type="button" className="classical-btn capitalize" onClick={() => void submitReview(r)}>
-                        {r}
+                      <button
+                        key={r}
+                        type="button"
+                        className="classical-btn capitalize"
+                        disabled={reviewSubmitting}
+                        onClick={() => void submitReview(r)}
+                      >
+                        {reviewSubmitting ? "…" : r}
                       </button>
                     ))}
                   </div>
                 ) : null}
-                <button type="button" className="classical-btn w-full" onClick={() => { setReviewing(null); setRevealed(false); }}>
+                <button
+                  type="button"
+                  className="classical-btn w-full"
+                  disabled={reviewSubmitting}
+                  onClick={() => {
+                    setReviewing(null);
+                    setRevealed(false);
+                  }}
+                >
                   Cancel
                 </button>
               </section>
             ) : (
-              <ul className="space-y-3">
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  className="classical-btn text-sm"
+                  onClick={() => {
+                    setDueCategoryKey(null);
+                    setReviewing(null);
+                    setRevealed(false);
+                  }}
+                >
+                  ← Categories
+                </button>
+                <p className="text-sm opacity-70 capitalize">
+                  {dueCategoryKey === UNCATEGORIZED_DUE_CATEGORY_KEY
+                    ? "Other"
+                    : formatCategoryLabel(dueCategoryKey ?? "")}
+                </p>
+                <ul className="space-y-3">
                 {due.length === 0 ? (
-                  <p className="opacity-60">Nothing due today.</p>
+                  <p className="opacity-60">Nothing due in this category.</p>
                 ) : (
                   due.map((card) => (
                     <li key={card.id} className="classical-card p-4">
@@ -309,7 +408,8 @@ export default function MemoPage() {
                     </li>
                   ))
                 )}
-              </ul>
+                </ul>
+              </div>
             )}
           </>
         ) : tab === "shadowing" ? (

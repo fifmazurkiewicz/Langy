@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/shadowing";
 import { fetchLiveToken } from "@/lib/api/live";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
+import { runOneShotRecognition, speechRecognitionSupported } from "@/lib/voice/webSpeechTurn";
 
 type Props = {
   token: string;
@@ -45,7 +46,11 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hardIds, setHardIds] = useState<string[]>([]);
+  const [speakOnceActive, setSpeakOnceActive] = useState(false);
   const playedRef = useRef<string | null>(null);
+  const oneShotRef = useRef<SpeechRecognition | null>(null);
+
+  const speechLang = language.startsWith("en") ? "en-GB" : language;
 
   const geminiLive = useGeminiLive({
     onAgentText: (text) => speakLine(text, language),
@@ -86,6 +91,52 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
     playedRef.current = current.id;
     void playCurrentLine(current);
   }, [step, current, playCurrentLine]);
+
+  useEffect(() => {
+    return () => {
+      oneShotRef.current?.stop();
+      oneShotRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    oneShotRef.current?.stop();
+    oneShotRef.current = null;
+    setSpeakOnceActive(false);
+  }, [lineIndex, step]);
+
+  const handleSpeakOnce = useCallback(() => {
+    if (speakOnceActive || loading) return;
+
+    oneShotRef.current?.stop();
+    oneShotRef.current = null;
+    setSpeakOnceActive(true);
+
+    const recognition = runOneShotRecognition(
+      speechLang,
+      (text) => {
+        setUserInput(text);
+        setSpeakOnceActive(false);
+        oneShotRef.current = null;
+      },
+      () => {
+        setSpeakOnceActive(false);
+        oneShotRef.current = null;
+      }
+    );
+
+    if (!recognition) {
+      setSpeakOnceActive(false);
+      alert("Speech not supported in this browser. Use Chrome or Edge, or type your repeat.");
+      return;
+    }
+
+    recognition.onend = () => {
+      setSpeakOnceActive(false);
+      oneShotRef.current = null;
+    };
+    oneShotRef.current = recognition;
+  }, [speakOnceActive, loading, speechLang]);
 
   async function loadPastConversations() {
     setLoading(true);
@@ -305,12 +356,28 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
       >
         Replay line
       </button>
-      <input
-        className="classical-input"
-        value={userInput}
-        onChange={(e) => setUserInput(e.target.value)}
-        placeholder="Type or speak your repeat"
-      />
+      <div className="flex items-end gap-2">
+        <input
+          className="classical-input min-w-0 flex-1"
+          value={userInput}
+          disabled={loading || speakOnceActive}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder="Type your repeat"
+          aria-label="Type your repeat"
+        />
+        {speechRecognitionSupported() ? (
+          <button
+            type="button"
+            className={`classical-btn shrink-0 px-3 ${speakOnceActive ? "classical-btn-primary" : ""}`}
+            disabled={loading || speakOnceActive}
+            onClick={handleSpeakOnce}
+            aria-pressed={speakOnceActive}
+            aria-label="Speak your repeat"
+          >
+            {speakOnceActive ? "Listening…" : "Speak"}
+          </button>
+        ) : null}
+      </div>
       {feedback ? <p className="text-sm opacity-80">{feedback}</p> : null}
       <div className="flex gap-2">
         <button type="button" className="classical-btn flex-1" disabled={loading || !current} onClick={() => void handleAddCurrent()}>

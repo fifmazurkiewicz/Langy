@@ -15,7 +15,7 @@ export function MicStatusBanner({ status, hasSession, onDismissBlocked }: Props)
     return (
       <div className="classical-card border-[var(--color-accent)] p-3 text-sm">
         <p className="font-serif">Speech not supported in this browser</p>
-        <p className="mt-1 opacity-80">Use Chrome or Edge for voice input.</p>
+        <p className="mt-1 opacity-80">Use Chrome or Edge for voice input, or type your message below.</p>
       </div>
     );
   }

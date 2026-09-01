@@ -16,6 +16,6 @@ def test_resume_session_requires_auth():
     assert r.status_code == 401
 
 
-def test_get_session_requires_auth():
-    r = client.get("/api/chat/sessions/00000000-0000-4000-8000-000000000001")
+def test_delete_conversation_requires_auth():
+    r = client.delete("/api/chat/conversations/00000000-0000-4000-8000-000000000001")
     assert r.status_code == 401

@@ -12,7 +12,7 @@ const STATUS: Record<
   },
   idle: {
     title: "Ready when you are",
-    subtitle: "Start a session and turn on listening to speak.",
+    subtitle: "Type below, tap Speak, or turn on listening for hands-free chat.",
   },
   listening: {
     title: "Listening",

@@ -16,5 +16,12 @@ tests:
           const o = typeof output === 'string' ? JSON.parse(output) : output;
           return !!(o.association_pl && o.example_l2);
 
-
-
+  - vars:
+      term: itinerary
+    assert:
+      - type: javascript
+        value: |
+          const o = typeof output === 'string' ? JSON.parse(output) : output;
+          const pl = o.association_pl || '';
+          const bad = /itinerer|mieć\s+itinerer/i.test(pl);
+          return !bad && pl.length > 20 && !!(o.example_l2 && o.example_pl);

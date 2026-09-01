@@ -17,6 +17,37 @@ from app.models import FlashcardSet, FsrsCard, User, VocabItem
 
 router = APIRouter()
 
+UNCATEGORIZED_CATEGORY_KEY = "__other__"
+
+
+def _due_cards_base_query(db: Session, user_id: uuid.UUID, lang: str | None, now: datetime):
+    q = (
+        db.query(FsrsCard)
+        .join(VocabItem)
+        .options(joinedload(FsrsCard.vocab_item))
+        .filter(VocabItem.user_id == user_id, VocabItem.status == "accepted", FsrsCard.due_at <= now)
+    )
+    if lang:
+        q = q.filter(VocabItem.language == lang)
+    return q
+
+
+def _apply_due_category_filter(q, category_key: str | None):
+    if not category_key:
+        return q
+    if category_key == UNCATEGORIZED_CATEGORY_KEY:
+        return q.filter(VocabItem.flashcard_set_id.is_(None))
+    return q.join(FlashcardSet, VocabItem.flashcard_set_id == FlashcardSet.id).filter(
+        FlashcardSet.category_key == category_key
+    )
+
+
+def _category_key_for_vocab(db: Session, item: VocabItem) -> str | None:
+    if not item.flashcard_set_id:
+        return None
+    card_set = db.get(FlashcardSet, item.flashcard_set_id)
+    return card_set.category_key if card_set else None
+
 
 class VocabDecision(BaseModel):
     action: str  # accept | reject
@@ -71,17 +102,11 @@ def list_due(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
+    category_key: str | None = None,
 ) -> dict:
     lang = language or user.active_language
     now = datetime.now(timezone.utc)
-    q = (
-        db.query(FsrsCard)
-        .join(VocabItem)
-        .options(joinedload(FsrsCard.vocab_item))
-        .filter(VocabItem.user_id == user.id, VocabItem.status == "accepted", FsrsCard.due_at <= now)
-    )
-    if lang:
-        q = q.filter(VocabItem.language == lang)
+    q = _apply_due_category_filter(_due_cards_base_query(db, user.id, lang, now), category_key)
     cards = q.order_by(FsrsCard.due_at).all()
     return {
         "cards": [
@@ -90,6 +115,7 @@ def list_due(
                 "term": c.vocab_item.term,
                 "translation": c.vocab_item.translation,
                 "due_at": c.due_at.isoformat(),
+                "category_key": _category_key_for_vocab(db, c.vocab_item),
             }
             for c in cards
         ]
@@ -124,6 +150,7 @@ def list_vocab_categories(
     language: str | None = None,
 ) -> dict:
     lang = language or user.active_language
+    now = datetime.now(timezone.utc)
     q = db.query(FlashcardSet).filter(FlashcardSet.user_id == user.id)
     if lang:
         q = q.filter(FlashcardSet.language == lang)
@@ -138,15 +165,29 @@ def list_vocab_categories(
             )
             .scalar()
         )
+        due_count = (
+            db.query(func.count(FsrsCard.id))
+            .join(VocabItem)
+            .filter(
+                VocabItem.flashcard_set_id == card_set.id,
+                VocabItem.status == "accepted",
+                FsrsCard.due_at <= now,
+            )
+            .scalar()
+        )
         items.append(
             {
                 "id": str(card_set.id),
                 "category_key": card_set.category_key,
                 "language": card_set.language,
                 "accepted_count": int(accepted or 0),
+                "due_count": int(due_count or 0),
             }
         )
-    return {"items": items}
+    other_due_count = int(
+        _apply_due_category_filter(_due_cards_base_query(db, user.id, lang, now), UNCategorized_CATEGORY_KEY).count()
+    )
+    return {"items": items, "other_due_count": other_due_count}
 
 
 @router.post("/cards/{card_id}/review")

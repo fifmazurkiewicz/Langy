@@ -70,8 +70,19 @@ class MockTextProvider:
             term = "word"
             if len(messages) > 1 and "term" in messages[1]["content"]:
                 term = messages[1]["content"].split(":", 1)[-1].strip()
+            if term.casefold() == "itinerary":
+                return {
+                    "association_pl": (
+                        "'Itinerary' brzmi jak 'aj, taki plan' — to po prostu plan podróży i lista miejsc na trasie."
+                    ),
+                    "example_l2": "Do you have the itinerary for our trip to Italy?",
+                    "example_pl": "Czy masz plan podróży na naszą wycieczkę do Włoch?",
+                }
             return {
-                "association_pl": f"Wyobraź sobie '{term}' jako zabawne skojarzenie dźwiękowe.",
+                "association_pl": (
+                    f"Skojarz '{term}' z prostym obrazem po polsku — np. wyobraź sobie sytuację, "
+                    f"w której to słowo naturalnie pasuje."
+                ),
                 "example_l2": f"I love using {term} every day.",
                 "example_pl": "Uwielbiam używać tego słowa każdego dnia.",
             }

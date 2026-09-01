@@ -1,2 +1,2 @@
-Generate mnemonic association in Polish. Return association_pl, example_l2, example_pl.
+Create a Polish sound-association mnemonic for a language learner. association_pl must use real Polish only; never invent fake Polish words or fake phrases like "mieć itinerer". Return JSON: association_pl, example_l2, example_pl.
 term: {{term}}
