@@ -32,9 +32,9 @@ export function LanguageSwitcher({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/40">
+        <div className="fixed inset-0 z-[60] flex flex-col bg-black/40 pb-[calc(52px+env(safe-area-inset-bottom))]">
           <button type="button" className="flex-1" aria-label="Close language menu" onClick={() => setOpen(false)} />
-          <div className="classical-card rounded-t-md border-b-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="classical-card rounded-t-md border-b-0 p-4">
             <p className="mb-3 font-serif text-xl">Learning language</p>
             <ul role="listbox" className="space-y-1">
               {languages.map((lang) => (

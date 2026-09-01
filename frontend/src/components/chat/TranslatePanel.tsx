@@ -13,8 +13,8 @@ type Props = {
 
 export function TranslatePanel({ result, loading, error, onAdd, onClose, onRetry }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4">
-      <div className="classical-card w-full max-w-lg space-y-3 p-4">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 pb-[calc(52px+env(safe-area-inset-bottom)+1rem)]">
+      <div className="classical-card max-h-[min(70vh,calc(100%-1rem))] w-full max-w-lg space-y-3 overflow-y-auto p-4">
         <div className="flex items-start justify-between gap-2">
           <h2 className="text-lg font-serif">Translate</h2>
           <button type="button" className="classical-btn px-2 py-1 text-sm" onClick={onClose}>

@@ -13,7 +13,10 @@ type Props = {
 export function ClassicalBottomSheet({ open, title, onClose, children, footer }: Props) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40" role="presentation">
+    <div
+      className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/40 pb-[calc(52px+env(safe-area-inset-bottom))]"
+      role="presentation"
+    >
       <button type="button" className="flex-1" aria-label="Close" onClick={onClose} />
       <div
         className="classical-card max-h-[85vh] overflow-hidden rounded-t-md border-b-0 shadow-lg"
@@ -28,11 +31,7 @@ export function ClassicalBottomSheet({ open, title, onClose, children, footer }:
           </button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-4">{children}</div>
-        {footer ? (
-          <div className="border-t border-[var(--color-divider)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-            {footer}
-          </div>
-        ) : null}
+        {footer ? <div className="border-t border-[var(--color-divider)] p-4">{footer}</div> : null}
       </div>
     </div>
   );
