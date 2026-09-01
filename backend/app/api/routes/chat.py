@@ -20,6 +20,7 @@ from app.domain.agenda.service import (
     process_post_session_job,
 )
 from app.domain.chat.service import ConversationDeleteError, delete_conversation
+from app.domain.chat.transcript import parse_transcript, preview_transcript
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
 from app.domain.providers.text import get_text_provider
 from app.domain.voice.chained_pipeline import chained_user_turn

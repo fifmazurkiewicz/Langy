@@ -43,7 +43,13 @@ export function listDueCards(token: string, language?: string, categoryKey?: str
 export function listVocabCategories(token: string, language?: string) {
   const q = language ? `?language=${encodeURIComponent(language)}` : "";
   return apiFetch<{
-    items: { id: string; category_key: string; accepted_count: number; due_count: number }[];
+    items: {
+      id: string;
+      category_key: string;
+      accepted_count: number;
+      due_count: number;
+      is_custom: boolean;
+    }[];
     other_due_count: number;
   }>(`/api/vocab/categories${q}`, { token });
 }
@@ -58,4 +64,8 @@ export function createCategory(token: string, body: { language: string; category
     token,
     body,
   });
+}
+
+export function deleteVocab(token: string, vocabId: string) {
+  return apiFetch<{ ok: boolean }>(`/api/vocab/${vocabId}`, { method: "DELETE", token });
 }

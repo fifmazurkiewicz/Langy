@@ -74,3 +74,84 @@ export function runOneShotRecognition(
   recognition.start();
   return recognition;
 }
+
+export type DebouncedRecognitionHandle = {
+  recognition: SpeechRecognition;
+  stop: () => void;
+};
+
+/**
+ * Shadowing-friendly capture: debounced continuous STT with manual stop.
+ * MVP fallback until provider STT endpointing (see STT_END_SILENCE_MS env).
+ */
+export function runDebouncedRecognition(
+  lang: string,
+  silenceMs: number,
+  onUtterance: UtteranceHandler,
+  onError?: (code: string) => void
+): DebouncedRecognitionHandle | null {
+  const Ctor = getSpeechRecognitionCtor();
+  if (!Ctor) return null;
+
+  const recognition = new Ctor();
+  recognition.lang = lang;
+  let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingText = "";
+  let stopped = false;
+
+  const commit = () => {
+    const text = pendingText.trim();
+    pendingText = "";
+    if (silenceTimer) {
+      clearTimeout(silenceTimer);
+      silenceTimer = null;
+    }
+    if (!stopped) {
+      stopped = true;
+      try {
+        recognition.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+    if (text) onUtterance(text);
+  };
+
+  const scheduleCommit = () => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      silenceTimer = null;
+      if (!stopped) commit();
+    }, silenceMs);
+  };
+
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.onresult = (event: SpeechRecognitionEvent) => {
+    let chunk = "";
+    for (let i = 0; i < event.results.length; i += 1) {
+      chunk += event.results[i][0].transcript;
+    }
+    pendingText = chunk.trim();
+    if (!pendingText) return;
+    scheduleCommit();
+  };
+  recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    onError?.(event.error);
+  };
+
+  recognition.start();
+
+  return {
+    recognition,
+    stop: () => {
+      stopped = true;
+      try {
+        recognition.stop();
+      } catch {
+        /* ignore */
+      }
+      commit();
+    },
+  };
+}

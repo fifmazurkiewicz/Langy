@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listAcceptedVocab } from "@/lib/api/vocab";
+import { deleteVocab, listAcceptedVocab } from "@/lib/api/vocab";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
 import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
 import { formatCategoryLabel, UNCATEGORIZED_DUE_CATEGORY_KEY } from "@/lib/memo/categories";
@@ -23,6 +23,7 @@ export function VocabularyList({ token, language }: Props) {
   const [items, setItems] = useState<VocabItem[]>([]);
   const [search, setSearch] = useState("");
   const [mnemonicTerm, setMnemonicTerm] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +60,20 @@ export function VocabularyList({ token, language }: Props) {
     });
   }, [filtered]);
 
+  async function handleDelete(item: VocabItem) {
+    if (!confirm(`Remove "${item.term}" from your vocabulary? This cannot be undone.`)) return;
+    setDeletingId(item.id);
+    try {
+      await deleteVocab(token, item.id);
+      setItems((prev) => prev.filter((v) => v.id !== item.id));
+      if (mnemonicTerm === item.term) setMnemonicTerm(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Could not delete word");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <input
@@ -93,13 +108,24 @@ export function VocabularyList({ token, language }: Props) {
                         </p>
                       ) : null}
                     </div>
-                    <button
-                      type="button"
-                      className="classical-btn shrink-0"
-                      onClick={() => setMnemonicTerm(item.term)}
-                    >
-                      Mnemonic
-                    </button>
+                    <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        className="classical-btn"
+                        onClick={() => setMnemonicTerm(item.term)}
+                      >
+                        Mnemonic
+                      </button>
+                      <button
+                        type="button"
+                        className="classical-btn opacity-70"
+                        disabled={deletingId === item.id}
+                        aria-label={`Delete ${item.term}`}
+                        onClick={() => void handleDelete(item)}
+                      >
+                        {deletingId === item.id ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

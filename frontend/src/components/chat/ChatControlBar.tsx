@@ -5,6 +5,7 @@ import { ChatComposer } from "@/components/chat/ChatComposer";
 type Props = {
   hasSession: boolean;
   listening: boolean;
+  tutorVoice: boolean;
   startingSession: boolean;
   canStartSession: boolean;
   draft: string;
@@ -16,12 +17,14 @@ type Props = {
   onSpeakOnce: () => void;
   onStart: () => void;
   onToggleListening: () => void;
+  onToggleTutorVoice: () => void;
   onEnd: () => void;
 };
 
 export function ChatControlBar({
   hasSession,
   listening,
+  tutorVoice,
   startingSession,
   canStartSession,
   draft,
@@ -33,6 +36,7 @@ export function ChatControlBar({
   onSpeakOnce,
   onStart,
   onToggleListening,
+  onToggleTutorVoice,
   onEnd,
 }: Props) {
   if (!hasSession) {
@@ -68,14 +72,28 @@ export function ChatControlBar({
       <div className="flex gap-2">
         <button
           type="button"
-          className={`classical-btn flex-1 ${listening ? "classical-btn-primary" : ""}`}
+          className={`classical-btn flex-1 text-sm ${tutorVoice ? "classical-btn-primary" : ""}`}
+          onClick={onToggleTutorVoice}
+          aria-pressed={tutorVoice}
+          disabled={sending}
+        >
+          {tutorVoice ? "Tutor voice on" : "Tutor voice off"}
+        </button>
+        <button
+          type="button"
+          className={`classical-btn flex-1 text-sm ${listening ? "classical-btn-primary" : ""}`}
           onClick={onToggleListening}
           aria-pressed={listening}
           disabled={inputDisabled}
         >
           {listening ? "Listening on" : "Listening off"}
         </button>
-        <button type="button" className="classical-btn flex-1 opacity-80" onClick={onEnd} disabled={sending}>
+        <button
+          type="button"
+          className="classical-btn flex-1 text-sm opacity-80"
+          onClick={onEnd}
+          disabled={sending}
+        >
           End session
         </button>
       </div>

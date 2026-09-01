@@ -10,8 +10,18 @@ def test_vocab_export_auth():
     assert r.status_code == 401
 
 
+def test_vocab_categories_auth():
+    r = client.get("/api/vocab/categories")
+    assert r.status_code == 401
+
+
 def test_vocab_accepted_auth():
     r = client.get("/api/vocab/accepted")
+    assert r.status_code == 401
+
+
+def test_vocab_delete_auth():
+    r = client.delete("/api/vocab/00000000-0000-4000-8000-000000000001")
     assert r.status_code == 401
 
 

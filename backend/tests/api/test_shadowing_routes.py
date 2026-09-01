@@ -13,6 +13,16 @@ def test_shadowing_requires_auth():
     assert r.status_code == 401
 
 
+def test_voice_synthesize_requires_auth():
+    r = client.post("/api/voice/synthesize", json={"text": "hello"})
+    assert r.status_code == 401
+
+
 def test_list_conversations_requires_auth():
     r = client.get("/api/shadowing/conversations")
+    assert r.status_code == 401
+
+
+def test_voice_config_requires_auth():
+    r = client.get("/api/voice/config")
     assert r.status_code == 401

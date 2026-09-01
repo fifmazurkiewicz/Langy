@@ -54,9 +54,9 @@ Local dev without Supabase: leave `NEXT_PUBLIC_SUPABASE_*` empty so the frontend
 - Monthly spend_cap is admin-configurable and sums TTS + ASR + gen AI; when exceeded, block costly actions for the rest of the month but allow browsing and reviewing existing flashcards.
 - Chat always has a text input; Listening is an optional on/off toggle (on = VAD hands-free; off = mic idle) with a speak/mic affordance when off — not push-to-talk or mandatory Tap-to-start; MicStatusBanner (off / blocked / unsupported / listening); Web Speech needs Chrome or Edge (Firefox unsupported; Safari desktop partial, iOS unreliable).
 - Menu hub (drill-in per UX §11.3): Languages, Profile (motivation/interests/skills per language), Plan, Memory (view/edit/delete facts), Appearance (System/Light/Dark), optional Admin, Sign out.
-- Bottom nav is Chat / Memo / Menu; Memo main tabs Flashcards, Vocabulary, Shadowing, Mnemonics; Flashcards sub-tabs Due today (category picker first) / Pending / Generate (renamed from Categories); Vocabulary = all accepted words for active language with local search.
+- Bottom nav is Chat / Memo / Menu; Memo main tabs Flashcards, Vocabulary, Shadowing; Flashcards sub-tabs Due today (category picker first) / Pending / Generate (renamed from Categories); Vocabulary = all accepted words for active language with local search and Mnemonic per term.
 - Shadowing: agent asks topic, then generated dialogue or pick past conversation; show-text on/off before session (default on); audio TTS|Live switch; tip + optional Add during session and hard-line batch at end → Pending (`shadowing`).
-- Mnemonics: library tab for accepted terms without association → Generate; Regenerate costs GenAI cap; Due card has Mnemonic shortcut (same panel); no images, no user-owned mnemonics.
+- Mnemonics: Generate/Regenerate via Mnemonic button on Vocabulary and Due cards (same panel); no images, no user-owned mnemonics.
 - Coach packages build order: 1 interactive transcript + selection dictionary → 2 in-flight correction → 4 shadowing → 3 mnemonics (GenAI on demand; no images; no user-owned mnemonics).
 
 ## Learned Workspace Facts

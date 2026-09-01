@@ -26,24 +26,20 @@ Fokus na **wersji czatowej**. W zakładce Memo → **Flashcards** w MVP:
 | Zakładka | Zawartość |
 |---|---|
 | **Chat** | Rozmowa głosowa — ekran domyślny po zalogowaniu |
-| **Memo** | Hub nauki: **Flashcards** · **Shadowing** · **Mnemonics** |
+| **Memo** | Hub nauki: **Flashcards** · **Vocabulary** · **Shadowing** |
 | **Menu** | Konto, języki, profil per język, Plan, **Memory**, wygląd, Admin |
 
 ### Memo — Flashcards
 
-Dawne Words: Due today | Categories | Pending | eksport Quizlet `.txt`. Badge Pending na zakładce Memo. Na karcie **Due**: przycisk **Mnemonic** (skrót do tego samego panelu co zakładka Mnemonics).
+Dawne Words: Due today | Categories | Pending | eksport Quizlet `.txt`. Badge Pending na zakładce Memo. Na karcie **Due**: przycisk **Mnemonic** (ten sam panel co w Vocabulary).
 
 ### Memo — Shadowing
 
 Osobny tryb: agent dopytuje tematykę → dialog wygenerowany **lub** wybór past conversation → setup (show-text on/off, TTS\|Live) → pętla play→repeat→feedback → End z batch trudnych linii → Pending (`shadowing`). Spec: [`../superpowers/specs/2026-08-27-shadowing-memo-design.md`](../superpowers/specs/2026-08-27-shadowing-memo-design.md).
 
-### Memo — Mnemonics
-
-Biblioteka skojarzeń dźwiękowych (GenAI, PL) dla **zaakceptowanych** terminów bez cache: lista → **Generate** / podgląd → **Regenerate** (koszt GenAI, cap). Bez obrazków; bez wpisywania własnych. Spec: [`../superpowers/specs/2026-08-27-mnemonics-design.md`](../superpowers/specs/2026-08-27-mnemonics-design.md).
-
 ## 4. Language Switcher — jedno miejsce, skutek wszędzie
 
-- **Jedyny** kontroler aktywnego języka nauki. Zmiana aktualizuje jednocześnie Chat, Memo (Flashcards / Shadowing / Mnemonics) i kontekst profilu.
+- **Jedyny** kontroler aktywnego języka nauki. Zmiana aktualizuje jednocześnie Chat, Memo (Flashcards / Vocabulary / Shadowing) i kontekst profilu.
 - Widoczny w headerze powierzchni nauki (Chat / Memo); nie duplikować osobnych switcherów.
 - Wizualnie: znaczniki Classical (**GB / US / DE / ES / IT**), **bez emoji flag**, + nazwa języka.
 - British i American English = dwa osobne wpisy.
@@ -115,15 +111,13 @@ Header: język → switcher. Stany: Waking up… → Idle z **opcjonalnym listen
 
 ### 11.2 Memo
 
-Sub-tabs: **Flashcards** | **Vocabulary** | **Shadowing** | **Mnemonics**.
+Sub-tabs: **Flashcards** | **Vocabulary** | **Shadowing**.
 
 **Flashcards:** Due Today | Pending | Generate (category vocab generation). Badge na tabie Memo. Export (tab-separated). Cap banner. Due card: **Mnemonic** button.
 
-**Vocabulary:** all accepted words for active language; local search; Mnemonic shortcut per term.
+**Vocabulary:** all accepted words for active language; local search; **Mnemonic** per term (Generate/Regenerate panel — PL association + example).
 
 **Shadowing:** topic intake → generate or pick conversation → show-text + TTS|Live → loop → end hard-line batch → Pending.
-
-**Mnemonics:** needs-mnemonic list → Generate/Regenerate panel (PL association + example).
 
 ### 11.3 Menu
 

@@ -9,6 +9,7 @@ from app.auth.deps import get_current_user
 from app.db import get_db
 from app.domain.languages import SUPPORTED_LANGUAGES
 from app.domain.profile.service import ensure_flashcard_sets_for_interests, enqueue_jobs_for_new_interest_sets
+from app.domain.voice.catalog import CUSTOM_VOICE_KEY, DEFAULT_VOICE_KEY, is_valid_elevenlabs_voice_id, is_valid_voice_key
 from app.models import User, UserLanguageProfile
 
 router = APIRouter()
@@ -22,6 +23,8 @@ class ProfileUpdate(BaseModel):
     skill_writing: int | None = Field(None, ge=1, le=6)
     skill_listening: int | None = Field(None, ge=1, le=6)
     skill_vocabulary: int | None = Field(None, ge=1, le=6)
+    tts_voice_key: str | None = None
+    tts_custom_voice_id: str | None = None
 
 
 class ActiveLanguageUpdate(BaseModel):
@@ -61,6 +64,8 @@ def list_profiles(
                     "vocabulary": p.skill_vocabulary,
                 },
                 "cefr_level": p.cefr_level,
+                "tts_voice_key": p.tts_voice_key or DEFAULT_VOICE_KEY,
+                "tts_custom_voice_id": p.tts_custom_voice_id,
             }
             for p in profiles
         ],
@@ -156,6 +161,17 @@ def update_profile(
         profile.skill_listening = body.skill_listening
     if body.skill_vocabulary is not None:
         profile.skill_vocabulary = body.skill_vocabulary
+    if body.tts_custom_voice_id is not None:
+        raw = body.tts_custom_voice_id.strip()
+        profile.tts_custom_voice_id = raw or None
+    if body.tts_voice_key is not None:
+        key = body.tts_voice_key.strip() or DEFAULT_VOICE_KEY
+        if not is_valid_voice_key(language, key):
+            raise HTTPException(status_code=400, detail=f"Invalid voice key for {language}")
+        profile.tts_voice_key = None if key == DEFAULT_VOICE_KEY else key
+    effective_key = profile.tts_voice_key or DEFAULT_VOICE_KEY
+    if effective_key == CUSTOM_VOICE_KEY and not is_valid_elevenlabs_voice_id(profile.tts_custom_voice_id):
+        raise HTTPException(status_code=400, detail="Custom ElevenLabs voice ID required when using custom voice")
     db.commit()
     if new_keys:
         enqueue_jobs_for_new_interest_sets(db, user.id, language, new_keys)

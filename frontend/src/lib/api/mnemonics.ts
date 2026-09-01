@@ -9,14 +9,6 @@ export type MnemonicResponse = {
   from_cache: boolean;
 };
 
-export function listNeedsMnemonic(token: string, language?: string) {
-  const q = language ? `?language=${encodeURIComponent(language)}` : "";
-  return apiFetch<{ items: { term: string; translation: string; vocab_item_id: string }[] }>(
-    `/api/mnemonics/needs${q}`,
-    { token }
-  );
-}
-
 export function generateMnemonic(
   token: string,
   body: { term: string; language: string; regenerate?: boolean }

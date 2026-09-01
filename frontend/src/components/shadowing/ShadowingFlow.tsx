@@ -10,8 +10,14 @@ import {
   type DialogueLine,
 } from "@/lib/api/shadowing";
 import { fetchLiveToken } from "@/lib/api/live";
+import { fetchVoiceConfig, type VoiceConfig } from "@/lib/api/voice";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
-import { runOneShotRecognition, speechRecognitionSupported } from "@/lib/voice/webSpeechTurn";
+import { speakTutorLine } from "@/lib/voice/speakLine";
+import {
+  runDebouncedRecognition,
+  speechRecognitionSupported,
+  type DebouncedRecognitionHandle,
+} from "@/lib/voice/webSpeechTurn";
 
 type Props = {
   token: string;
@@ -22,13 +28,11 @@ type Props = {
 type Step = "intake" | "past" | "setup" | "loop" | "done";
 type SourceMode = "generated" | "past";
 
-function speakLine(text: string, language: string) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = language.startsWith("en") ? "en-GB" : language;
-  window.speechSynthesis.speak(utterance);
-}
+const DEFAULT_VOICE_CONFIG: VoiceConfig = {
+  tts_provider: "elevenlabs",
+  tts_configured: false,
+  stt_end_silence_ms: 2500,
+};
 
 export function ShadowingFlow({ token, language, onDone }: Props) {
   const [step, setStep] = useState<Step>("intake");
@@ -47,27 +51,50 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
   const [loading, setLoading] = useState(false);
   const [hardIds, setHardIds] = useState<string[]>([]);
   const [speakOnceActive, setSpeakOnceActive] = useState(false);
+  const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(DEFAULT_VOICE_CONFIG);
   const playedRef = useRef<string | null>(null);
-  const oneShotRef = useRef<SpeechRecognition | null>(null);
+  const oneShotRef = useRef<DebouncedRecognitionHandle | null>(null);
 
   const speechLang = language.startsWith("en") ? "en-GB" : language;
 
   const geminiLive = useGeminiLive({
-    onAgentText: (text) => speakLine(text, language),
+    onAgentText: (text) => {
+      void speakTutorLine(text, language, token, voiceConfig).catch(() => undefined);
+    },
     onError: () => undefined,
   });
+
+  useEffect(() => {
+    fetchVoiceConfig(token, language)
+      .then(setVoiceConfig)
+      .catch(() => undefined);
+  }, [token, language]);
 
   const agentLines = lines.filter((l) => l.role === "agent");
   const current = agentLines[lineIndex];
 
+  const canStart =
+    sourceMode === "generated" ? topic.trim().length > 0 : selectedConversationId !== null;
+
+  const playLineTts = useCallback(
+    async (text: string) => {
+      try {
+        await speakTutorLine(text, language, token, voiceConfig);
+      } catch {
+        /* text visible in UI; no browser voice */
+      }
+    },
+    [language, token, voiceConfig]
+  );
+
   const playCurrentLine = useCallback(
     async (line: DialogueLine) => {
       if (audioMode === "tts") {
-        speakLine(line.text, language);
+        await playLineTts(line.text);
         return;
       }
       if (!sessionId) {
-        speakLine(line.text, language);
+        await playLineTts(line.text);
         return;
       }
       try {
@@ -76,13 +103,13 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
           await geminiLive.connect(live);
           await geminiLive.sendUserText(`Say exactly: ${line.text}`);
         } else {
-          speakLine(line.text, language);
+          await playLineTts(line.text);
         }
       } catch {
-        speakLine(line.text, language);
+        await playLineTts(line.text);
       }
     },
-    [audioMode, geminiLive, language, sessionId, token]
+    [audioMode, geminiLive, language, sessionId, token, playLineTts]
   );
 
   useEffect(() => {
@@ -105,6 +132,12 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
     setSpeakOnceActive(false);
   }, [lineIndex, step]);
 
+  const stopSpeakCapture = useCallback(() => {
+    oneShotRef.current?.stop();
+    oneShotRef.current = null;
+    setSpeakOnceActive(false);
+  }, []);
+
   const handleSpeakOnce = useCallback(() => {
     if (speakOnceActive || loading) return;
 
@@ -112,8 +145,9 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
     oneShotRef.current = null;
     setSpeakOnceActive(true);
 
-    const recognition = runOneShotRecognition(
+    const handle = runDebouncedRecognition(
       speechLang,
+      voiceConfig.stt_end_silence_ms,
       (text) => {
         setUserInput(text);
         setSpeakOnceActive(false);
@@ -125,18 +159,20 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
       }
     );
 
-    if (!recognition) {
+    if (!handle) {
       setSpeakOnceActive(false);
       alert("Speech not supported in this browser. Use Chrome or Edge, or type your repeat.");
       return;
     }
 
-    recognition.onend = () => {
-      setSpeakOnceActive(false);
-      oneShotRef.current = null;
+    handle.recognition.onend = () => {
+      if (oneShotRef.current === handle) {
+        setSpeakOnceActive(false);
+        oneShotRef.current = null;
+      }
     };
-    oneShotRef.current = recognition;
-  }, [speakOnceActive, loading, speechLang]);
+    oneShotRef.current = handle;
+  }, [speakOnceActive, loading, speechLang, voiceConfig.stt_end_silence_ms]);
 
   async function loadPastConversations() {
     setLoading(true);
@@ -152,8 +188,14 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
   }
 
   async function handleStart() {
-    if (sourceMode === "generated" && !topic.trim()) return;
-    if (sourceMode === "past" && !selectedConversationId) return;
+    if (!canStart) {
+      alert(
+        sourceMode === "generated"
+          ? "Enter a topic first (e.g. ordering coffee)."
+          : "Pick a past conversation first."
+      );
+      return;
+    }
     setLoading(true);
     try {
       const session = await startShadowingSession(token, {
@@ -252,7 +294,12 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
               onChange={(e) => setTopic(e.target.value)}
               placeholder="e.g. ordering coffee"
             />
-            <button type="button" className="classical-btn classical-btn-primary w-full" onClick={() => setStep("setup")}>
+            <button
+              type="button"
+              className="classical-btn classical-btn-primary w-full"
+              disabled={!topic.trim()}
+              onClick={() => setStep("setup")}
+            >
               Continue
             </button>
           </>
@@ -299,8 +346,19 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
   }
 
   if (step === "setup") {
+    const setupLabel =
+      sourceMode === "generated"
+        ? topic.trim()
+        : pastConversations.find((c) => c.id === selectedConversationId)?.preview || "Past conversation";
+
     return (
       <div className="space-y-4">
+        <button type="button" className="classical-btn text-sm" onClick={() => setStep(sourceMode === "past" ? "past" : "intake")}>
+          ← Back
+        </button>
+        <p className="text-sm opacity-80">
+          Topic: <span className="font-serif">{setupLabel}</span>
+        </p>
         <label className="flex min-h-[44px] items-center gap-2">
           <input type="checkbox" checked={showText} onChange={(e) => setShowText(e.target.checked)} />
           Show text (default on)
@@ -309,6 +367,7 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
           <button
             type="button"
             className={`classical-btn ${audioMode === "tts" ? "classical-btn-primary" : ""}`}
+            aria-pressed={audioMode === "tts"}
             onClick={() => setAudioMode("tts")}
           >
             TTS
@@ -316,15 +375,23 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
           <button
             type="button"
             className={`classical-btn ${audioMode === "live" ? "classical-btn-primary" : ""}`}
+            aria-pressed={audioMode === "live"}
             onClick={() => setAudioMode("live")}
           >
             Live
           </button>
         </div>
+        <p className="text-xs opacity-60">
+          {audioMode === "live"
+            ? "Live uses Gemini voice when configured; otherwise server TTS from env."
+            : voiceConfig.tts_configured
+              ? "TTS uses your configured server voice (ElevenLabs)."
+              : "Set TTS_PROVIDER=elevenlabs + keys in backend .env for tutor audio."}
+        </p>
         <button
           type="button"
           className="classical-btn classical-btn-primary w-full"
-          disabled={loading}
+          disabled={loading || !canStart}
           onClick={() => void handleStart()}
         >
           {loading ? "Starting…" : "Start shadowing"}
@@ -366,16 +433,27 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
           aria-label="Type your repeat"
         />
         {speechRecognitionSupported() ? (
-          <button
-            type="button"
-            className={`classical-btn shrink-0 px-3 ${speakOnceActive ? "classical-btn-primary" : ""}`}
-            disabled={loading || speakOnceActive}
-            onClick={handleSpeakOnce}
-            aria-pressed={speakOnceActive}
-            aria-label="Speak your repeat"
-          >
-            {speakOnceActive ? "Listening…" : "Speak"}
-          </button>
+          speakOnceActive ? (
+            <button
+              type="button"
+              className="classical-btn classical-btn-primary shrink-0 px-3"
+              disabled={loading}
+              onClick={stopSpeakCapture}
+              aria-label="Stop listening"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="classical-btn shrink-0 px-3"
+              disabled={loading}
+              onClick={handleSpeakOnce}
+              aria-label="Speak your repeat"
+            >
+              Speak
+            </button>
+          )
         ) : null}
       </div>
       {feedback ? <p className="text-sm opacity-80">{feedback}</p> : null}

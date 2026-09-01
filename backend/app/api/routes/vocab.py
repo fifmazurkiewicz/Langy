@@ -12,8 +12,10 @@ from sqlalchemy.orm import Session, joinedload
 from app.auth.deps import get_current_user
 from app.db import get_db
 from app.domain.fsrs.service import create_fsrs_card, review_card
+from app.domain.profile.service import ensure_flashcard_sets_for_interests
 from app.domain.vocab.export import accepted_vocab_for_export, format_quizlet_export
-from app.models import FlashcardSet, FsrsCard, User, VocabItem
+from app.models import FlashcardSet, FsrsCard, User, UserLanguageProfile, VocabItem
+from app.models.vocab_mnemonic import VocabMnemonic
 
 router = APIRouter()
 
@@ -180,6 +182,15 @@ def list_vocab_categories(
 ) -> dict:
     lang = language or user.active_language
     now = datetime.now(timezone.utc)
+    if lang:
+        profile = (
+            db.query(UserLanguageProfile)
+            .filter(UserLanguageProfile.user_id == user.id, UserLanguageProfile.language == lang)
+            .first()
+        )
+        if profile and profile.interests:
+            ensure_flashcard_sets_for_interests(db, user.id, lang, profile.interests)
+            db.commit()
     q = db.query(FlashcardSet).filter(FlashcardSet.user_id == user.id)
     if lang:
         q = q.filter(FlashcardSet.language == lang)
@@ -211,10 +222,11 @@ def list_vocab_categories(
                 "language": card_set.language,
                 "accepted_count": int(accepted or 0),
                 "due_count": int(due_count or 0),
+                "is_custom": bool(card_set.is_custom),
             }
         )
     other_due_count = int(
-        _apply_due_category_filter(_due_cards_base_query(db, user.id, lang, now), UNCategorized_CATEGORY_KEY).count()
+        _apply_due_category_filter(_due_cards_base_query(db, user.id, lang, now), UNCATEGORIZED_CATEGORY_KEY).count()
     )
     return {"items": items, "other_due_count": other_due_count}
 
@@ -275,3 +287,21 @@ def pending_count(
 ) -> dict:
     count = db.query(VocabItem).filter(VocabItem.user_id == user.id, VocabItem.status == "pending").count()
     return {"count": count}
+
+
+@router.delete("/{vocab_id}")
+def delete_vocab(
+    vocab_id: str,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    item = db.get(VocabItem, uuid.UUID(vocab_id))
+    if not item or item.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Vocab not found")
+    db.query(VocabMnemonic).filter(VocabMnemonic.vocab_item_id == item.id).update(
+        {VocabMnemonic.vocab_item_id: None},
+        synchronize_session=False,
+    )
+    db.delete(item)
+    db.commit()
+    return {"ok": True}

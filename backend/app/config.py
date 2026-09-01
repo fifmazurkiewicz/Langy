@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     voice_mode: str = "speech_to_speech"
     google_api_key: str = ""
 
+    # TTS: browser (free, client-side) | elevenlabs (server-side)
+    tts_provider: str = "browser"
+    tts_voice_id: str = ""
+    tts_voice_name: str = ""
+    elevenlabs_api_key: str = ""
+
+    # Web Speech debounce for shadowing / hands-free (ms). Phone-bot SOTA uses provider STT endpointing.
+    stt_end_silence_ms: int = 2500
+
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"

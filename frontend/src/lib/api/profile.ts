@@ -12,6 +12,8 @@ export type LanguageProfile = {
     vocabulary: number | null;
   };
   cefr_level: string | null;
+  tts_voice_key: string;
+  tts_custom_voice_id: string | null;
 };
 
 export function fetchProfiles(token: string) {
@@ -60,6 +62,8 @@ export function updateProfile(
     skill_writing: number;
     skill_listening: number;
     skill_vocabulary: number;
+    tts_voice_key: string;
+    tts_custom_voice_id: string | null;
   }>
 ) {
   return apiFetch<{ ok: boolean }>(`/api/profile/${encodeURIComponent(language)}`, {

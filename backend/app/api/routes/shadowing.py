@@ -16,7 +16,8 @@ from app.domain.shadowing.service import (
     end_session,
     submit_turn,
 )
-from app.domain.spend_cap.service import SpendCapExceeded
+from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap
+from app.domain.voice.tts_service import synthesize_tts
 from app.models import Conversation, ShadowingSession, User
 
 router = APIRouter()
@@ -119,10 +120,22 @@ def session_tts(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
+    try:
+        check_spend_cap(db, user)
+    except SpendCapExceeded as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
     session = db.get(ShadowingSession, session_id)
     if not session or session.user_id != user.id:
         raise HTTPException(status_code=404, detail="Session not found")
     line = next((l for l in (session.dialogue or []) if l.get("id") == body.line_id), None)
     if not line:
         raise HTTPException(status_code=404, detail="Line not found")
-    return {"line_id": body.line_id, "text": line["text"], "mode": "tts", "audio_url": None}
+    text = str(line.get("text") or "")
+    try:
+        return synthesize_tts(db, user, text, session.language)
+    except SpendCapExceeded as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"TTS failed: {exc}") from exc

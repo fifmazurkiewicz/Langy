@@ -43,6 +43,8 @@ class UserLanguageProfile(Base):
     skill_listening: Mapped[int | None] = mapped_column(Integer, nullable=True)
     skill_vocabulary: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cefr_level: Mapped[str | None] = mapped_column(String, nullable=True)
+    tts_voice_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    tts_custom_voice_id: Mapped[str | None] = mapped_column(String, nullable=True)
     assessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="profiles")

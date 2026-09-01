@@ -22,8 +22,10 @@ import {
 } from "@/lib/api/correction";
 import { addSelectionPending, translateSelection, type TranslateSelectionResponse } from "@/lib/api/selection";
 import { fetchLiveConfig, fetchLiveToken } from "@/lib/api/live";
+import { fetchVoiceConfig, type VoiceConfig } from "@/lib/api/voice";
 import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
+import { cancelSpeech, speakTutorLine } from "@/lib/voice/speakLine";
 import {
   bindDebouncedContinuousRecognition,
   getSpeechRecognitionCtor,
@@ -45,6 +47,12 @@ import { SessionSummarySheet } from "@/components/chat/SessionSummarySheet";
 import { TranscriptPane, type TranscriptLineData } from "@/components/chat/TranscriptPane";
 import { TranslatePanel } from "@/components/chat/TranslatePanel";
 import { formatConversationDate } from "@/lib/chat/transcript";
+
+const DEFAULT_VOICE_CONFIG: VoiceConfig = {
+  tts_provider: "elevenlabs",
+  tts_configured: false,
+  stt_end_silence_ms: 2500,
+};
 
 async function probeMicrophone(): Promise<MicStatus> {
   if (!speechRecognitionSupported()) return "unsupported";
@@ -95,18 +103,29 @@ export default function ChatPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [speakOnceActive, setSpeakOnceActive] = useState(false);
+  const [tutorVoice, setTutorVoice] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem("langy-chat-tutor-voice") === "true";
+  });
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const oneShotRef = useRef<SpeechRecognition | null>(null);
   const unbindSpeechRef = useRef<(() => void) | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
   const listeningRef = useRef(listening);
+  const tutorVoiceRef = useRef(tutorVoice);
   const voiceModeRef = useRef("speech_to_speech");
+  const voiceConfigRef = useRef<VoiceConfig>(DEFAULT_VOICE_CONFIG);
   const lineIndexRef = useRef(0);
 
   useEffect(() => {
     listeningRef.current = listening;
   }, [listening]);
+
+  useEffect(() => {
+    tutorVoiceRef.current = tutorVoice;
+    sessionStorage.setItem("langy-chat-tutor-voice", String(tutorVoice));
+  }, [tutorVoice]);
 
   const canStartSession =
     apiReady && languageStatus === "ready" && Boolean(sessionLanguage) && Boolean(token) && !startingSession;
@@ -121,10 +140,12 @@ export default function ChatPage() {
     },
     onError: (message) => console.warn("Gemini Live:", message),
   });
+  const { connected: liveConnected, connect: connectGeminiLive, disconnect: disconnectGeminiLive, sendUserText } =
+    geminiLive;
 
   const connectLive = useCallback(
     async (convId: string) => {
-      if (!token || !sessionLanguage) return;
+      if (!token || !sessionLanguage || !tutorVoiceRef.current) return;
       try {
         const config = await fetchLiveConfig(token);
         voiceModeRef.current = config.voice_mode;
@@ -133,13 +154,13 @@ export default function ChatPage() {
           conversation_id: convId,
         });
         if (live.mode === "live" && live.configured) {
-          await geminiLive.connect(live, { conversationId: convId, apiToken: token });
+          await connectGeminiLive(live, { conversationId: convId, apiToken: token });
         }
       } catch {
         /* fall back to mock / chained */
       }
     },
-    [token, sessionLanguage, geminiLive]
+    [token, sessionLanguage, connectGeminiLive]
   );
 
   const triggerAutoCorrection = useCallback(
@@ -172,7 +193,12 @@ export default function ChatPage() {
         voiceModeRef.current = c.voice_mode;
       })
       .catch(() => undefined);
-  }, [token]);
+    fetchVoiceConfig(token, sessionLanguage ?? undefined)
+      .then((cfg) => {
+        voiceConfigRef.current = cfg;
+      })
+      .catch(() => undefined);
+  }, [token, sessionLanguage]);
 
   const appendLine = useCallback(
     async (role: "User" | "Agent", text: string) => {
@@ -202,10 +228,17 @@ export default function ChatPage() {
     async (lineIndex: number, reply: string) => {
       setChatState("speaking");
       await appendLine("Agent", reply);
+      if (tutorVoiceRef.current && !liveConnected && token) {
+        try {
+          await speakTutorLine(reply, speechLang, token, voiceConfigRef.current);
+        } catch {
+          /* text-only when server TTS unavailable */
+        }
+      }
       setChatState(listeningRef.current ? "listening" : "idle");
       if (lineIndex >= 0) lineIndexRef.current = lineIndex;
     },
-    [appendLine]
+    [appendLine, speechLang, liveConnected, token]
   );
 
   const submitUserMessage = useCallback(
@@ -219,8 +252,8 @@ export default function ChatPage() {
         const lineIndex = await appendLine("User", text);
         lineIndexRef.current = lineIndex;
 
-        if (geminiLive.connected) {
-          await geminiLive.sendUserText(text);
+        if (liveConnected) {
+          await sendUserText(text);
           setChatState(listeningRef.current ? "listening" : "idle");
           return;
         }
@@ -247,7 +280,7 @@ export default function ChatPage() {
         setSending(false);
       }
     },
-    [conversationId, sending, appendLine, geminiLive, token, sessionLanguage, deliverAgentReply]
+    [conversationId, sending, appendLine, liveConnected, sendUserText, token, sessionLanguage, deliverAgentReply]
   );
 
   const handleSendText = useCallback(() => {
@@ -313,9 +346,13 @@ export default function ChatPage() {
       setSpeakOnceActive(false);
       setDetailOpen(false);
       setHistoryOpen(false);
-      await connectLive(convId);
+      if (tutorVoiceRef.current) {
+        await connectLive(convId);
+      } else {
+        disconnectGeminiLive();
+      }
     },
-    [connectLive]
+    [connectLive, disconnectGeminiLive]
   );
 
   const startSession = useCallback(async () => {
@@ -325,12 +362,21 @@ export default function ChatPage() {
     try {
       const session = await startChatSession(token, { language: sessionLanguage });
       await loadSession(session.conversation_id, [{ role: "Agent", text: session.opening_line }]);
+      if (tutorVoiceRef.current && !liveConnected && token) {
+        setChatState("speaking");
+        try {
+          await speakTutorLine(session.opening_line, speechLang, token, voiceConfigRef.current);
+        } catch {
+          /* text-only when server TTS unavailable */
+        }
+        setChatState("idle");
+      }
     } catch (e) {
       setStartError(e instanceof Error ? e.message : "Could not start session");
     } finally {
       setStartingSession(false);
     }
-  }, [token, sessionLanguage, loadSession]);
+  }, [token, sessionLanguage, loadSession, speechLang, liveConnected]);
 
   const performEndSession = useCallback(async () => {
     if (!conversationId || !token) return;
@@ -341,7 +387,8 @@ export default function ChatPage() {
     setSpeakOnceActive(false);
     oneShotRef.current?.stop();
     oneShotRef.current = null;
-    geminiLive.disconnect();
+    cancelSpeech();
+    disconnectGeminiLive();
     setSelectedSpan(null);
     setTranslateResult(null);
     setCheckResult(null);
@@ -354,7 +401,7 @@ export default function ChatPage() {
     setPendingCount(count.count);
     setSummaryPendingCount(count.count);
     setSummaryOpen(true);
-  }, [conversationId, token, geminiLive]);
+  }, [conversationId, token, disconnectGeminiLive]);
 
   const requestEndSession = useCallback(() => {
     setEndSheetMode("end");
@@ -627,6 +674,16 @@ export default function ChatPage() {
     };
   }, [listening, conversationId, speechLang, submitUserMessage]);
 
+  useEffect(() => {
+    if (!conversationId || !token) return;
+    if (tutorVoice) {
+      void connectLive(conversationId);
+      return;
+    }
+    disconnectGeminiLive();
+    cancelSpeech();
+  }, [tutorVoice, conversationId, token, connectLive, disconnectGeminiLive]);
+
   const detailTitle = detailItem
     ? formatConversationDate(detailItem.started_at) || "Conversation"
     : "Conversation";
@@ -708,6 +765,7 @@ export default function ChatPage() {
       <ChatControlBar
         hasSession={Boolean(conversationId)}
         listening={listening}
+        tutorVoice={tutorVoice}
         startingSession={startingSession}
         canStartSession={canStartSession}
         draft={draft}
@@ -718,6 +776,7 @@ export default function ChatPage() {
         onSendText={handleSendText}
         onSpeakOnce={() => void handleSpeakOnce()}
         onStart={() => void startSession()}
+        onToggleTutorVoice={() => setTutorVoice((v) => !v)}
         onToggleListening={() => {
           if (speakOnceActive) {
             oneShotRef.current?.stop();
