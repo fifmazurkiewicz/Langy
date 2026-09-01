@@ -10,6 +10,11 @@ def test_vocab_export_auth():
     assert r.status_code == 401
 
 
+def test_vocab_accepted_auth():
+    r = client.get("/api/vocab/accepted")
+    assert r.status_code == 401
+
+
 def test_plan_auth():
     r = client.get("/api/plan")
     assert r.status_code == 401

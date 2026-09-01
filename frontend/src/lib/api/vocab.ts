@@ -1,5 +1,19 @@
 import { apiFetch } from "@/lib/api";
 
+export function listAcceptedVocab(token: string, language?: string) {
+  const q = language ? `?language=${encodeURIComponent(language)}` : "";
+  return apiFetch<{
+    items: {
+      id: string;
+      term: string;
+      translation: string;
+      source: string;
+      category_key?: string | null;
+      context_sentence?: string | null;
+    }[];
+  }>(`/api/vocab/accepted${q}`, { token });
+}
+
 export function exportQuizlet(token: string, language?: string, categoryKey?: string) {
   const params = new URLSearchParams();
   if (language) params.set("language", language);

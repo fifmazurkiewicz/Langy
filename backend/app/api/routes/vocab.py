@@ -65,6 +65,35 @@ RATING_MAP = {
 }
 
 
+@router.get("/accepted")
+def list_accepted(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    language: str | None = None,
+) -> dict:
+    lang = language or user.active_language
+    items = accepted_vocab_for_export(db, user.id, lang)
+    set_ids = {i.flashcard_set_id for i in items if i.flashcard_set_id}
+    category_by_set_id: dict[uuid.UUID, str] = {}
+    if set_ids:
+        for card_set in db.query(FlashcardSet).filter(FlashcardSet.id.in_(set_ids)).all():
+            category_by_set_id[card_set.id] = card_set.category_key
+    return {
+        "items": [
+            {
+                "id": str(i.id),
+                "term": i.term,
+                "translation": i.translation,
+                "context_sentence": i.context_sentence,
+                "source": i.source,
+                "language": i.language,
+                "category_key": category_by_set_id.get(i.flashcard_set_id) if i.flashcard_set_id else None,
+            }
+            for i in items
+        ]
+    }
+
+
 @router.get("/pending")
 def list_pending(
     user: Annotated[User, Depends(get_current_user)],

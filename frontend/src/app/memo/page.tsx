@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { createCategory, exportQuizlet, generateCategory, listDueCards, listVocabCategories, reviewCard } from "@/lib/api/vocab";
 import { formatCategoryLabel, UNCATEGORIZED_DUE_CATEGORY_KEY } from "@/lib/memo/categories";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
+import { VocabularyList } from "@/components/memo/VocabularyList";
 import { MnemonicsList } from "@/components/mnemonics/MnemonicsList";
 import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
 import { ShadowingFlow } from "@/components/shadowing/ShadowingFlow";
@@ -23,8 +24,8 @@ type VocabItem = {
   category_key?: string | null;
 };
 
-type Tab = "flashcards" | "shadowing" | "mnemonics";
-type SubTab = "due" | "pending" | "categories";
+type Tab = "flashcards" | "vocabulary" | "shadowing" | "mnemonics";
+type SubTab = "due" | "pending" | "generate";
 
 export default function MemoPage() {
   const { token, refreshProfile } = useAuth();
@@ -155,7 +156,7 @@ export default function MemoPage() {
           ) : null}
         </div>
         <div className="flex gap-2 text-sm">
-          {(["flashcards", "shadowing", "mnemonics"] as Tab[]).map((t) => (
+          {(["flashcards", "vocabulary", "shadowing", "mnemonics"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -193,10 +194,10 @@ export default function MemoPage() {
               </button>
               <button
                 type="button"
-                className={`classical-btn px-3 capitalize ${subTab === "categories" ? "classical-btn-primary" : ""}`}
-                onClick={() => setSubTab("categories")}
+                className={`classical-btn px-3 capitalize ${subTab === "generate" ? "classical-btn-primary" : ""}`}
+                onClick={() => setSubTab("generate")}
               >
-                Categories
+                Generate
               </button>
               <button type="button" className="classical-btn px-3 ml-auto" onClick={() => void handleExport()}>
                 Export Quizlet
@@ -226,8 +227,9 @@ export default function MemoPage() {
                   ))
                 )}
               </ul>
-            ) : subTab === "categories" ? (
+            ) : subTab === "generate" ? (
               <div className="space-y-4">
+                <p className="text-sm opacity-70">Generate vocab from your interests or custom categories.</p>
                 <div className="flex gap-2">
                   <input
                     className="classical-input flex-1"
@@ -380,7 +382,7 @@ export default function MemoPage() {
                     setRevealed(false);
                   }}
                 >
-                  ← Categories
+                  ← Back
                 </button>
                 <p className="text-sm opacity-70 capitalize">
                   {dueCategoryKey === UNCATEGORIZED_DUE_CATEGORY_KEY
@@ -412,6 +414,12 @@ export default function MemoPage() {
               </div>
             )}
           </>
+        ) : tab === "vocabulary" ? (
+          token && activeLanguage ? (
+            <VocabularyList token={token} language={activeLanguage} />
+          ) : (
+            <p className="opacity-60">Sign in and set a language first.</p>
+          )
         ) : tab === "shadowing" ? (
           token && activeLanguage ? (
             <ShadowingFlow

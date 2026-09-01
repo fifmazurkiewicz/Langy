@@ -83,7 +83,8 @@ Self-assessment 1–5 i CEFR są **osobne** (bez automatycznego mapowania).
 
 ## 7. Memo → Flashcards
 
-- Sub-widoki: **Due today** | **Categories** | **Pending** (wspólna kolejka).
+- Sub-widoki: **Due today** | **Pending** | **Generate** (generowanie słów z kategorii / interests).
+- **Vocabulary** (osobny tab Memo) — wszystkie `accepted` dla aktywnego języka; wyszukiwarka lokalna; Mnemonic per słowo.
 - **Due today** — tylko `accepted` + FSRS; interwały dynamiczne.
 - **Categories** — zestawy z interests + custom; „Generate new” → Pending.
 - **Pending** — Accept / Reject dla `chat_extraction`, `category_generated`, `transcript_selection`, `lesson`, `correction`, `shadowing` (źródło widoczne). Nie wygasa. Badge z liczbą na zakładce Memo.
@@ -114,9 +115,11 @@ Header: język → switcher. Stany: Waking up… → Idle z **opcjonalnym listen
 
 ### 11.2 Memo
 
-Sub-tabs: **Flashcards** | **Shadowing** | **Mnemonics**.
+Sub-tabs: **Flashcards** | **Vocabulary** | **Shadowing** | **Mnemonics**.
 
-**Flashcards:** Due Today | Categories | Pending. Badge na tabie Memo. Export (tab-separated). Cap banner. Due card: **Mnemonic** button.
+**Flashcards:** Due Today | Pending | Generate (category vocab generation). Badge na tabie Memo. Export (tab-separated). Cap banner. Due card: **Mnemonic** button.
+
+**Vocabulary:** all accepted words for active language; local search; Mnemonic shortcut per term.
 
 **Shadowing:** topic intake → generate or pick conversation → show-text + TTS|Live → loop → end hard-line batch → Pending.
 
