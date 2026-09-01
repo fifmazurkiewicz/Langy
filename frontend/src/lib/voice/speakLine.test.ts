@@ -18,9 +18,12 @@ describe("speakLine", () => {
     });
     vi.stubGlobal(
       "SpeechSynthesisUtterance",
-      vi.fn(function SpeechSynthesisUtterance(this: { lang: string; onend?: () => void; onerror?: () => void }, text: string) {
+      vi.fn(function SpeechSynthesisUtterance(
+        this: { lang: string; onend?: () => void; onerror?: () => void },
+        _text: string
+      ) {
         this.lang = "";
-        return { text, lang: "", onend: undefined, onerror: undefined, ...this };
+        return this;
       })
     );
   });
