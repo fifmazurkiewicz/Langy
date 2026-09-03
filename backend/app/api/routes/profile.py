@@ -25,6 +25,7 @@ class ProfileUpdate(BaseModel):
     skill_vocabulary: int | None = Field(None, ge=1, le=6)
     tts_voice_key: str | None = None
     tts_custom_voice_id: str | None = None
+    tts_playback_rate: float | None = Field(None, ge=0.5, le=2.0)
 
 
 class ActiveLanguageUpdate(BaseModel):
@@ -66,6 +67,7 @@ def list_profiles(
                 "cefr_level": p.cefr_level,
                 "tts_voice_key": p.tts_voice_key or DEFAULT_VOICE_KEY,
                 "tts_custom_voice_id": p.tts_custom_voice_id,
+                "tts_playback_rate": float(p.tts_playback_rate) if p.tts_playback_rate is not None else 1.0,
             }
             for p in profiles
         ],
@@ -169,6 +171,10 @@ def update_profile(
         if not is_valid_voice_key(language, key):
             raise HTTPException(status_code=400, detail=f"Invalid voice key for {language}")
         profile.tts_voice_key = None if key == DEFAULT_VOICE_KEY else key
+    if body.tts_playback_rate is not None:
+        allowed = (0.75, 1.0, 1.25, 1.5)
+        rate = min(allowed, key=lambda r: abs(r - body.tts_playback_rate))
+        profile.tts_playback_rate = rate
     effective_key = profile.tts_voice_key or DEFAULT_VOICE_KEY
     if effective_key == CUSTOM_VOICE_KEY and not is_valid_elevenlabs_voice_id(profile.tts_custom_voice_id):
         raise HTTPException(status_code=400, detail="Custom ElevenLabs voice ID required when using custom voice")

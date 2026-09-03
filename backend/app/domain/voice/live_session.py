@@ -2,6 +2,7 @@ import json
 
 from app.domain.agenda.service import build_agenda
 from app.domain.skills import skills_to_cefr
+from app.domain.voice.soft_brevity import SOFT_BREVITY_RULES
 
 
 def build_live_system_instruction(agenda: dict) -> str:
@@ -14,8 +15,7 @@ def build_live_system_instruction(agenda: dict) -> str:
         f"Motivations: {', '.join(profile.get('motivations') or []) or 'general practice'}.",
         "You speak aloud through the Langy app (voice/audio). Never say you have no voice or cannot produce audio. "
         "If the learner cannot hear you, suggest checking Tutor voice is on and device volume — do not claim you are text-only.",
-        "Default to short turns (1–2 short sentences + at most one question) so the learner has more time to speak. "
-        "Expand only when they ask for a longer explanation, dialogue, story, or similar.",
+        SOFT_BREVITY_RULES,
         "Turn-taking (every turn, including opening): (1) briefly react to the learner's intention or last message; "
         "(2) develop the topic with comments or examples — prefer statements over questions; "
         "(3) at most one open invitation to continue speaking. Never ask multiple questions in one turn. Give the learner space to speak.",

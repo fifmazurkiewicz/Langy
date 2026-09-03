@@ -18,6 +18,8 @@ export type VoiceConfig = {
   voices?: VoiceOption[];
   tts_voice_key?: string;
   tts_custom_voice_id?: string | null;
+  /** Playback rate for TTS / respeak (Live natural tempo unchanged). */
+  tts_playback_rate?: number;
 };
 
 export type VoiceCatalog = {

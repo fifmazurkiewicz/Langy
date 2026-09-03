@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,6 +45,7 @@ class UserLanguageProfile(Base):
     cefr_level: Mapped[str | None] = mapped_column(String, nullable=True)
     tts_voice_key: Mapped[str | None] = mapped_column(String, nullable=True)
     tts_custom_voice_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    tts_playback_rate: Mapped[float | None] = mapped_column(Float, nullable=True, default=1.0)
     assessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="profiles")

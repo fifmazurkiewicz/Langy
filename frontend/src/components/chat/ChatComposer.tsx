@@ -4,32 +4,23 @@ type Props = {
   draft: string;
   disabled: boolean;
   sending: boolean;
-  listening: boolean;
-  speakOnceActive: boolean;
-  speechAvailable: boolean;
   /** When true, primary action is Stop (tutor speaking/thinking). */
   canStop?: boolean;
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onStop?: () => void;
-  onSpeakOnce: () => void;
 };
 
 export function ChatComposer({
   draft,
   disabled,
   sending,
-  listening,
-  speakOnceActive,
-  speechAvailable,
   canStop,
   onDraftChange,
   onSend,
   onStop,
-  onSpeakOnce,
 }: Props) {
   const canSend = draft.trim().length > 0 && !disabled && !sending && !canStop;
-  const showSpeakOnce = !listening && speechAvailable && !canStop;
 
   return (
     <div className="flex items-end gap-2">
@@ -48,18 +39,6 @@ export function ChatComposer({
         }}
         aria-label="Type a message"
       />
-      {showSpeakOnce ? (
-        <button
-          type="button"
-          className={`classical-btn shrink-0 px-3 ${speakOnceActive ? "classical-btn-primary" : ""}`}
-          disabled={disabled || sending || speakOnceActive}
-          onClick={onSpeakOnce}
-          aria-pressed={speakOnceActive}
-          aria-label="Speak once"
-        >
-          {speakOnceActive ? "Listening…" : "Speak"}
-        </button>
-      ) : null}
       {canStop ? (
         <button
           type="button"

@@ -98,4 +98,7 @@ def voice_public_config(
     cfg.update(voice_catalog_payload(lang))
     cfg["tts_voice_key"] = voice_key
     cfg["tts_custom_voice_id"] = profile.tts_custom_voice_id if profile else None
+    cfg["tts_playback_rate"] = (
+        float(profile.tts_playback_rate) if profile and profile.tts_playback_rate is not None else 1.0
+    )
     return cfg

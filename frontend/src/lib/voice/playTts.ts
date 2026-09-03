@@ -1,5 +1,6 @@
 import type { TtsLineResponse, VoiceConfig } from "@/lib/api/voice";
 import { fetchTts } from "@/lib/api/voice";
+import { clampTtsPlaybackRate } from "@/lib/voice/ttsPlaybackRate";
 
 let activeAudio: HTMLAudioElement | null = null;
 
@@ -27,17 +28,23 @@ export function stopActiveTtsAudio(): void {
 }
 
 /** Legacy browser-only path — use speakTutorLine in product code. */
-export function speakBrowserLine(text: string, language: string, voiceNameHint?: string): void {
+export function speakBrowserLine(
+  text: string,
+  language: string,
+  voiceNameHint?: string,
+  rate = 1
+): void {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   stopActiveTtsAudio();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = language.startsWith("en") ? "en-GB" : language;
+  utterance.rate = clampTtsPlaybackRate(rate);
   const voice = pickBrowserVoice(language, voiceNameHint);
   if (voice) utterance.voice = voice;
   window.speechSynthesis.speak(utterance);
 }
 
-export async function playServerTtsAudio(response: TtsLineResponse): Promise<void> {
+export async function playServerTtsAudio(response: TtsLineResponse, rate = 1): Promise<void> {
   if (!response.audio_base64 || !response.content_type) {
     throw new Error("No server audio in TTS response");
   }
@@ -51,6 +58,7 @@ export async function playServerTtsAudio(response: TtsLineResponse): Promise<voi
     await new Promise<void>((resolve, reject) => {
       const audio = new Audio(url);
       activeAudio = audio;
+      audio.playbackRate = clampTtsPlaybackRate(rate);
       audio.onended = () => {
         activeAudio = null;
         resolve();
@@ -75,14 +83,15 @@ export async function speakTutorLine(
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
+  const rate = clampTtsPlaybackRate(voiceConfig.tts_playback_rate);
 
   if (voiceConfig.tts_provider === "elevenlabs" && voiceConfig.tts_configured) {
     const tts = await fetchTts(token, { text: trimmed, language });
-    await playServerTtsAudio(tts);
+    await playServerTtsAudio(tts, rate);
     return;
   }
 
   if (voiceConfig.tts_provider === "browser") {
-    speakBrowserLine(trimmed, language, voiceConfig.tts_voice_name);
+    speakBrowserLine(trimmed, language, voiceConfig.tts_voice_name, rate);
   }
 }

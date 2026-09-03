@@ -47,12 +47,14 @@ import { SelectionActionSheet } from "@/components/chat/SelectionActionSheet";
 import { SessionSummarySheet } from "@/components/chat/SessionSummarySheet";
 import { TranscriptPane, type TranscriptLineData } from "@/components/chat/TranscriptPane";
 import { TranslatePanel } from "@/components/chat/TranslatePanel";
+import { VoiceDots } from "@/components/chat/VoiceDots";
 import { formatConversationDate } from "@/lib/chat/transcript";
 
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
   tts_provider: "elevenlabs",
   tts_configured: false,
   stt_end_silence_ms: 2500,
+  tts_playback_rate: 1,
 };
 
 async function probeMicrophone(): Promise<MicStatus> {
@@ -721,29 +723,54 @@ export default function ChatPage() {
     : "Conversation";
 
   return (
-    <div className="flex flex-1 flex-col pb-[calc(196px+env(safe-area-inset-bottom))]">
-      <header className="flex items-center gap-2 border-b border-[var(--color-divider)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-        <LanguageSwitcher
-          activeLanguage={sessionLanguage}
-          languages={languages.length ? languages : ["en-GB"]}
-          onChange={async (lang) => {
-            if (!token) return;
-            await apiFetch("/api/profile/active-language", {
-              method: "PATCH",
-              token,
-              body: { active_language: lang },
-            });
-            await refreshProfile();
-          }}
-        />
-        <button
-          type="button"
-          className="classical-btn min-h-[44px] shrink-0 px-3 text-sm"
-          onClick={() => void openHistory()}
-          aria-label="Conversation history"
-        >
-          History
-        </button>
+    <div className="flex flex-1 flex-col pb-[calc(168px+env(safe-area-inset-bottom))]">
+      <header className="flex items-start gap-2 border-b border-[var(--color-divider)] px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <div className="min-w-0 flex-1 pt-1">
+          <LanguageSwitcher
+            activeLanguage={sessionLanguage}
+            languages={languages.length ? languages : ["en-GB"]}
+            onChange={async (lang) => {
+              if (!token) return;
+              await apiFetch("/api/profile/active-language", {
+                method: "PATCH",
+                token,
+                body: { active_language: lang },
+              });
+              await refreshProfile();
+            }}
+          />
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
+          <button
+            type="button"
+            className="classical-btn min-h-[44px] shrink-0 px-3 text-sm"
+            onClick={() => void openHistory()}
+            aria-label="Conversation history"
+          >
+            History
+          </button>
+          {conversationId ? (
+            <VoiceDots
+              tutorVoice={tutorVoice}
+              listening={listening}
+              disabled={sending && !(chatState === "speaking" || chatState === "thinking")}
+              onToggleTutorVoice={() => setTutorVoice((v) => !v)}
+              onToggleListening={() => {
+                if (speakOnceActive) {
+                  oneShotRef.current?.stop();
+                  oneShotRef.current = null;
+                  setSpeakOnceActive(false);
+                }
+                setListening((v) => {
+                  const next = !v;
+                  if (next && conversationId) setChatState("listening");
+                  if (!next) setChatState("idle");
+                  return next;
+                });
+              }}
+            />
+          ) : null}
+        </div>
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col gap-3 px-4 pt-3">
@@ -794,6 +821,10 @@ export default function ChatPage() {
                 setSelectedRole(role);
               }}
               onAddFromCorrection={(lineIndex) => void handleAddFromCorrection(lineIndex)}
+              onRespeak={(text) => {
+                if (!token) return;
+                void speakTutorLine(text, speechLang, token, voiceConfigRef.current).catch(() => undefined);
+              }}
             />
           }
         />
@@ -801,34 +832,15 @@ export default function ChatPage() {
 
       <ChatControlBar
         hasSession={Boolean(conversationId)}
-        listening={listening}
-        tutorVoice={tutorVoice}
         startingSession={startingSession}
         canStartSession={canStartSession}
         draft={draft}
         sending={sending}
-        speakOnceActive={speakOnceActive}
-        speechAvailable={speechRecognitionSupported()}
         canStop={chatState === "speaking" || chatState === "thinking" || sending}
         onDraftChange={setDraft}
         onSendText={handleSendText}
         onStop={handleStop}
-        onSpeakOnce={() => void handleSpeakOnce()}
         onStart={() => void startSession()}
-        onToggleTutorVoice={() => setTutorVoice((v) => !v)}
-        onToggleListening={() => {
-          if (speakOnceActive) {
-            oneShotRef.current?.stop();
-            oneShotRef.current = null;
-            setSpeakOnceActive(false);
-          }
-          setListening((v) => {
-            const next = !v;
-            if (next && conversationId) setChatState("listening");
-            if (!next) setChatState("idle");
-            return next;
-          });
-        }}
         onEnd={requestEndSession}
       />
 

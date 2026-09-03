@@ -107,7 +107,7 @@ UI copy i kod po **angielsku**. Rozmowa o projekcie może być po polsku; L1 w p
 
 ### 11.1 Chat
 
-Header: język → switcher. Stany: Waking up… → Idle z **opcjonalnym listening toggle** → Listening/Thinking/Speaking (VAD, bez mic per turn) → End session → Idle. Mic blocked sheet. Badge Memo gdy Pending.
+Header: język → switcher · History; pod History **dwie kropki** (Tutor voice, Listening; on = accent, off = dark). Stany: Waking up… → Idle → Listening/Thinking/Speaking. AgentPresence waves = Speak (gdy Listening off). Composer: Send ↔ Stop; **bez** Speak obok inputu. Pod composer: tylko **End session**. Linia Agent: ikona speaker = respeak TTS. Mic blocked sheet. Badge Memo gdy Pending.
 
 ### 11.2 Memo
 
@@ -121,7 +121,7 @@ Sub-tabs: **Flashcards** | **Vocabulary** | **Shadowing**.
 
 ### 11.3 Menu
 
-Account · Languages · Profile (per język) · **Plan** (opcjonalny: placement / intensywność / lekcje) · **Memory** (facts: edit/delete; recent summaries) · Appearance · Admin · Sign out.
+Account · Languages · Profile (per język) · **Plan** (opcjonalny: placement / intensywność / lekcje) · **Memory** (facts: continuous essay, tap sentence to edit; recent summaries) · Appearance · Admin · Sign out.
 
 Plan nie jest czwartą zakładką dolnego paska. Brak planu nie blokuje Chat/Memo.
 

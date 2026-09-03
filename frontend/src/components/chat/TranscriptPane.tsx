@@ -12,6 +12,7 @@ type Props = {
   corrections: Record<number, CorrectionResponse>;
   onSelect: (text: string, lineIndex: number, role: "User" | "Agent") => void;
   onAddFromCorrection: (lineIndex: number) => void;
+  onRespeak?: (text: string) => void;
 };
 
 export function TranscriptPane({
@@ -20,6 +21,7 @@ export function TranscriptPane({
   corrections,
   onSelect,
   onAddFromCorrection,
+  onRespeak,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +45,7 @@ export function TranscriptPane({
               correction={corrections[i]}
               onSelect={onSelect}
               onAddFromCorrection={onAddFromCorrection}
+              onRespeak={onRespeak}
             />
           ))}
         </div>

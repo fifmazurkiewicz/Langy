@@ -16,7 +16,9 @@ import { useDeferredEffect } from "@/lib/hooks/useDeferredEffect";
 
 import { ChipToggle } from "@/components/profile/ChipToggle";
 import { SkillCefrSlider } from "@/components/profile/SkillCefrSlider";
+import { SpeechRateSlider } from "@/components/profile/SpeechRateSlider";
 import { VoicePicker } from "@/components/profile/VoicePicker";
+import { clampTtsPlaybackRate, type TtsPlaybackRate } from "@/lib/voice/ttsPlaybackRate";
 
 type ProfileDraft = {
   motivations: string[];
@@ -24,6 +26,7 @@ type ProfileDraft = {
   skills: LanguageProfile["skills"];
   tts_voice_key: string;
   tts_custom_voice_id: string;
+  tts_playback_rate: TtsPlaybackRate;
 };
 
 function sortedKey(values: string[]) {
@@ -39,6 +42,7 @@ function isDraftDirty(draft: ProfileDraft, profile: LanguageProfile) {
   }
   if (draft.tts_voice_key !== profile.tts_voice_key) return true;
   if ((draft.tts_custom_voice_id || "") !== (profile.tts_custom_voice_id || "")) return true;
+  if (draft.tts_playback_rate !== clampTtsPlaybackRate(profile.tts_playback_rate ?? 1)) return true;
   return false;
 }
 
@@ -75,6 +79,7 @@ export default function MenuProfilePage() {
       skills: { ...profile.skills },
       tts_voice_key: profile.tts_voice_key,
       tts_custom_voice_id: profile.tts_custom_voice_id ?? "",
+      tts_playback_rate: clampTtsPlaybackRate(profile.tts_playback_rate ?? 1),
     });
     setSaved(false);
   }, [profile]);
@@ -109,6 +114,7 @@ export default function MenuProfilePage() {
         skill_vocabulary: draft.skills.vocabulary ?? undefined,
         tts_voice_key: draft.tts_voice_key,
         tts_custom_voice_id: draft.tts_custom_voice_id.trim() || null,
+        tts_playback_rate: draft.tts_playback_rate,
       });
       setSaved(true);
       await load();
@@ -215,6 +221,15 @@ export default function MenuProfilePage() {
                 }}
               />
             ) : null}
+
+            <SpeechRateSlider
+              value={draft.tts_playback_rate}
+              disabled={saving}
+              onChange={(rate) => {
+                setDraft({ ...draft, tts_playback_rate: rate });
+                setSaved(false);
+              }}
+            />
 
             <div className="space-y-2 pt-2">
               <button
