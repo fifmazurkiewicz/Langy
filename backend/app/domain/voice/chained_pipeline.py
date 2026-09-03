@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.domain.correction.schemas import CorrectionRequest, CorrectionResponse
 from app.domain.correction.service import run_correction
 from app.domain.providers.text import TextCompletionProvider
-from app.domain.voice.soft_brevity import SOFT_BREVITY_RULES
+from app.domain.voice.soft_brevity import EXERCISE_ALLOWED_RULES, SOFT_BREVITY_RULES
 from app.models import User
 
 
@@ -37,7 +37,7 @@ def chained_user_turn(
                         "role": "system",
                         "content": (
                             "You are a friendly language tutor. Speak in the learner's target language. "
-                            f"{SOFT_BREVITY_RULES} "
+                            f"{SOFT_BREVITY_RULES} {EXERCISE_ALLOWED_RULES} "
                             'Return JSON: {"reply": "your message"}'
                         ),
                     },

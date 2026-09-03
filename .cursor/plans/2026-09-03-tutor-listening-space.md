@@ -12,6 +12,7 @@ Working plan mirror of `docs/superpowers/plans/2026-09-03-tutor-listening-space.
 | 2026-09-03 | All turns including opening | Consistent feel |
 | 2026-09-03 | Prompt + OPENING/RESUME pools | Smallest lever; shared Live/text-turn path |
 | 2026-09-03 | No listen-mode UI / no Langfuse-first this task | YAGNI |
+| 2026-09-04 | Exercises explicitly allowed in Chat prompts (`EXERCISE_ALLOWED_RULES`) | Stop invented conversation-only refusals |
 
 ## Tasks
 

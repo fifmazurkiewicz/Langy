@@ -18,6 +18,7 @@ Tutor often asks too many questions instead of following the learner’s intenti
 | 2026-09-03 | Success = fewer questions **and** clear topic-following | Product feel, not only prompt wording |
 | 2026-09-03 | Implement via **system instruction + softer OPENING/RESUME lines** | Smallest change; Live + text-turn share `build_live_system_instruction` |
 | 2026-09-03 | Out of scope: UI listen-mode toggle, Langfuse-first prompt rewrite, correction/shadowing | YAGNI for this fix |
+| 2026-09-04 | Exercises (repetition, drills, role-play) explicitly allowed in Chat system instruction | Model was inventing “conversation-only” refusals |
 
 ## Behavior (contract)
 
@@ -33,6 +34,7 @@ Hard constraints:
 - Do not list Interests in the opening; soft Interest suggestions only when silent / unsure (unchanged product rule).
 - Opening and resume lines are spacious invitations, not interview openers.
 - Polish only when the learner asks (unchanged).
+- When the learner asks for an exercise (repetition, drill, role-play, etc.), run it; do not refuse as “conversation-only”.
 
 ## Implementation delta
 

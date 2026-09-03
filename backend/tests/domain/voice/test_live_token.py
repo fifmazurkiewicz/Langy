@@ -56,6 +56,18 @@ def test_build_live_system_instruction_includes_soft_brevity():
     assert "expand" in text
 
 
+def test_build_live_system_instruction_allows_exercises():
+    agenda = {
+        "language": "en-GB",
+        "profile": {"motivations": [], "skills": {}},
+        "memory_facts": [],
+        "study_plan": None,
+    }
+    text = build_live_system_instruction(agenda).lower()
+    assert "exercise" in text or "repetition" in text
+    assert "do not refuse" in text or "never refuse" in text or "are allowed" in text
+
+
 def test_mint_token_requires_api_key():
     with pytest.raises(LiveTokenError):
         mint_ephemeral_live_token(system_instruction="Hi", api_key="")
