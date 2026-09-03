@@ -17,6 +17,8 @@
 | 2026-09-03 | Implement lamp per existing design | Spec approved; missing from FE |
 | 2026-09-03 | Suspend Listening during any chat `speakTutorLine` (respeak + TTS path) | Same echo bug for opening/reply TTS |
 | 2026-09-03 | Listening preference stays on; only gate recognition | Dot stays user intent |
+| 2026-09-03 | Also gate mic on Live PCM (`liveMicGate` + turnComplete/idle) | Echo still happened with lamp ON |
+| 2026-09-03 | Presence/status inside transcript scroll | Sticky presence blocked reading history |
 
 ## File map
 

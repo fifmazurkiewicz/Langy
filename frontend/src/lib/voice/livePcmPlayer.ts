@@ -5,6 +5,27 @@ const LIVE_OUTPUT_RATE = 24000;
 let ctx: AudioContext | null = null;
 let nextStart = 0;
 const activeSources = new Set<AudioBufferSourceNode>();
+let idleWaiters: Array<() => void> = [];
+let pendingEnqueues = 0;
+
+function flushIdleWaiters(): void {
+  if (activeSources.size > 0 || pendingEnqueues > 0) return;
+  const waiters = idleWaiters;
+  idleWaiters = [];
+  for (const resolve of waiters) resolve();
+}
+
+/** Resolves when no Live PCM is enqueueing or playing. */
+export function whenLivePcmIdle(): Promise<void> {
+  if (activeSources.size === 0 && pendingEnqueues === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    idleWaiters.push(resolve);
+  });
+}
+
+export function isLivePcmIdle(): boolean {
+  return activeSources.size === 0 && pendingEnqueues === 0;
+}
 
 export function stopLivePcmPlayback(): void {
   for (const source of activeSources) {
@@ -15,11 +36,13 @@ export function stopLivePcmPlayback(): void {
     }
   }
   activeSources.clear();
+  pendingEnqueues = 0;
   if (ctx) {
     void ctx.close();
     ctx = null;
   }
   nextStart = 0;
+  flushIdleWaiters();
 }
 
 export function base64PcmToFloat32(base64: string): Float32Array {
@@ -60,28 +83,35 @@ export async function enqueueLivePcmBase64(
 ): Promise<void> {
   if (typeof window === "undefined" || !base64) return;
 
-  if (!ctx || ctx.state === "closed") {
-    ctx = new AudioContext({ sampleRate });
-    nextStart = 0;
-  }
-  if (ctx.state === "suspended") {
-    await ctx.resume();
-  }
+  pendingEnqueues += 1;
+  try {
+    if (!ctx || ctx.state === "closed") {
+      ctx = new AudioContext({ sampleRate });
+      nextStart = 0;
+    }
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
 
-  const samples = base64PcmToFloat32(base64);
-  if (samples.length === 0) return;
+    const samples = base64PcmToFloat32(base64);
+    if (samples.length === 0) return;
 
-  const buffer = ctx.createBuffer(1, samples.length, sampleRate);
-  // getChannelData().set avoids Float32Array<ArrayBufferLike> vs ArrayBuffer mismatch (TS 5.7+)
-  buffer.getChannelData(0).set(samples);
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(ctx.destination);
-  const startAt = Math.max(ctx.currentTime, nextStart);
-  source.start(startAt);
-  nextStart = startAt + buffer.duration;
-  activeSources.add(source);
-  source.onended = () => {
-    activeSources.delete(source);
-  };
+    const buffer = ctx.createBuffer(1, samples.length, sampleRate);
+    // getChannelData().set avoids Float32Array<ArrayBufferLike> vs ArrayBuffer mismatch (TS 5.7+)
+    buffer.getChannelData(0).set(samples);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    const startAt = Math.max(ctx.currentTime, nextStart);
+    source.start(startAt);
+    nextStart = startAt + buffer.duration;
+    activeSources.add(source);
+    source.onended = () => {
+      activeSources.delete(source);
+      flushIdleWaiters();
+    };
+  } finally {
+    pendingEnqueues -= 1;
+    flushIdleWaiters();
+  }
 }

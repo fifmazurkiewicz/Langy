@@ -30,11 +30,11 @@ export function TranscriptPane({
   }, [lines.length, corrections]);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto border-y border-[var(--color-divider)] py-3 select-text">
+    <div className="select-text py-1">
       {lines.length === 0 ? (
-        <p className="px-1 text-sm text-[var(--color-soft)]">Transcript will appear here.</p>
+        <p className="text-sm text-[var(--color-soft)]">Transcript will appear here.</p>
       ) : (
-        <div className="flex flex-col gap-3 px-1">
+        <div className="flex flex-col gap-3">
           {lines.map((line, i) => (
             <TranscriptLine
               key={`${line.role}-${i}-${line.text.slice(0, 12)}`}

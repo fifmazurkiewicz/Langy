@@ -28,6 +28,8 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 | 2026-09-03 | Default ON (Live) | Matches production `speech_to_speech` default |
 | 2026-09-03 | Mid-session toggle allowed | Immediate path switch |
 | 2026-09-03 | Suspend Listening recognition during chat TTS/respeak | Avoid capturing tutor audio |
+| 2026-09-03 | Suspend Listening during Live PCM until turnComplete + idle | Same echo bug on Live path (previous fix only wrapped speakTutorLine) |
+| 2026-09-03 | AgentPresence + ChatStatus scroll with transcript | Presence was sticky above scroll; user needs it to move with chat |
 
 ## Architecture
 
@@ -44,8 +46,10 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 4. **Given** preference saved in localStorage, **When** user revisits Chat, **Then** lamp matches saved state.
 
 5. **Given** lamp ON and Listening on, **When** learner taps Agent speaker (respeak), **Then** recognition is suspended until TTS ends and does not submit the tutor line as user speech.
+6. **Given** lamp ON, Listening on, and Live connected, **When** tutor audio plays, **Then** recognition is suspended until turn complete and PCM idle so tutor speech is not submitted as a user turn.
+7. **Given** an active Chat session with transcript, **When** the learner scrolls the transcript, **Then** AgentPresence rings + status title scroll with the messages (same scroll surface).
 
 ## Sync
 
-- UX §11.1 Chat chrome: Live/TTS lamp in header; respeak suspends Listening recognition.
+- UX §11.1 Chat chrome: Live/TTS lamp in header; respeak and Live playback suspend Listening recognition; presence scrolls with transcript.
 - Working plan: `.cursor/plans/2026-09-03-chat-live-tts-lamp.md`.

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { base64PcmToFloat32, extractLiveAudioBase64Parts } from "./livePcmPlayer";
+import { base64PcmToFloat32, extractLiveAudioBase64Parts, whenLivePcmIdle } from "./livePcmPlayer";
+
+describe("whenLivePcmIdle", () => {
+  it("resolves immediately when nothing is playing", async () => {
+    await expect(whenLivePcmIdle()).resolves.toBeUndefined();
+  });
+});
 
 describe("extractLiveAudioBase64Parts", () => {
   it("returns pcm inlineData payloads", () => {

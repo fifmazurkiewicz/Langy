@@ -54,6 +54,8 @@ import {
   readLiveGeminiPreference,
   writeLiveGeminiPreference,
 } from "@/lib/voice/liveGeminiPreference";
+import { createLiveMicGate } from "@/lib/voice/liveMicGate";
+import { isLivePcmIdle, whenLivePcmIdle } from "@/lib/voice/livePcmPlayer";
 import { withMicSuspended } from "@/lib/voice/withMicSuspended";
 
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
@@ -129,11 +131,29 @@ export default function ChatPage() {
   const voiceModeRef = useRef("speech_to_speech");
   const voiceConfigRef = useRef<VoiceConfig>(DEFAULT_VOICE_CONFIG);
   const lineIndexRef = useRef(0);
+  const micSuspendedRef = useRef(false);
+  const liveMicGateRef = useRef<ReturnType<typeof createLiveMicGate> | null>(null);
   const recognitionActive = listening && !micSuspended;
+
+  useEffect(() => {
+    liveMicGateRef.current = createLiveMicGate({
+      listeningOn: () => listeningRef.current,
+      setSuspended: (value) => {
+        micSuspendedRef.current = value;
+        setMicSuspended(value);
+      },
+      whenIdle: whenLivePcmIdle,
+      isIdle: isLivePcmIdle,
+    });
+  }, []);
 
   useEffect(() => {
     listeningRef.current = listening;
   }, [listening]);
+
+  useEffect(() => {
+    micSuspendedRef.current = micSuspended;
+  }, [micSuspended]);
 
   useEffect(() => {
     tutorVoiceRef.current = tutorVoice;
@@ -152,11 +172,17 @@ export default function ChatPage() {
   const geminiLive = useGeminiLive({
     onAgentText: (text) => {
       setChatState("speaking");
-      void appendLineRef.current("Agent", text).then(() =>
-        setChatState(listeningRef.current ? "listening" : "idle")
-      );
+      void appendLineRef.current("Agent", text);
     },
-    onAgentAudio: () => setChatState("speaking"),
+    onAgentAudio: () => {
+      setChatState("speaking");
+      liveMicGateRef.current?.onAgentAudio();
+    },
+    onAgentTurnComplete: () => {
+      void liveMicGateRef.current?.onTurnComplete().then(() => {
+        setChatState(listeningRef.current ? "listening" : "idle");
+      });
+    },
     onError: (message) => console.warn("Gemini Live:", message),
   });
   const {
@@ -288,7 +314,7 @@ export default function ChatPage() {
 
         if (liveConnected) {
           await sendUserText(text);
-          setChatState(listeningRef.current ? "listening" : "idle");
+          // Stay thinking/speaking until Live turnComplete + audio idle.
           return;
         }
 
@@ -345,6 +371,7 @@ export default function ChatPage() {
   const handleStop = useCallback(() => {
     cancelSpeech();
     void interruptLive();
+    liveMicGateRef.current?.onInterrupt();
     setSending(false);
     setChatState(listeningRef.current ? "listening" : "idle");
   }, [interruptLive]);
@@ -711,7 +738,12 @@ export default function ChatPage() {
         setChatState("idle");
       };
       recognition.onend = () => {
-        if (!cancelled && listeningRef.current && !micSuspended && recognitionRef.current === recognition) {
+        if (
+          !cancelled &&
+          listeningRef.current &&
+          !micSuspendedRef.current &&
+          recognitionRef.current === recognition
+        ) {
           try {
             recognition.start();
           } catch {

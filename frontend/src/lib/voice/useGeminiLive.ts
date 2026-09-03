@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { LiveTokenResponse } from "@/lib/api/live";
 import {
@@ -15,6 +15,7 @@ type LiveCallbacks = {
   onError?: (message: string) => void;
   onWordSaved?: (term: string) => void;
   onAgentAudio?: () => void;
+  onAgentTurnComplete?: () => void;
 };
 
 type LiveConnectContext = {
@@ -65,7 +66,9 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
   const rawSessionRef = useRef<RawLiveSession | null>(null);
   const ignoreOutputRef = useRef(false);
   const callbacksRef = useRef(callbacks);
-  callbacksRef.current = callbacks;
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
 
   const disconnect = useCallback(() => {
     stopLivePcmPlayback();
@@ -126,6 +129,7 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
               const sc = msg.serverContent;
               if (sc?.interrupted) {
                 stopLivePcmPlayback();
+                callbacksRef.current.onAgentTurnComplete?.();
                 return;
               }
 
@@ -147,6 +151,10 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
               } else if (sc?.modelTurn?.parts) {
                 const text = sc.modelTurn.parts.map((p) => p.text ?? "").join("").trim();
                 if (text) callbacksRef.current.onAgentText?.(text);
+              }
+
+              if (sc?.turnComplete) {
+                callbacksRef.current.onAgentTurnComplete?.();
               }
 
               const calls = msg.toolCall?.functionCalls ?? [];
