@@ -50,8 +50,12 @@ export function addShadowingPending(token: string, sessionId: string, lineIds: s
 
 export function listShadowingConversations(token: string, language?: string) {
   const q = language ? `?language=${encodeURIComponent(language)}` : "";
-  return apiFetch<{ conversations: { id: string; preview: string }[] }>(
-    `/api/shadowing/conversations${q}`,
-    { token }
-  );
+  return apiFetch<{
+    conversations: {
+      id: string;
+      preview: string;
+      snippet_lines?: { role: string; text: string }[];
+      started_at?: string | null;
+    }[];
+  }>(`/api/shadowing/conversations${q}`, { token });
 }

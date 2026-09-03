@@ -117,7 +117,7 @@ Sub-tabs: **Flashcards** | **Vocabulary** | **Shadowing**.
 
 **Vocabulary:** all accepted words for active language; local search; **Mnemonic** per term (Generate/Regenerate panel — PL association + example).
 
-**Shadowing:** topic intake → generate or pick conversation → show-text + TTS|Live → loop → end hard-line batch → Pending.
+**Shadowing:** topic intake → generate or pick conversation (list accordion: last ~10 lines preview) → show-text + TTS|Live → loop → end hard-line batch → Pending.
 
 ### 11.3 Menu
 

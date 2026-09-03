@@ -11,15 +11,15 @@ from app.models import Conversation, Job, User, UserLanguageProfile, UserMemoryF
 
 
 OPENING_LINES = [
-    "What would you like to talk about today?",
-    "What are you learning right now — shall we practice?",
-    "What's on your mind for today's practice?",
+    "I'm listening — what would you like to talk about today?",
+    "Take your time — whenever you're ready, tell me what you'd like to practice.",
+    "Happy to listen. Go ahead whenever you want to start.",
 ]
 
 RESUME_LINES = [
-    "Welcome back! Shall we pick up where we left off?",
-    "Good to see you again — ready to continue?",
-    "Let's continue — what would you like to talk about next?",
+    "Welcome back — I'm listening whenever you're ready to continue.",
+    "Good to see you again. Take your time; we can pick up whenever you like.",
+    "I'm here. Go ahead when you want to continue.",
 ]
 
 

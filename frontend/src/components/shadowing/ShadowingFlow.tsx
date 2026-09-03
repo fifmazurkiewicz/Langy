@@ -38,8 +38,11 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
   const [step, setStep] = useState<Step>("intake");
   const [sourceMode, setSourceMode] = useState<SourceMode>("generated");
   const [topic, setTopic] = useState("");
-  const [pastConversations, setPastConversations] = useState<{ id: string; preview: string }[]>([]);
+  const [pastConversations, setPastConversations] = useState<
+    { id: string; preview: string; snippet_lines?: { role: string; text: string }[]; started_at?: string | null }[]
+  >([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [expandedConversationId, setExpandedConversationId] = useState<string | null>(null);
   const [showText, setShowText] = useState(true);
   const [audioMode, setAudioMode] = useState<"tts" | "live">("tts");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -318,19 +321,46 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
           <p className="text-sm opacity-60">No ended conversations yet — try a generated dialogue.</p>
         ) : (
           <ul className="space-y-2">
-            {pastConversations.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  className={`classical-card w-full p-3 text-left text-sm ${
-                    selectedConversationId === c.id ? "ring-1 ring-[var(--color-accent)]" : ""
-                  }`}
-                  onClick={() => setSelectedConversationId(c.id)}
-                >
-                  {c.preview || "Conversation"}
-                </button>
-              </li>
-            ))}
+            {pastConversations.map((c) => {
+              const selected = selectedConversationId === c.id;
+              const expanded = expandedConversationId === c.id;
+              const lines = c.snippet_lines ?? [];
+              return (
+                <li key={c.id}>
+                  <div
+                    className={`classical-card w-full p-3 text-sm ${
+                      selected ? "ring-1 ring-[var(--color-accent)]" : ""
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      aria-expanded={expanded}
+                      onClick={() => {
+                        setSelectedConversationId(c.id);
+                        setExpandedConversationId(c.id);
+                      }}
+                    >
+                      <p className="line-clamp-2">{c.preview || "Conversation"}</p>
+                    </button>
+                    {expanded ? (
+                      <div className="mt-3 max-h-48 space-y-2 overflow-y-auto border-t border-[var(--color-divider)] pt-3">
+                        {lines.length === 0 ? (
+                          <p className="text-xs opacity-60">No messages to preview</p>
+                        ) : (
+                          lines.map((line, i) => (
+                            <p key={`${c.id}-${i}`} className="text-xs leading-snug">
+                              <span className="text-[var(--color-accent)]">{line.role}: </span>
+                              <span className="line-clamp-2 opacity-90">{line.text}</span>
+                            </p>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
         <button
