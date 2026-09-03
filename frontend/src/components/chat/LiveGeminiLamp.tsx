@@ -8,7 +8,7 @@ type Props = {
   onToggle: () => void;
 };
 
-/** Header lamp: lit = Live Gemini, unlit = TTS-only path. */
+/** Status-row lamp: lit = Live Gemini, unlit = TTS-only path. */
 export function LiveGeminiLamp({ on, disabled, onToggle }: Props) {
   return (
     <button

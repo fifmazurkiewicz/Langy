@@ -107,7 +107,7 @@ UI copy i kod po **angielsku**. Rozmowa o projekcie może być po polsku; L1 w p
 
 ### 11.1 Chat
 
-Header: **lampa Live Gemini** (lewo; lit = Live, off = TTS) · język → switcher · History; pod History **dwie kropki** (Tutor voice, Listening; on = accent, off = dark). Stany: Waking up… → Idle → Listening/Thinking/Speaking. AgentPresence + status **scrollują z transcriptem** (jedna powierzchnia scroll). AgentPresence waves = Speak (gdy Listening off). Composer: Send ↔ Stop; **bez** Speak obok inputu. Pod composer: tylko **End session**. Linia Agent: ikona speaker = respeak TTS (Listening wstrzymane na czas odtwarzania). Live PCM: Listening wstrzymane do turnComplete + idle. Mic blocked sheet. Badge Memo gdy Pending.
+Pięć zablokowanych stref (tylko transcript scrolluje): (1) Header: język → switcher · History. (2) Status row (jeden poziom): **lampa Live Gemini** lewo (lit = Live, off = TTS) · kompaktowe AgentPresence waves + tytuł statusu (Ready / Listening / …) · **dwie kropki** prawo (Tutor voice, Listening; on = accent, off = dark). (3) Transcript — jedyna powierzchnia `overflow-y-auto`. (4) Composer: Send ↔ Stop; **bez** Speak obok inputu; pod composer **End session**. (5) Bottom nav Chat / Memo / Menu. AgentPresence waves = Speak (gdy Listening off). Linia Agent: ikona speaker = respeak TTS (Listening wstrzymane na czas odtwarzania). Live PCM: Listening wstrzymane do turnComplete + idle. Mic blocked sheet. Badge Memo gdy Pending.
 
 ### 11.2 Memo
 

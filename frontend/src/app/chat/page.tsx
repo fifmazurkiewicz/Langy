@@ -780,22 +780,9 @@ export default function ChatPage() {
     : "Conversation";
 
   return (
-    <div className="flex flex-1 flex-col pb-[calc(168px+env(safe-area-inset-bottom))]">
-      <header className="flex items-start gap-2 border-b border-[var(--color-divider)] px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-        <LiveGeminiLamp
-          on={liveGemini}
-          onToggle={() => {
-            setLiveGemini((prev) => {
-              const next = !prev;
-              if (!next) {
-                disconnectGeminiLive();
-                cancelSpeech();
-              }
-              return next;
-            });
-          }}
-        />
-        <div className="min-w-0 flex-1 pt-1">
+    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden pb-[calc(168px+env(safe-area-inset-bottom))]">
+      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--color-divider)] px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <div className="min-w-0 flex-1">
           <LanguageSwitcher
             activeLanguage={sessionLanguage}
             languages={languages.length ? languages : ["en-GB"]}
@@ -810,40 +797,17 @@ export default function ChatPage() {
             }}
           />
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-0.5">
-          <button
-            type="button"
-            className="classical-btn min-h-[44px] shrink-0 px-3 text-sm"
-            onClick={() => void openHistory()}
-            aria-label="Conversation history"
-          >
-            History
-          </button>
-          {conversationId ? (
-            <VoiceDots
-              tutorVoice={tutorVoice}
-              listening={listening}
-              disabled={sending && !(chatState === "speaking" || chatState === "thinking")}
-              onToggleTutorVoice={() => setTutorVoice((v) => !v)}
-              onToggleListening={() => {
-                if (speakOnceActive) {
-                  oneShotRef.current?.stop();
-                  oneShotRef.current = null;
-                  setSpeakOnceActive(false);
-                }
-                setListening((v) => {
-                  const next = !v;
-                  if (next && conversationId) setChatState("listening");
-                  if (!next) setChatState("idle");
-                  return next;
-                });
-              }}
-            />
-          ) : null}
-        </div>
+        <button
+          type="button"
+          className="classical-btn min-h-[44px] shrink-0 px-3 text-sm"
+          onClick={() => void openHistory()}
+          aria-label="Conversation history"
+        >
+          History
+        </button>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col gap-3 px-4 pt-3">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-4">
         <MicStatusBanner
           status={activeMicStatus}
           hasSession={Boolean(conversationId)}
@@ -858,6 +822,44 @@ export default function ChatPage() {
           }
           presencePressed={speakOnceActive}
           onPresencePress={() => void handleSpeakOnce()}
+          leftControls={
+            <LiveGeminiLamp
+              on={liveGemini}
+              onToggle={() => {
+                setLiveGemini((prev) => {
+                  const next = !prev;
+                  if (!next) {
+                    disconnectGeminiLive();
+                    cancelSpeech();
+                  }
+                  return next;
+                });
+              }}
+            />
+          }
+          rightControls={
+            conversationId ? (
+              <VoiceDots
+                tutorVoice={tutorVoice}
+                listening={listening}
+                disabled={sending && !(chatState === "speaking" || chatState === "thinking")}
+                onToggleTutorVoice={() => setTutorVoice((v) => !v)}
+                onToggleListening={() => {
+                  if (speakOnceActive) {
+                    oneShotRef.current?.stop();
+                    oneShotRef.current = null;
+                    setSpeakOnceActive(false);
+                  }
+                  setListening((v) => {
+                    const next = !v;
+                    if (next && conversationId) setChatState("listening");
+                    if (!next) setChatState("idle");
+                    return next;
+                  });
+                }}
+              />
+            ) : null
+          }
           preSessionAction={
             <>
               {!apiReady ? <p className="text-center text-sm text-[var(--color-soft)]">Waiting for API…</p> : null}

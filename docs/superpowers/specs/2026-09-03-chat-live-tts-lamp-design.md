@@ -6,7 +6,7 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 
 ## Goals
 
-- Header lamp (left): **ON (lit) = Live Gemini**, **OFF = TTS only**.
+- Status-row lamp (left of waves/title): **ON (lit) = Live Gemini**, **OFF = TTS only**.
 - TTS path never opens Live (`live-token` / connect / PCM).
 - Persist preference in `localStorage`.
 - Switch mid-session: OFF disconnects Live immediately; ON reconnects when Tutor voice is on.
@@ -23,6 +23,7 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 |---|---|---|
 | 2026-09-03 | Approach: FE preference gates Live | Smallest change; TTS fully independent |
 | 2026-09-03 | Lamp left of language switcher in Chat header | Always visible; matches Classical chrome |
+| 2026-09-04 | Lamp + Tutor/Listening dots on locked status row (not header); only transcript scrolls | User: waves + status + dots one level; header = language + History only |
 | 2026-09-03 | Lit = Live, unlit = TTS | User metaphor |
 | 2026-09-03 | `localStorage` key `langy-chat-live-gemini` | Persist across visits without backend |
 | 2026-09-03 | Default ON (Live) | Matches production `speech_to_speech` default |
@@ -30,11 +31,13 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 | 2026-09-03 | Suspend Listening recognition during chat TTS/respeak | Avoid capturing tutor audio |
 | 2026-09-03 | Suspend Listening during Live PCM until turnComplete + idle | Same echo bug on Live path (previous fix only wrapped speakTutorLine) |
 | 2026-09-03 | AgentPresence + ChatStatus scroll with transcript | Presence was sticky above scroll; user needs it to move with chat |
+| 2026-09-04 | AgentPresence + ChatStatus + voice dots locked above transcript | Supersedes scroll-with-transcript; user wants fixed chrome, scroll-only messages |
 
 ## Architecture
 
 - `readLiveGeminiPreference` / `writeLiveGeminiPreference` + storage key helper.
 - `LiveGeminiLamp` button: hit target ≥44px, lit = accent fill/glow, unlit = dark/divider; `aria-pressed` + name “Live Gemini”.
+- Chat status row: lamp left, compact AgentPresence + status title center, Tutor/Listening dots right; transcript is the only scroll surface.
 - Chat page: `liveGemini` state; `connectLive` no-ops when false; tutor-voice effect also requires `liveGemini`; toggle OFF → `disconnect` + `cancelSpeech`.
 - `withMicSuspended` + `micSuspended` gate around chat `speakTutorLine` (respeak / TTS path); browser TTS awaits utterance end.
 
@@ -47,9 +50,9 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 
 5. **Given** lamp ON and Listening on, **When** learner taps Agent speaker (respeak), **Then** recognition is suspended until TTS ends and does not submit the tutor line as user speech.
 6. **Given** lamp ON, Listening on, and Live connected, **When** tutor audio plays, **Then** recognition is suspended until turn complete and PCM idle so tutor speech is not submitted as a user turn.
-7. **Given** an active Chat session with transcript, **When** the learner scrolls the transcript, **Then** AgentPresence rings + status title scroll with the messages (same scroll surface).
+7. **Given** an active Chat session with transcript, **When** the learner scrolls the transcript, **Then** only messages move; header, status row (lamp + waves + title + voice dots), composer, and bottom nav stay fixed.
 
 ## Sync
 
-- UX §11.1 Chat chrome: Live/TTS lamp in header; respeak and Live playback suspend Listening recognition; presence scrolls with transcript.
+- UX §11.1 Chat chrome: five locked zones; Live/TTS lamp + voice dots on status row; only transcript scrolls; respeak and Live playback suspend Listening recognition.
 - Working plan: `.cursor/plans/2026-09-03-chat-live-tts-lamp.md`.

@@ -5,19 +5,29 @@ export type ChatVisualState = "idle" | "listening" | "thinking" | "speaking" | "
 type Props = {
   state: ChatVisualState;
   hasSession: boolean;
+  /** Compact rings for the locked status row (same level as title + dots). */
+  size?: "sm" | "md";
   /** When true, waves act as Speak (hover + click). */
   interactive?: boolean;
   pressed?: boolean;
   onPress?: () => void;
 };
 
-export function AgentPresence({ state, hasSession, interactive, pressed, onPress }: Props) {
+export function AgentPresence({
+  state,
+  hasSession,
+  size = "sm",
+  interactive,
+  pressed,
+  onPress,
+}: Props) {
   const active = hasSession && state !== "idle" && state !== "waking";
   const speed = state === "thinking" ? "2.8s" : state === "speaking" ? "3.2s" : "5.2s";
   const canPress = Boolean(hasSession && interactive && onPress);
+  const px = size === "sm" ? 56 : 140;
 
   const rings = (
-    <svg width="140" height="140" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+    <svg width={px} height={px} viewBox="0 0 200 200" fill="none" aria-hidden="true">
       <circle
         cx="100"
         cy="100"
@@ -70,25 +80,23 @@ export function AgentPresence({ state, hasSession, interactive, pressed, onPress
 
   if (canPress) {
     return (
-      <div className="flex justify-center py-2">
-        <button
-          type="button"
-          className={`rounded-full p-1 transition duration-200 hover:scale-[1.04] hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
-            pressed ? "brightness-125" : "cursor-pointer opacity-90 hover:opacity-100"
-          }`}
-          onClick={onPress}
-          aria-label="Speak"
-          aria-pressed={pressed}
-          title="Speak"
-        >
-          {rings}
-        </button>
-      </div>
+      <button
+        type="button"
+        className={`shrink-0 rounded-full p-0.5 transition duration-200 hover:scale-[1.04] hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] ${
+          pressed ? "brightness-125" : "cursor-pointer opacity-90 hover:opacity-100"
+        }`}
+        onClick={onPress}
+        aria-label="Speak"
+        aria-pressed={pressed}
+        title="Speak"
+      >
+        {rings}
+      </button>
     );
   }
 
   return (
-    <div className="flex justify-center py-2" aria-hidden="true">
+    <div className="shrink-0" aria-hidden="true">
       {rings}
     </div>
   );
