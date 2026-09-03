@@ -18,3 +18,7 @@
 ## Cost
 
 Fact/summary extraction counts as **GenAI** toward monthly spend cap (same as vocab extraction).
+
+## Listening space (2026-09-03)
+
+Mid-session and opening share the same turn-taking contract: react → develop → at most one open invite; no multi-question turns. Opening/resume line pools invite space to speak (not interview openers). Soft Interests-on-silence unchanged.

@@ -271,6 +271,8 @@ Build ephemeral system prompt from:
 
 **Opening:** first agent turn uses a **varied** line from a small pool — ask what to talk about today or what they’re learning. **Do not** list Interests in that opening. If user is silent / unsure, Agent may **softly** suggest from Interests — never force a lesson plan. User leads. Polish only on explicit request.
 
+**Listening space:** Every tutor turn (including opening) should (1) briefly react to the learner's intention, (2) develop the topic with statements/examples, (3) use at most one open invitation — never stack multiple questions. Prefer giving the learner room to speak.
+
 ### 7.2 Session end + extraction + memory + Pending
 
 - Session ends **only** via explicit **End session**.

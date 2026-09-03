@@ -27,3 +27,13 @@ def preview_transcript(transcript: str | None, limit: int = 120) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 1].rstrip() + "…"
+
+
+def snippet_lines(transcript: str | None, limit: int = 10) -> list[dict[str, str]]:
+    """Return the last `limit` parsed transcript lines for list previews."""
+    if limit <= 0:
+        return []
+    lines = parse_transcript(transcript)
+    if len(lines) <= limit:
+        return lines
+    return lines[-limit:]

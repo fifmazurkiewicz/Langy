@@ -19,6 +19,19 @@ def test_build_live_system_instruction_includes_language():
     assert "A2" in text
 
 
+def test_build_live_system_instruction_includes_listening_space_rules():
+    agenda = {
+        "language": "en-GB",
+        "profile": {"motivations": ["travel"], "skills": {}},
+        "memory_facts": [],
+        "study_plan": None,
+    }
+    text = build_live_system_instruction(agenda).lower()
+    assert "react" in text or "intention" in text or "intent" in text
+    assert "one" in text and ("question" in text or "invite" in text or "invitation" in text)
+    assert "multiple questions" in text or "do not ask more than one" in text or "at most one" in text
+
+
 def test_mint_token_requires_api_key():
     with pytest.raises(LiveTokenError):
         mint_ephemeral_live_token(system_instruction="Hi", api_key="")

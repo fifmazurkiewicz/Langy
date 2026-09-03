@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
 from app.db import get_db
+from app.domain.chat.transcript import preview_transcript, snippet_lines
 from app.domain.shadowing.service import (
     CreateShadowingRequest,
     PendingLineRequest,
@@ -39,7 +40,8 @@ def list_conversations(
                 "id": str(c.id),
                 "language": c.language,
                 "started_at": c.started_at.isoformat() if c.started_at else None,
-                "preview": (c.transcript or "")[:120],
+                "preview": preview_transcript(c.transcript),
+                "snippet_lines": snippet_lines(c.transcript, limit=10),
             }
             for c in convs
         ]
