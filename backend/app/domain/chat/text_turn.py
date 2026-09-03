@@ -25,7 +25,7 @@ def text_user_turn(
     agenda = build_agenda(db, user, language)
     system = (
         build_live_system_instruction(agenda)
-        + '\nReply briefly in the learner\'s target language. Return JSON: {"reply": "your message"}'
+        + '\nReply in the learner\'s target language. Return JSON: {"reply": "your message"}'
     )
 
     messages: list[dict[str, str]] = [{"role": "system", "content": system}]

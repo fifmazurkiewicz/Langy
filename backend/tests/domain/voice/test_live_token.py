@@ -32,6 +32,30 @@ def test_build_live_system_instruction_includes_listening_space_rules():
     assert "multiple questions" in text or "do not ask more than one" in text or "at most one" in text
 
 
+def test_build_live_system_instruction_claims_audible_voice():
+    agenda = {
+        "language": "en-GB",
+        "profile": {"motivations": [], "skills": {}},
+        "memory_facts": [],
+        "study_plan": None,
+    }
+    text = build_live_system_instruction(agenda).lower()
+    assert "voice" in text or "audio" in text
+    assert "never say you have no voice" in text or "do not claim you are text-only" in text
+
+
+def test_build_live_system_instruction_includes_soft_brevity():
+    agenda = {
+        "language": "en-GB",
+        "profile": {"motivations": [], "skills": {}},
+        "memory_facts": [],
+        "study_plan": None,
+    }
+    text = build_live_system_instruction(agenda).lower()
+    assert "short" in text
+    assert "expand" in text
+
+
 def test_mint_token_requires_api_key():
     with pytest.raises(LiveTokenError):
         mint_ephemeral_live_token(system_instruction="Hi", api_key="")

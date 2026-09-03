@@ -3,12 +3,18 @@
 import { useCallback, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { LiveTokenResponse } from "@/lib/api/live";
+import {
+  enqueueLivePcmBase64,
+  extractLiveAudioBase64Parts,
+  stopLivePcmPlayback,
+} from "@/lib/voice/livePcmPlayer";
 
 type LiveCallbacks = {
   onUserText?: (text: string) => void;
   onAgentText?: (text: string) => void;
   onError?: (message: string) => void;
   onWordSaved?: (term: string) => void;
+  onAgentAudio?: () => void;
 };
 
 type LiveConnectContext = {
@@ -18,35 +24,59 @@ type LiveConnectContext = {
 
 type LiveSession = {
   sendUserText: (text: string) => Promise<void>;
+  interrupt: () => Promise<void>;
   disconnect: () => void;
   sendToolResponse: (name: string, id: string, response: Record<string, unknown>) => Promise<void>;
+};
+
+type LivePart = {
+  inlineData?: { data?: string; mimeType?: string };
+  text?: string;
 };
 
 type LiveMessage = {
   serverContent?: {
     inputTranscription?: { text?: string };
     outputTranscription?: { text?: string };
-    modelTurn?: { parts?: { text?: string }[] };
+    modelTurn?: { parts?: LivePart[] };
+    interrupted?: boolean;
+    turnComplete?: boolean;
   };
   toolCall?: {
     functionCalls?: { id?: string; name?: string; args?: Record<string, unknown> }[];
   };
 };
 
+/** Minimal silent PCM frame (16-bit mono) to nudge Live interruption. */
+const SILENT_PCM_B64 = "AAAA"; // 2 zero bytes
+
 export function useGeminiLive(callbacks: LiveCallbacks) {
   const [connected, setConnected] = useState(false);
   const sessionRef = useRef<LiveSession | null>(null);
   const contextRef = useRef<LiveConnectContext>({});
+  const rawSessionRef = useRef<{
+    sendClientContent: (params: unknown) => Promise<void>;
+    sendRealtimeInput?: (params: unknown) => Promise<void> | void;
+    sendToolResponse: (params: unknown) => Promise<void>;
+    close: () => void;
+  } | null>(null);
+  const ignoreOutputRef = useRef(false);
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
 
   const disconnect = useCallback(() => {
+    stopLivePcmPlayback();
+    ignoreOutputRef.current = true;
     sessionRef.current?.disconnect();
     sessionRef.current = null;
+    rawSessionRef.current = null;
     setConnected(false);
   }, []);
 
   const connect = useCallback(
     async (liveConfig: LiveTokenResponse, context: LiveConnectContext = {}) => {
       disconnect();
+      ignoreOutputRef.current = false;
       contextRef.current = context;
       if (liveConfig.mode !== "live" || !liveConfig.token) {
         return false;
@@ -91,14 +121,29 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
             onmessage: (message) => {
               const msg = message as LiveMessage;
               const sc = msg.serverContent;
+              if (sc?.interrupted) {
+                stopLivePcmPlayback();
+                return;
+              }
+
+              const audioParts = extractLiveAudioBase64Parts(msg);
+              if (audioParts.length && !ignoreOutputRef.current) {
+                callbacksRef.current.onAgentAudio?.();
+                for (const b64 of audioParts) {
+                  void enqueueLivePcmBase64(b64);
+                }
+              }
+
+              if (ignoreOutputRef.current) return;
+
               if (sc?.inputTranscription?.text) {
-                callbacks.onUserText?.(sc.inputTranscription.text);
+                callbacksRef.current.onUserText?.(sc.inputTranscription.text);
               }
               if (sc?.outputTranscription?.text) {
-                callbacks.onAgentText?.(sc.outputTranscription.text);
+                callbacksRef.current.onAgentText?.(sc.outputTranscription.text);
               } else if (sc?.modelTurn?.parts) {
                 const text = sc.modelTurn.parts.map((p) => p.text ?? "").join("").trim();
-                if (text) callbacks.onAgentText?.(text);
+                if (text) callbacksRef.current.onAgentText?.(text);
               }
 
               const calls = msg.toolCall?.functionCalls ?? [];
@@ -124,7 +169,7 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
                         },
                       });
                       saved = true;
-                      callbacks.onWordSaved?.(term);
+                      callbacksRef.current.onWordSaved?.(term);
                     } catch {
                       saved = false;
                     }
@@ -137,18 +182,38 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
               }
             },
             onerror: (e: ErrorEvent) => {
-              callbacks.onError?.(e.message ?? "Live session error");
+              callbacksRef.current.onError?.(e.message ?? "Live session error");
             },
             onclose: () => setConnected(false),
           },
         });
 
+        rawSessionRef.current = session as typeof rawSessionRef.current;
+
         sessionRef.current = {
           sendUserText: async (text: string) => {
+            ignoreOutputRef.current = false;
             await session.sendClientContent({
               turns: [{ role: "user", parts: [{ text }] }],
               turnComplete: true,
             });
+          },
+          interrupt: async () => {
+            ignoreOutputRef.current = true;
+            stopLivePcmPlayback();
+            const raw = rawSessionRef.current;
+            try {
+              if (raw?.sendRealtimeInput) {
+                await raw.sendRealtimeInput({
+                  audio: {
+                    data: SILENT_PCM_B64,
+                    mimeType: "audio/pcm;rate=16000",
+                  },
+                });
+              }
+            } catch {
+              /* best-effort interrupt */
+            }
           },
           sendToolResponse: async (name: string, id: string, response: Record<string, unknown>) => {
             await session.sendToolResponse({
@@ -156,22 +221,27 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
             });
           },
           disconnect: () => {
+            stopLivePcmPlayback();
             session.close();
           },
         };
         setConnected(true);
         return true;
       } catch (e) {
-        callbacks.onError?.(e instanceof Error ? e.message : "Could not connect to Gemini Live");
+        callbacksRef.current.onError?.(e instanceof Error ? e.message : "Could not connect to Gemini Live");
         return false;
       }
     },
-    [callbacks, disconnect]
+    [disconnect]
   );
 
   const sendUserText = useCallback(async (text: string) => {
     await sessionRef.current?.sendUserText(text);
   }, []);
 
-  return { connected, connect, disconnect, sendUserText };
+  const interrupt = useCallback(async () => {
+    await sessionRef.current?.interrupt();
+  }, []);
+
+  return { connected, connect, disconnect, sendUserText, interrupt };
 }

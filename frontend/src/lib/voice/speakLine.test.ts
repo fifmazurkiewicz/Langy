@@ -5,8 +5,13 @@ vi.mock("./playTts", () => ({
   stopActiveTtsAudio: vi.fn(),
 }));
 
+vi.mock("./livePcmPlayer", () => ({
+  stopLivePcmPlayback: vi.fn(),
+}));
+
 import { cancelSpeech, speakLine } from "./speakLine";
 import { stopActiveTtsAudio } from "./playTts";
+import { stopLivePcmPlayback } from "./livePcmPlayer";
 
 describe("speakLine", () => {
   beforeEach(() => {
@@ -55,5 +60,6 @@ describe("speakLine", () => {
   it("cancelSpeech stops active synthesis and server audio", () => {
     cancelSpeech();
     expect(stopActiveTtsAudio).toHaveBeenCalled();
+    expect(stopLivePcmPlayback).toHaveBeenCalled();
   });
 });

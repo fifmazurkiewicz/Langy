@@ -7,8 +7,11 @@ type Props = {
   listening: boolean;
   speakOnceActive: boolean;
   speechAvailable: boolean;
+  /** When true, primary action is Stop (tutor speaking/thinking). */
+  canStop?: boolean;
   onDraftChange: (value: string) => void;
   onSend: () => void;
+  onStop?: () => void;
   onSpeakOnce: () => void;
 };
 
@@ -19,12 +22,14 @@ export function ChatComposer({
   listening,
   speakOnceActive,
   speechAvailable,
+  canStop,
   onDraftChange,
   onSend,
+  onStop,
   onSpeakOnce,
 }: Props) {
-  const canSend = draft.trim().length > 0 && !disabled && !sending;
-  const showSpeakOnce = !listening && speechAvailable;
+  const canSend = draft.trim().length > 0 && !disabled && !sending && !canStop;
+  const showSpeakOnce = !listening && speechAvailable && !canStop;
 
   return (
     <div className="flex items-end gap-2">
@@ -33,7 +38,7 @@ export function ChatComposer({
         className="classical-input min-w-0 flex-1"
         placeholder="Type a message…"
         value={draft}
-        disabled={disabled || sending}
+        disabled={disabled || sending || Boolean(canStop)}
         onChange={(e) => onDraftChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && canSend) {
@@ -55,15 +60,26 @@ export function ChatComposer({
           {speakOnceActive ? "Listening…" : "Speak"}
         </button>
       ) : null}
-      <button
-        type="button"
-        className="classical-btn classical-btn-primary shrink-0 px-3"
-        disabled={!canSend}
-        onClick={onSend}
-        aria-label="Send message"
-      >
-        {sending ? "…" : "Send"}
-      </button>
+      {canStop ? (
+        <button
+          type="button"
+          className="classical-btn classical-btn-primary shrink-0 px-3"
+          onClick={onStop}
+          aria-label="Stop speaking"
+        >
+          Stop
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="classical-btn classical-btn-primary shrink-0 px-3"
+          disabled={!canSend}
+          onClick={onSend}
+          aria-label="Send message"
+        >
+          {sending ? "…" : "Send"}
+        </button>
+      )}
     </div>
   );
 }

@@ -1,10 +1,12 @@
+import { stopLivePcmPlayback } from "./livePcmPlayer";
 import { speakTutorLine, stopActiveTtsAudio } from "./playTts";
 
 export { speakTutorLine };
 
-/** Stops browser synthesis and any in-flight server TTS audio. */
+/** Stops browser/server TTS and any Live PCM playback. */
 export function cancelSpeech(): void {
   stopActiveTtsAudio();
+  stopLivePcmPlayback();
 }
 
 /** @deprecated Use speakTutorLine with voice config — kept for tests. */

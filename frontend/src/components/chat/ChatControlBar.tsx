@@ -12,8 +12,10 @@ type Props = {
   sending: boolean;
   speakOnceActive: boolean;
   speechAvailable: boolean;
+  canStop?: boolean;
   onDraftChange: (value: string) => void;
   onSendText: () => void;
+  onStop?: () => void;
   onSpeakOnce: () => void;
   onStart: () => void;
   onToggleListening: () => void;
@@ -31,8 +33,10 @@ export function ChatControlBar({
   sending,
   speakOnceActive,
   speechAvailable,
+  canStop,
   onDraftChange,
   onSendText,
+  onStop,
   onSpeakOnce,
   onStart,
   onToggleListening,
@@ -65,8 +69,10 @@ export function ChatControlBar({
         listening={listening}
         speakOnceActive={speakOnceActive}
         speechAvailable={speechAvailable}
+        canStop={canStop}
         onDraftChange={onDraftChange}
         onSend={onSendText}
+        onStop={onStop}
         onSpeakOnce={onSpeakOnce}
       />
       <div className="flex gap-2">
@@ -75,7 +81,7 @@ export function ChatControlBar({
           className={`classical-btn flex-1 text-sm ${tutorVoice ? "classical-btn-primary" : ""}`}
           onClick={onToggleTutorVoice}
           aria-pressed={tutorVoice}
-          disabled={sending}
+          disabled={sending && !canStop}
         >
           {tutorVoice ? "Tutor voice on" : "Tutor voice off"}
         </button>

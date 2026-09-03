@@ -139,10 +139,16 @@ export default function ChatPage() {
         setChatState(listeningRef.current ? "listening" : "idle")
       );
     },
+    onAgentAudio: () => setChatState("speaking"),
     onError: (message) => console.warn("Gemini Live:", message),
   });
-  const { connected: liveConnected, connect: connectGeminiLive, disconnect: disconnectGeminiLive, sendUserText } =
-    geminiLive;
+  const {
+    connected: liveConnected,
+    connect: connectGeminiLive,
+    disconnect: disconnectGeminiLive,
+    sendUserText,
+    interrupt: interruptLive,
+  } = geminiLive;
 
   const connectLive = useCallback(
     async (convId: string) => {
@@ -308,6 +314,13 @@ export default function ChatPage() {
     setDraft("");
     void submitUserMessage(text);
   }, [draft, submitUserMessage]);
+
+  const handleStop = useCallback(() => {
+    cancelSpeech();
+    void interruptLive();
+    setSending(false);
+    setChatState(listeningRef.current ? "listening" : "idle");
+  }, [interruptLive]);
 
   const handleSpeakOnce = useCallback(async () => {
     if (!conversationId || speakOnceActive || sending || listening) return;
@@ -743,6 +756,11 @@ export default function ChatPage() {
         <ChatStage
           visualState={visualState}
           hasSession={Boolean(conversationId)}
+          presenceInteractive={
+            Boolean(conversationId) && !listening && speechRecognitionSupported() && !speakOnceActive
+          }
+          presencePressed={speakOnceActive}
+          onPresencePress={() => void handleSpeakOnce()}
           preSessionAction={
             <>
               {!apiReady ? <p className="text-center text-sm text-[var(--color-soft)]">Waiting for API…</p> : null}
@@ -791,8 +809,10 @@ export default function ChatPage() {
         sending={sending}
         speakOnceActive={speakOnceActive}
         speechAvailable={speechRecognitionSupported()}
+        canStop={chatState === "speaking" || chatState === "thinking" || sending}
         onDraftChange={setDraft}
         onSendText={handleSendText}
+        onStop={handleStop}
         onSpeakOnce={() => void handleSpeakOnce()}
         onStart={() => void startSession()}
         onToggleTutorVoice={() => setTutorVoice((v) => !v)}
