@@ -72,7 +72,8 @@ export async function enqueueLivePcmBase64(
   if (samples.length === 0) return;
 
   const buffer = ctx.createBuffer(1, samples.length, sampleRate);
-  buffer.copyToChannel(samples, 0);
+  // getChannelData().set avoids Float32Array<ArrayBufferLike> vs ArrayBuffer mismatch (TS 5.7+)
+  buffer.getChannelData(0).set(samples);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.connect(ctx.destination);

@@ -29,6 +29,14 @@ type LiveSession = {
   sendToolResponse: (name: string, id: string, response: Record<string, unknown>) => Promise<void>;
 };
 
+/** Subset of @google/genai Live session used for interrupt / tool replies. */
+type RawLiveSession = {
+  sendClientContent: (params: unknown) => Promise<void>;
+  sendRealtimeInput?: (params: unknown) => Promise<void> | void;
+  sendToolResponse: (params: unknown) => Promise<void>;
+  close: () => void;
+};
+
 type LivePart = {
   inlineData?: { data?: string; mimeType?: string };
   text?: string;
@@ -54,12 +62,7 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
   const [connected, setConnected] = useState(false);
   const sessionRef = useRef<LiveSession | null>(null);
   const contextRef = useRef<LiveConnectContext>({});
-  const rawSessionRef = useRef<{
-    sendClientContent: (params: unknown) => Promise<void>;
-    sendRealtimeInput?: (params: unknown) => Promise<void> | void;
-    sendToolResponse: (params: unknown) => Promise<void>;
-    close: () => void;
-  } | null>(null);
+  const rawSessionRef = useRef<RawLiveSession | null>(null);
   const ignoreOutputRef = useRef(false);
   const callbacksRef = useRef(callbacks);
   callbacksRef.current = callbacks;
@@ -188,7 +191,7 @@ export function useGeminiLive(callbacks: LiveCallbacks) {
           },
         });
 
-        rawSessionRef.current = session as typeof rawSessionRef.current;
+        rawSessionRef.current = session as unknown as RawLiveSession;
 
         sessionRef.current = {
           sendUserText: async (text: string) => {
