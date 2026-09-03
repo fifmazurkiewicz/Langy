@@ -14,7 +14,7 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 ## Non-goals
 
 - Profile/server sync of this preference.
-- Changing Tutor voice / Listening / respeak semantics.
+- Changing Tutor voice / Listening chrome (dots stay as user preference).
 - Removing env `VOICE_MODE` (still caps Live availability when `chained`).
 
 ## Decisions
@@ -27,12 +27,14 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 | 2026-09-03 | `localStorage` key `langy-chat-live-gemini` | Persist across visits without backend |
 | 2026-09-03 | Default ON (Live) | Matches production `speech_to_speech` default |
 | 2026-09-03 | Mid-session toggle allowed | Immediate path switch |
+| 2026-09-03 | Suspend Listening recognition during chat TTS/respeak | Avoid capturing tutor audio |
 
 ## Architecture
 
 - `readLiveGeminiPreference` / `writeLiveGeminiPreference` + storage key helper.
 - `LiveGeminiLamp` button: hit target ≥44px, lit = accent fill/glow, unlit = dark/divider; `aria-pressed` + name “Live Gemini”.
 - Chat page: `liveGemini` state; `connectLive` no-ops when false; tutor-voice effect also requires `liveGemini`; toggle OFF → `disconnect` + `cancelSpeech`.
+- `withMicSuspended` + `micSuspended` gate around chat `speakTutorLine` (respeak / TTS path); browser TTS awaits utterance end.
 
 ## Given / When / Then
 
@@ -41,7 +43,9 @@ Chat voice path is driven only by server `VOICE_MODE`. Learners cannot pick **Ge
 3. **Given** Live connected, **When** user turns lamp OFF, **Then** Live disconnects immediately and further turns stay on TTS path.
 4. **Given** preference saved in localStorage, **When** user revisits Chat, **Then** lamp matches saved state.
 
+5. **Given** lamp ON and Listening on, **When** learner taps Agent speaker (respeak), **Then** recognition is suspended until TTS ends and does not submit the tutor line as user speech.
+
 ## Sync
 
-- UX §11.1 Chat chrome: Live/TTS lamp in header.
+- UX §11.1 Chat chrome: Live/TTS lamp in header; respeak suspends Listening recognition.
 - Working plan: `.cursor/plans/2026-09-03-chat-live-tts-lamp.md`.

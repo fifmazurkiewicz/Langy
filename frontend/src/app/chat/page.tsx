@@ -47,8 +47,14 @@ import { SelectionActionSheet } from "@/components/chat/SelectionActionSheet";
 import { SessionSummarySheet } from "@/components/chat/SessionSummarySheet";
 import { TranscriptPane, type TranscriptLineData } from "@/components/chat/TranscriptPane";
 import { TranslatePanel } from "@/components/chat/TranslatePanel";
+import { LiveGeminiLamp } from "@/components/chat/LiveGeminiLamp";
 import { VoiceDots } from "@/components/chat/VoiceDots";
 import { formatConversationDate } from "@/lib/chat/transcript";
+import {
+  readLiveGeminiPreference,
+  writeLiveGeminiPreference,
+} from "@/lib/voice/liveGeminiPreference";
+import { withMicSuspended } from "@/lib/voice/withMicSuspended";
 
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
   tts_provider: "elevenlabs",
@@ -110,6 +116,8 @@ export default function ChatPage() {
     if (typeof window === "undefined") return false;
     return sessionStorage.getItem("langy-chat-tutor-voice") === "true";
   });
+  const [liveGemini, setLiveGemini] = useState(() => readLiveGeminiPreference());
+  const [micSuspended, setMicSuspended] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const oneShotRef = useRef<SpeechRecognition | null>(null);
@@ -117,9 +125,11 @@ export default function ChatPage() {
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
   const listeningRef = useRef(listening);
   const tutorVoiceRef = useRef(tutorVoice);
+  const liveGeminiRef = useRef(liveGemini);
   const voiceModeRef = useRef("speech_to_speech");
   const voiceConfigRef = useRef<VoiceConfig>(DEFAULT_VOICE_CONFIG);
   const lineIndexRef = useRef(0);
+  const recognitionActive = listening && !micSuspended;
 
   useEffect(() => {
     listeningRef.current = listening;
@@ -129,6 +139,11 @@ export default function ChatPage() {
     tutorVoiceRef.current = tutorVoice;
     sessionStorage.setItem("langy-chat-tutor-voice", String(tutorVoice));
   }, [tutorVoice]);
+
+  useEffect(() => {
+    liveGeminiRef.current = liveGemini;
+    writeLiveGeminiPreference(liveGemini);
+  }, [liveGemini]);
 
   const canStartSession =
     apiReady && languageStatus === "ready" && Boolean(sessionLanguage) && Boolean(token) && !startingSession;
@@ -154,7 +169,7 @@ export default function ChatPage() {
 
   const connectLive = useCallback(
     async (convId: string) => {
-      if (!token || !sessionLanguage || !tutorVoiceRef.current) return;
+      if (!token || !sessionLanguage || !tutorVoiceRef.current || !liveGeminiRef.current) return;
       try {
         const config = await fetchLiveConfig(token);
         voiceModeRef.current = config.voice_mode;
@@ -233,13 +248,23 @@ export default function ChatPage() {
 
   const speechLang = sessionLanguage?.startsWith("en") ? "en-GB" : (sessionLanguage ?? "en-GB");
 
+  const speakWithMicGate = useCallback(
+    async (text: string) => {
+      if (!token) return;
+      await withMicSuspended(listeningRef.current, setMicSuspended, () =>
+        speakTutorLine(text, speechLang, token, voiceConfigRef.current)
+      );
+    },
+    [token, speechLang]
+  );
+
   const deliverAgentReply = useCallback(
     async (lineIndex: number, reply: string) => {
       setChatState("speaking");
       await appendLine("Agent", reply);
       if (tutorVoiceRef.current && !liveConnected && token) {
         try {
-          await speakTutorLine(reply, speechLang, token, voiceConfigRef.current);
+          await speakWithMicGate(reply);
         } catch {
           /* text-only when server TTS unavailable */
         }
@@ -247,7 +272,7 @@ export default function ChatPage() {
       setChatState(listeningRef.current ? "listening" : "idle");
       if (lineIndex >= 0) lineIndexRef.current = lineIndex;
     },
-    [appendLine, speechLang, liveConnected, token]
+    [appendLine, liveConnected, token, speakWithMicGate]
   );
 
   const submitUserMessage = useCallback(
@@ -399,7 +424,7 @@ export default function ChatPage() {
       if (tutorVoiceRef.current && !liveConnected && token) {
         setChatState("speaking");
         try {
-          await speakTutorLine(session.opening_line, speechLang, token, voiceConfigRef.current);
+          await speakWithMicGate(session.opening_line);
         } catch {
           /* text-only when server TTS unavailable */
         }
@@ -410,7 +435,7 @@ export default function ChatPage() {
     } finally {
       setStartingSession(false);
     }
-  }, [token, sessionLanguage, loadSession, speechLang, liveConnected]);
+  }, [token, sessionLanguage, loadSession, liveConnected, speakWithMicGate]);
 
   const performEndSession = useCallback(async () => {
     if (!conversationId || !token) return;
@@ -642,7 +667,7 @@ export default function ChatPage() {
   const activeMicStatus: MicStatus = browserSpeechUnsupported ? "unsupported" : micStatus;
 
   useEffect(() => {
-    if (!listening || !conversationId) return;
+    if (!recognitionActive || !conversationId) return;
 
     let cancelled = false;
     const SpeechRecognitionCtor = getSpeechRecognitionCtor();
@@ -686,7 +711,7 @@ export default function ChatPage() {
         setChatState("idle");
       };
       recognition.onend = () => {
-        if (!cancelled && listeningRef.current && recognitionRef.current === recognition) {
+        if (!cancelled && listeningRef.current && !micSuspended && recognitionRef.current === recognition) {
           try {
             recognition.start();
           } catch {
@@ -706,17 +731,17 @@ export default function ChatPage() {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
-  }, [listening, conversationId, speechLang, submitUserMessage]);
+  }, [recognitionActive, micSuspended, conversationId, speechLang, submitUserMessage]);
 
   useEffect(() => {
     if (!conversationId || !token) return;
-    if (tutorVoice) {
+    if (tutorVoice && liveGemini) {
       void connectLive(conversationId);
       return;
     }
     disconnectGeminiLive();
     cancelSpeech();
-  }, [tutorVoice, conversationId, token, connectLive, disconnectGeminiLive]);
+  }, [tutorVoice, liveGemini, conversationId, token, connectLive, disconnectGeminiLive]);
 
   const detailTitle = detailItem
     ? formatConversationDate(detailItem.started_at) || "Conversation"
@@ -725,6 +750,19 @@ export default function ChatPage() {
   return (
     <div className="flex flex-1 flex-col pb-[calc(168px+env(safe-area-inset-bottom))]">
       <header className="flex items-start gap-2 border-b border-[var(--color-divider)] px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <LiveGeminiLamp
+          on={liveGemini}
+          onToggle={() => {
+            setLiveGemini((prev) => {
+              const next = !prev;
+              if (!next) {
+                disconnectGeminiLive();
+                cancelSpeech();
+              }
+              return next;
+            });
+          }}
+        />
         <div className="min-w-0 flex-1 pt-1">
           <LanguageSwitcher
             activeLanguage={sessionLanguage}
@@ -822,8 +860,7 @@ export default function ChatPage() {
               }}
               onAddFromCorrection={(lineIndex) => void handleAddFromCorrection(lineIndex)}
               onRespeak={(text) => {
-                if (!token) return;
-                void speakTutorLine(text, speechLang, token, voiceConfigRef.current).catch(() => undefined);
+                void speakWithMicGate(text).catch(() => undefined);
               }}
             />
           }

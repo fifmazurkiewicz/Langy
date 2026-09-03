@@ -27,21 +27,25 @@ export function stopActiveTtsAudio(): void {
   }
 }
 
-/** Legacy browser-only path — use speakTutorLine in product code. */
+/** Legacy browser-only path — use speakTutorLine in product code. Awaits utterance end. */
 export function speakBrowserLine(
   text: string,
   language: string,
   voiceNameHint?: string,
   rate = 1
-): void {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
+): Promise<void> {
+  if (typeof window === "undefined" || !window.speechSynthesis) return Promise.resolve();
   stopActiveTtsAudio();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = language.startsWith("en") ? "en-GB" : language;
-  utterance.rate = clampTtsPlaybackRate(rate);
-  const voice = pickBrowserVoice(language, voiceNameHint);
-  if (voice) utterance.voice = voice;
-  window.speechSynthesis.speak(utterance);
+  return new Promise((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language.startsWith("en") ? "en-GB" : language;
+    utterance.rate = clampTtsPlaybackRate(rate);
+    const voice = pickBrowserVoice(language, voiceNameHint);
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 export async function playServerTtsAudio(response: TtsLineResponse, rate = 1): Promise<void> {
@@ -92,6 +96,6 @@ export async function speakTutorLine(
   }
 
   if (voiceConfig.tts_provider === "browser") {
-    speakBrowserLine(trimmed, language, voiceConfig.tts_voice_name, rate);
+    await speakBrowserLine(trimmed, language, voiceConfig.tts_voice_name, rate);
   }
 }
