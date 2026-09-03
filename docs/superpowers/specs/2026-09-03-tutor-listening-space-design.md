@@ -19,6 +19,7 @@ Tutor often asks too many questions instead of following the learner’s intenti
 | 2026-09-03 | Implement via **system instruction + softer OPENING/RESUME lines** | Smallest change; Live + text-turn share `build_live_system_instruction` |
 | 2026-09-03 | Out of scope: UI listen-mode toggle, Langfuse-first prompt rewrite, correction/shadowing | YAGNI for this fix |
 | 2026-09-04 | Exercises (repetition, drills, role-play) explicitly allowed in Chat system instruction | Model was inventing “conversation-only” refusals |
+| 2026-09-04 | Exercise rules strengthened (MUST, ban conversational-only refusals, repetition wait protocol, no steer to open chat) | Soft “are allowed” still produced refusals in Live |
 
 ## Behavior (contract)
 
@@ -64,6 +65,8 @@ Hard constraints:
 1. **Given** an agenda, **When** `build_live_system_instruction` runs, **Then** the text includes react-to-intent, develop-with-statements, max one open invite, and no multi-question stacking.
 2. **Given** session start / resume, **When** an opening or resume line is chosen from the pool, **Then** the line invites the learner to speak without interview-style interrogation tone.
 3. **Given** Chat docs (§7.1 / interests-memory), **When** a reader checks opening/agenda behavior, **Then** they see the listening-space contract (delta, not a full rewrite).
+4. **Given** the learner asks for a repetition (or similar) exercise, **When** the tutor replies, **Then** it runs the exercise (one phrase, wait for repeat) and does not refuse as conversation-only / free-flowing chat.
+5. **Given** `build_live_system_instruction` / chained tutor system prompt, **When** built, **Then** the text includes mandatory exercise rules (`MUST`, no conversational-only refusal, wait-for-repeat, do not steer to open chat).
 
 ## Verification
 

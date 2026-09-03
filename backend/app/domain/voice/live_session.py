@@ -19,7 +19,8 @@ def build_live_system_instruction(agenda: dict) -> str:
         EXERCISE_ALLOWED_RULES,
         "Turn-taking (every turn, including opening): (1) briefly react to the learner's intention or last message; "
         "(2) develop the topic with comments or examples — prefer statements over questions; "
-        "(3) at most one open invitation to continue speaking. Never ask multiple questions in one turn. Give the learner space to speak.",
+        "(3) at most one open invitation to continue speaking. Never ask multiple questions in one turn. Give the learner space to speak. "
+        "If they requested an exercise, lead that exercise instead of steering to open chat.",
         "Opening: invite them to talk or practice; do not list their interests unless they are silent or unsure.",
         "When the user asks to save a word, acknowledge you will save it.",
     ]

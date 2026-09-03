@@ -273,6 +273,8 @@ Build ephemeral system prompt from:
 
 **Listening space:** Every tutor turn (including opening) should (1) briefly react to the learner's intention, (2) develop the topic with statements/examples, (3) use at most one open invitation — never stack multiple questions. Prefer giving the learner room to speak.
 
+**Exercises in Chat:** When the learner asks for repetition, drills, role-play, or similar, the tutor runs the exercise (one item per turn) and must not refuse as “conversation-only”.
+
 ### 7.2 Session end + extraction + memory + Pending
 
 - Session ends **only** via explicit **End session**.

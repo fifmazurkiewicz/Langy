@@ -13,6 +13,7 @@ Working plan mirror of `docs/superpowers/plans/2026-09-03-tutor-listening-space.
 | 2026-09-03 | Prompt + OPENING/RESUME pools | Smallest lever; shared Live/text-turn path |
 | 2026-09-03 | No listen-mode UI / no Langfuse-first this task | YAGNI |
 | 2026-09-04 | Exercises explicitly allowed in Chat prompts (`EXERCISE_ALLOWED_RULES`) | Stop invented conversation-only refusals |
+| 2026-09-04 | Strengthen exercise rules: MUST + ban “conversational practice” refusals + repetition protocol + turn-taking exception | Soft “are allowed” still let the model refuse in Live |
 
 ## Tasks
 

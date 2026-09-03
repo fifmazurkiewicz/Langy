@@ -64,8 +64,24 @@ def test_build_live_system_instruction_allows_exercises():
         "study_plan": None,
     }
     text = build_live_system_instruction(agenda).lower()
-    assert "exercise" in text or "repetition" in text
-    assert "do not refuse" in text or "never refuse" in text or "are allowed" in text
+    assert "exercise" in text
+    assert "repetition" in text or "repeat" in text
+    assert "must" in text
+    assert "never refuse" in text or "do not refuse" in text
+    assert "conversational" in text or "free conversation" in text or "free-flowing" in text
+    assert "wait" in text and "repeat" in text
+
+
+def test_build_live_system_instruction_exercise_overrides_open_chat_steer():
+    agenda = {
+        "language": "en-GB",
+        "profile": {"motivations": [], "skills": {}},
+        "memory_facts": [],
+        "study_plan": None,
+    }
+    text = build_live_system_instruction(agenda).lower()
+    assert "exercise" in text
+    assert "instead of" in text or "do not steer" in text or "not steer" in text
 
 
 def test_mint_token_requires_api_key():
