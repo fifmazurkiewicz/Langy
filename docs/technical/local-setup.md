@@ -31,6 +31,8 @@ python -m pip install -r requirements.txt
 python -m scripts.create_tables
 ```
 
+**ADDED 2026-09-07:** on an existing database, also apply `supabase/migrations/010_user_is_approved.sql` (grandfathers current users). Fresh `create_tables` already includes `users.is_approved`.
+
 ## 3. Backend
 
 ```bash
@@ -47,7 +49,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 — Login (dev) → Onboarding → Chat / Memo / Menu.
+Open http://localhost:3000 — Login (dev) → waiting screen until admin Accept (allowlist / `dev-token` auto-approved on first insert) → Onboarding → Chat / Memo / Menu.
 
 ## 5. Smoke test
 

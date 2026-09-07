@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.category.service import generate_category_words, process_category_job
 from app.domain.spend_cap.service import SpendCapExceeded
@@ -23,7 +23,7 @@ class CreateCategoryRequest(BaseModel):
 @router.post("")
 def create_category(
     body: CreateCategoryRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     key = body.category_key.strip().lower().replace(" ", "_")
@@ -54,7 +54,7 @@ def create_category(
 
 @router.get("")
 def list_categories(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -84,7 +84,7 @@ def list_categories(
 @router.post("/{set_id}/generate")
 def generate_for_category(
     set_id: str,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     card_set = db.get(FlashcardSet, uuid.UUID(set_id))
@@ -99,7 +99,7 @@ def generate_for_category(
 
 @router.post("/process-jobs")
 def process_pending_category_jobs(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     jobs = (

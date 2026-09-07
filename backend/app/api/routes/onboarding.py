@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.category.service import enqueue_category_jobs_for_user, process_category_job
 from app.domain.languages import SUPPORTED_LANGUAGES
@@ -38,7 +38,7 @@ class CompleteOnboardingRequest(BaseModel):
 @router.post("/complete")
 def complete_onboarding(
     body: CompleteOnboardingRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     if not body.languages:
@@ -96,7 +96,7 @@ def complete_onboarding(
 
 @router.get("/status")
 def onboarding_status(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
 ) -> dict:
     return {
         "completed": user.onboarding_completed_at is not None,

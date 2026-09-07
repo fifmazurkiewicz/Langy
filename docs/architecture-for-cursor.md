@@ -312,6 +312,7 @@ selection_lookup_cache (
 
 - Cap is **per calendar month**, TZ **Europe/Warsaw** (`SPEND_CAP_TZ`).
 - Default for new users: **`spend_cap_usd = 10`**.
+- **ADDED 2026-09-07:** `users.is_approved` (default false). New public signups wait for admin Accept before feature APIs; Accept does not overwrite `spend_cap_usd`. Existing rows grandfathered. Spec: [`superpowers/specs/2026-09-07-user-approval-gate-design.md`](./superpowers/specs/2026-09-07-user-approval-gate-design.md).
 - Sum `usage_ledger.cost_usd` for current month vs cap. Counted: **TTS + ASR + GenAI**.
 - Admin can edit cap anytime.
 - **At cap:** block costly actions (start conversation, extraction, category generation, selection Translate / Add to learning, correction, shadowing start, mnemonic generate/regenerate). User **may still** browse Memo Flashcards and review FSRS. Nothing deleted. Resets next calendar month.

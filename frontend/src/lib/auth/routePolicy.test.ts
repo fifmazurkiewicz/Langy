@@ -47,4 +47,10 @@ describe("resolveRedirect", () => {
       expect(resolveRedirect("ready", path)).toBeNull();
     }
   });
+
+  it("does not send a pending user into chat, onboarding, or login redirects", () => {
+    for (const path of [...PROTECTED, "/", LOGIN_ROUTE, ONBOARDING_ROUTE]) {
+      expect(resolveRedirect("pending_approval", path)).toBeNull();
+    }
+  });
 });

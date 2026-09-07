@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user, get_current_user
 from app.db import get_db
 from app.domain.languages import SUPPORTED_LANGUAGES
 from app.domain.profile.service import ensure_flashcard_sets_for_interests, enqueue_jobs_for_new_interest_sets
@@ -77,7 +77,7 @@ def list_profiles(
 @router.patch("/active-language")
 def set_active_language(
     body: ActiveLanguageUpdate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     profile = (
@@ -95,7 +95,7 @@ def set_active_language(
 @router.post("/languages")
 def add_language(
     body: AddLanguageRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     if body.language not in SUPPORTED_LANGUAGES:
@@ -135,7 +135,7 @@ def add_language(
 def update_profile(
     language: str,
     body: ProfileUpdate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     profile = (

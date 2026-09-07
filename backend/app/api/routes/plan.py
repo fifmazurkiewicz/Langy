@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.plan.service import (
     complete_lesson,
@@ -27,7 +27,7 @@ class CreatePlanRequest(BaseModel):
 
 @router.get("")
 def get_plan(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -53,7 +53,7 @@ def get_plan(
 @router.post("")
 def create_plan(
     body: CreatePlanRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     if body.duration_weeks not in (4, 8, 12, 16):
@@ -74,7 +74,7 @@ def create_plan(
 @router.get("/lessons/{day}")
 def open_lesson(
     day: int,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -104,7 +104,7 @@ def open_lesson(
 @router.post("/lessons/{lesson_id}/complete")
 def finish_lesson(
     lesson_id: str,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     lesson = db.get(Lesson, uuid.UUID(lesson_id))

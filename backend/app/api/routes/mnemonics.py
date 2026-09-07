@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.mnemonics.schemas import GenerateMnemonicRequest, MnemonicResponse
 from app.domain.mnemonics.service import (
@@ -19,7 +19,7 @@ router = APIRouter()
 
 @router.get("/needs")
 def needs_mnemonic(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -32,7 +32,7 @@ def needs_mnemonic(
 @router.post("/generate", response_model=MnemonicResponse)
 def mnemonic_generate(
     body: GenerateMnemonicRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> MnemonicResponse:
     try:
@@ -47,7 +47,7 @@ def mnemonic_generate(
 def mnemonic_get(
     language: str,
     term: str,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> MnemonicResponse:
     result = get_cached_mnemonic(db, user, language, term)

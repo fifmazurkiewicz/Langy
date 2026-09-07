@@ -13,6 +13,18 @@ from app.models import User
 security = HTTPBearer(auto_error=False)
 settings = get_settings()
 
+ACCOUNT_PENDING_CODE = "account_pending_approval"
+ACCOUNT_PENDING_MESSAGE = "Konto oczekuje na akceptację administratora."
+
+
+def require_approved(user: User) -> User:
+    if not user.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": ACCOUNT_PENDING_CODE, "message": ACCOUNT_PENDING_MESSAGE},
+        )
+    return user
+
 
 def get_current_user(
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
@@ -31,11 +43,14 @@ def get_current_user(
     if user is None:
         email = payload.get("email")
         is_admin = (email or "").lower() in settings.admin_email_set
+        if settings.dev_auth_allowed and creds.credentials == DEV_TOKEN:
+            is_admin = True
         user = User(
             id=user_id,
             email=email,
             display_name=payload.get("user_metadata", {}).get("full_name"),
             is_admin=is_admin,
+            is_approved=is_admin,
         )
         db.add(user)
         db.commit()
@@ -47,8 +62,14 @@ def get_current_user(
     return user
 
 
-def get_admin_user(
+def get_approved_user(
     user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    return require_approved(user)
+
+
+def get_admin_user(
+    user: Annotated[User, Depends(get_approved_user)],
 ) -> User:
     if not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")

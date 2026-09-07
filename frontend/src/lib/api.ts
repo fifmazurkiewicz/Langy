@@ -9,11 +9,20 @@ export type ApiOptions = {
 export class ApiError extends Error {
   constructor(
     message: string,
-    readonly status: number
+    readonly status: number,
+    readonly code?: string
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+type PendingApprovalListener = () => void;
+let pendingApprovalListener: PendingApprovalListener | null = null;
+
+/** AuthProvider registers this so a mid-session revoke shows the waiting screen. */
+export function setPendingApprovalListener(listener: PendingApprovalListener | null) {
+  pendingApprovalListener = listener;
 }
 
 export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
@@ -30,23 +39,41 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promi
   });
   if (!res.ok) {
     const detail = await res.text();
-    throw new ApiError(parseApiError(detail, res.statusText), res.status);
+    const parsed = parseApiError(detail, res.statusText);
+    if (parsed.code === "account_pending_approval") {
+      pendingApprovalListener?.();
+    }
+    throw new ApiError(parsed.message, res.status, parsed.code);
   }
   return res.json() as Promise<T>;
 }
 
-function parseApiError(body: string, fallback: string): string {
-  if (!body) return fallback;
+function parseApiError(body: string, fallback: string): { message: string; code?: string } {
+  if (!body) return { message: fallback };
   try {
-    const json = JSON.parse(body) as { detail?: string | Array<{ msg?: string }> };
-    if (typeof json.detail === "string") return json.detail;
-    if (Array.isArray(json.detail)) {
-      return json.detail.map((item) => item.msg).filter(Boolean).join(", ") || fallback;
+    const json = JSON.parse(body) as {
+      code?: string;
+      message?: string;
+      detail?: string | { code?: string; message?: string } | Array<{ msg?: string }>;
+    };
+    const detail = json.detail;
+    if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+      return {
+        message: detail.message || fallback,
+        code: detail.code,
+      };
+    }
+    if (typeof json.code === "string") {
+      return { message: json.message || fallback, code: json.code };
+    }
+    if (typeof detail === "string") return { message: detail };
+    if (Array.isArray(detail)) {
+      return { message: detail.map((item) => item.msg).filter(Boolean).join(", ") || fallback };
     }
   } catch {
     /* plain-text error body */
   }
-  return body;
+  return { message: body };
 }
 
 export { fetchApiLiveness, fetchApiPulse, fetchApiReady } from "@/lib/api/pulse";

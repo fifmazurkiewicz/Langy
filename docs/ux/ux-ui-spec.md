@@ -100,6 +100,7 @@ UI copy i kod po **angielsku**. Rozmowa o projekcie może być po polsku; L1 w p
 
 - Google OAuth (Supabase).
 - Admin: tylko emaile z `ALLOWED_ADMIN_EMAILS` (prod: `fifmazurkiewicz@gmail.com`).
+- **ADDED 2026-09-07:** public signup stays; unapproved sessions see one waiting screen (`AuthGate`) until admin Accept / after Revoke. Admin list: Status Oczekuje / Zaakceptowany; Akceptuj / Cofnij dostęp (not on own row).
 - Admin UI (desktop): miesięczny spend cap + used this month (TTS + ASR + GenAI).
 - Po limicie do końca miesiąca: kosztowe off; Memo Flashcards review on. TZ: Europe/Warsaw.
 

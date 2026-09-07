@@ -5,11 +5,14 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 
 export function SpendCapBanner() {
-  const { token } = useAuth();
+  const { token, isApproved } = useAuth();
   const [atCap, setAtCap] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !isApproved) {
+      setAtCap(false);
+      return;
+    }
     apiFetch<{ spend_cap_usd: number; monthly_spend_usd: number; at_cap?: boolean }>("/api/auth/me", {
       token,
     })
@@ -19,7 +22,7 @@ export function SpendCapBanner() {
         setAtCap(capped);
       })
       .catch(() => setAtCap(false));
-  }, [token]);
+  }, [token, isApproved]);
 
   if (!atCap) return null;
 

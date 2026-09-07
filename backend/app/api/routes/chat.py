@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.config import get_settings
 from app.db import get_db
 from app.domain.agenda.service import (
@@ -62,7 +62,7 @@ class TextTurnRequest(BaseModel):
 @router.post("/sessions")
 def start_session(
     body: StartSessionRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -95,7 +95,7 @@ def start_session(
 
 @router.get("/conversations")
 def list_conversations(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = Query(default=None),
 ) -> dict:
@@ -132,7 +132,7 @@ def list_conversations(
 @router.delete("/conversations/{conversation_id}")
 def remove_conversation(
     conversation_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -147,7 +147,7 @@ def remove_conversation(
 @router.get("/sessions/{conversation_id}")
 def get_session(
     conversation_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     conversation = db.get(Conversation, conversation_id)
@@ -167,7 +167,7 @@ def get_session(
 @router.post("/sessions/{conversation_id}/resume")
 def resume_session(
     conversation_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -201,7 +201,7 @@ def resume_session(
 def append_line(
     conversation_id: uuid.UUID,
     body: TranscriptLineRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     conversation = db.get(Conversation, conversation_id)
@@ -219,7 +219,7 @@ def append_line(
 @router.post("/sessions/{conversation_id}/end")
 def end_session(
     conversation_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     conversation = db.get(Conversation, conversation_id)
@@ -238,7 +238,7 @@ def end_session(
 @router.post("/text-turn")
 def text_turn(
     body: TextTurnRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """OpenRouter text reply when Live is not connected (any VOICE_MODE)."""
@@ -273,7 +273,7 @@ def text_turn(
 @router.post("/chained-turn")
 def chained_turn(
     body: ChainedTurnRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     if settings.voice_mode != "chained":
@@ -294,7 +294,7 @@ def chained_turn(
 def save_word(
     conversation_id: uuid.UUID,
     body: SaveWordRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     conversation = db.get(Conversation, conversation_id)
@@ -313,7 +313,7 @@ class LiveTokenRequest(BaseModel):
 @router.post("/live-token")
 def create_live_token(
     body: LiveTokenRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     if settings.voice_mode != "speech_to_speech":
@@ -355,7 +355,7 @@ def create_live_token(
 
 @router.get("/live-config")
 def live_config(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -373,7 +373,7 @@ def live_config(
 
 @router.post("/jobs/process-pending")
 def process_pending_jobs(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     if not user.is_admin:

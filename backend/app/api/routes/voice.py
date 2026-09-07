@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.spend_cap.service import SpendCapExceeded
 from app.domain.voice.catalog import voice_catalog_payload
@@ -23,7 +23,7 @@ class SynthesizeRequest(BaseModel):
 
 @router.get("/config")
 def get_voice_config(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = Query(None),
 ) -> dict:
@@ -41,7 +41,7 @@ def get_voice_config(
 
 @router.get("/catalog")
 def get_voice_catalog(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     language: str = Query(...),
 ) -> dict:
     return voice_catalog_payload(language)
@@ -50,7 +50,7 @@ def get_voice_catalog(
 @router.post("/synthesize")
 def synthesize_voice(
     body: SynthesizeRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     language = body.language or user.active_language

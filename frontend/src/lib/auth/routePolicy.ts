@@ -19,6 +19,7 @@ export function resolveRedirect(status: AuthStatus, pathname: string): string | 
   switch (status) {
     case "initializing":
     case "profile_unknown":
+    case "pending_approval":
       return null;
     case "anonymous":
       return pathname === LOGIN_ROUTE ? null : LOGIN_ROUTE;

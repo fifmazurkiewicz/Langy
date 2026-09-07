@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.selection.schemas import (
     AddSelectionPendingRequest,
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/selection")
 @router.post("/translate", response_model=TranslateSelectionResponse)
 def translate(
     body: TranslateSelectionRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> TranslateSelectionResponse:
     try:
@@ -32,7 +32,7 @@ def translate(
 @router.post("/pending", response_model=AddSelectionPendingResponse)
 def add_pending(
     body: AddSelectionPendingRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AddSelectionPendingResponse:
     try:

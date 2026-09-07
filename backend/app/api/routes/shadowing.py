@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.chat.transcript import preview_transcript, snippet_lines
 from app.domain.shadowing.service import (
@@ -26,7 +26,7 @@ router = APIRouter()
 
 @router.get("/conversations")
 def list_conversations(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -51,7 +51,7 @@ def list_conversations(
 @router.post("/sessions")
 def start_session(
     body: CreateShadowingRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -72,7 +72,7 @@ def start_session(
 def session_turn(
     session_id: uuid.UUID,
     body: TurnRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -88,7 +88,7 @@ def session_turn(
 def session_pending(
     session_id: uuid.UUID,
     body: PendingLineRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -102,7 +102,7 @@ def session_pending(
 @router.post("/sessions/{session_id}/end")
 def session_end(
     session_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:
@@ -119,7 +119,7 @@ class TtsRequest(BaseModel):
 def session_tts(
     session_id: uuid.UUID,
     body: TtsRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     try:

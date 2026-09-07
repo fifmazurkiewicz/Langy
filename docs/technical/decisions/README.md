@@ -61,6 +61,13 @@ Short dated decisions. Living detail often lives in `docs/architecture-for-curso
 - `DEV_AUTH_ENABLED` (default false) gates `dev-token` + unsigned JWTs; ignored when `SUPABASE_URL` is set
 - ADR: `docs/technical/decisions/2026-08-28-session-gate-and-dev-auth.md`
 
+## 2026-09-07 — User approval gate
+
+- `users.is_approved`; new signups wait until admin Accept; revoke uses the same waiting screen
+- Allowlist / local `dev-token` auto-approved on insert only; Accept does not change `spend_cap_usd`
+- ADR: `docs/technical/decisions/2026-09-07-user-approval-gate.md`
+- Spec: `docs/superpowers/specs/2026-09-07-user-approval-gate-design.md`
+
 ## 2026-08-27 — Mnemonics (Package 3)
 
 - Memo sub-tabs: Flashcards · Shadowing · **Mnemonics**

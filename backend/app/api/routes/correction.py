@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.correction.schemas import (
     AddCorrectionPendingRequest,
@@ -20,7 +20,7 @@ router = APIRouter()
 @router.post("/correction", response_model=CorrectionResponse)
 def correction(
     body: CorrectionRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CorrectionResponse:
     try:
@@ -32,7 +32,7 @@ def correction(
 @router.post("/correction/pending", response_model=AddCorrectionPendingResponse)
 def correction_pending(
     body: AddCorrectionPendingRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AddCorrectionPendingResponse:
     try:

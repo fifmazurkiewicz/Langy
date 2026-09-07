@@ -14,6 +14,38 @@ function Splash({ label, action }: { label: string; action?: React.ReactNode }) 
   );
 }
 
+const POLL_MS = 15_000;
+
+function PendingApprovalScreen() {
+  const { refreshProfile, signOut } = useAuth();
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void refreshProfile();
+    }, POLL_MS);
+    return () => window.clearInterval(id);
+  }, [refreshProfile]);
+
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center p-6">
+      <div className="classical-card w-full max-w-sm space-y-4 p-6">
+        <h1 className="font-serif text-2xl text-[var(--color-text)]">Konto oczekuje na akceptację</h1>
+        <p className="text-sm text-[var(--color-soft)]">
+          Administrator musi zaakceptować to konto, zanim będzie można korzystać z Langy.
+        </p>
+        <div className="flex flex-col gap-2">
+          <button type="button" className="classical-btn classical-btn-primary" onClick={() => void refreshProfile()}>
+            Sprawdź status
+          </button>
+          <button type="button" className="classical-btn" onClick={() => void signOut()}>
+            Wyloguj
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 /**
  * The only place in the app that decides which screen a visitor may see. Pages render their own
  * content and never redirect for auth reasons — that used to race across three separate effects.
@@ -50,6 +82,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         }
       />
     );
+  }
+
+  if (status === "pending_approval") {
+    return <PendingApprovalScreen />;
   }
 
   return <>{children}</>;

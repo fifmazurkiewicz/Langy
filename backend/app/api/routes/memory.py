@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.models import ConversationSummary, User, UserMemoryFact
 
@@ -18,7 +18,7 @@ class FactUpdate(BaseModel):
 
 @router.get("/facts")
 def list_facts(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     facts = (
@@ -45,7 +45,7 @@ def list_facts(
 def update_fact(
     fact_id: uuid.UUID,
     body: FactUpdate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     fact = db.get(UserMemoryFact, fact_id)
@@ -59,7 +59,7 @@ def update_fact(
 @router.delete("/facts/{fact_id}")
 def delete_fact(
     fact_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     fact = db.get(UserMemoryFact, fact_id)
@@ -72,7 +72,7 @@ def delete_fact(
 
 @router.get("/summaries")
 def list_summaries(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:

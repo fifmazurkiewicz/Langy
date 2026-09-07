@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_approved_user
 from app.db import get_db
 from app.domain.fsrs.service import create_fsrs_card, review_card
 from app.domain.profile.service import ensure_flashcard_sets_for_interests
@@ -69,7 +69,7 @@ RATING_MAP = {
 
 @router.get("/accepted")
 def list_accepted(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -98,7 +98,7 @@ def list_accepted(
 
 @router.get("/pending")
 def list_pending(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -130,7 +130,7 @@ def list_pending(
 
 @router.get("/due")
 def list_due(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
     category_key: str | None = None,
@@ -155,7 +155,7 @@ def list_due(
 
 @router.get("/export")
 def export_quizlet(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
     category_key: str | None = None,
@@ -176,7 +176,7 @@ def export_quizlet(
 
 @router.get("/categories")
 def list_vocab_categories(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
     language: str | None = None,
 ) -> dict:
@@ -235,7 +235,7 @@ def list_vocab_categories(
 def review_fsrs_card(
     card_id: str,
     body: ReviewRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     rating = RATING_MAP.get(body.rating.lower())
@@ -261,7 +261,7 @@ def review_fsrs_card(
 def vocab_decision(
     vocab_id: str,
     body: VocabDecision,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     item = db.get(VocabItem, uuid.UUID(vocab_id))
@@ -282,7 +282,7 @@ def vocab_decision(
 
 @router.get("/pending/count")
 def pending_count(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     count = db.query(VocabItem).filter(VocabItem.user_id == user.id, VocabItem.status == "pending").count()
@@ -292,7 +292,7 @@ def pending_count(
 @router.delete("/{vocab_id}")
 def delete_vocab(
     vocab_id: str,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_approved_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     item = db.get(VocabItem, uuid.UUID(vocab_id))

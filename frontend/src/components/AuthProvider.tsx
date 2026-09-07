@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, setPendingApprovalListener } from "@/lib/api";
 import { useOnApiHealthy } from "@/components/ApiPulseProvider";
 import { clearOAuthRedirectParams, hasPendingOAuthRedirect } from "@/lib/auth/oauth";
 import { createClient, DEV_TOKEN, DEV_USER_ID, isDevAuthMode } from "@/lib/supabase/client";
@@ -10,14 +10,15 @@ import { createClient, DEV_TOKEN, DEV_USER_ID, isDevAuthMode } from "@/lib/supab
  * `profile_unknown` is the cold-start state: the Supabase session is valid but the API has not
  * answered yet, so onboarding status is genuinely unknown. Routing must never guess from it.
  */
-export type AuthStatus = "initializing" | "anonymous" | "profile_unknown" | "needs_onboarding" | "ready";
+export type AuthStatus = "initializing" | "anonymous" | "profile_unknown" | "pending_approval" | "needs_onboarding" | "ready";
 
-type ProfileState = "unknown" | "needs_onboarding" | "ready";
+type ProfileState = "unknown" | "pending_approval" | "needs_onboarding" | "ready";
 
 type MeResponse = {
   id: string;
   email: string | null;
   is_admin: boolean;
+  is_approved: boolean;
   active_language: string | null;
   onboarding_completed_at: string | null;
 };
@@ -28,6 +29,7 @@ type SessionState = {
   userId: string | null;
   email: string | null;
   isAdmin: boolean;
+  isApproved: boolean;
   activeLanguage: string | null;
   getAccessToken: () => Promise<string | null>;
   signInWithGoogle: () => Promise<void>;
@@ -56,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(() => (devMode ? DEV_USER_ID : null));
   const [email, setEmail] = useState<string | null>(() => (devMode ? "dev@langy.local" : null));
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [activeLanguage, setActiveLanguage] = useState<string | null>(null);
   const [profileState, setProfileState] = useState<ProfileState>("unknown");
   /** Token whose /api/auth/me result we already hold — keeps cold starts to one request. */
@@ -72,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserId(null);
     setEmail(null);
     setIsAdmin(false);
+    setIsApproved(false);
     setActiveLanguage(null);
     setProfileState("unknown");
   }, []);
@@ -93,11 +97,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserId(me.id);
         setEmail(me.email);
         setIsAdmin(me.is_admin);
+        setIsApproved(me.is_approved);
         setActiveLanguage(me.active_language);
-        setProfileState(me.onboarding_completed_at ? "ready" : "needs_onboarding");
+        if (!me.is_approved) {
+          setProfileState("pending_approval");
+        } else {
+          setProfileState(me.onboarding_completed_at ? "ready" : "needs_onboarding");
+        }
       } catch (err) {
         profileTokenRef.current = null;
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        if (err instanceof ApiError && err.status === 401) {
+          await rejectSession();
+          return;
+        }
+        if (err instanceof ApiError && err.code === "account_pending_approval") {
+          setIsApproved(false);
+          setProfileState("pending_approval");
+          return;
+        }
+        if (err instanceof ApiError && err.status === 403) {
           await rejectSession();
           return;
         }
@@ -130,6 +148,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!bearer) return;
     await applyMe(bearer, true);
   }, [getAccessToken, applyMe]);
+
+  useEffect(() => {
+    setPendingApprovalListener(() => {
+      setIsApproved(false);
+      setProfileState("pending_approval");
+    });
+    return () => setPendingApprovalListener(null);
+  }, []);
 
   useOnApiHealthy(
     useCallback(() => {
@@ -232,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!sessionResolved) return "initializing";
     if (!token) return "anonymous";
     if (profileState === "unknown") return "profile_unknown";
+    if (profileState === "pending_approval") return "pending_approval";
     if (profileState === "needs_onboarding") return "needs_onboarding";
     return "ready";
   }, [sessionResolved, token, profileState]);
@@ -243,6 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userId,
       email,
       isAdmin,
+      isApproved,
       activeLanguage,
       getAccessToken,
       signInWithGoogle,
@@ -256,6 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userId,
       email,
       isAdmin,
+      isApproved,
       activeLanguage,
       getAccessToken,
       signInWithGoogle,

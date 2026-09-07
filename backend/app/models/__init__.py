@@ -19,6 +19,7 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String, nullable=True)
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     spend_cap_usd: Mapped[float] = mapped_column(Numeric(10, 2), default=10)
     active_language: Mapped[str | None] = mapped_column(String, nullable=True)
     onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

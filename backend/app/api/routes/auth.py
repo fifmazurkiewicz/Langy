@@ -23,6 +23,7 @@ def me(
         "email": user.email,
         "display_name": user.display_name,
         "is_admin": user.is_admin,
+        "is_approved": user.is_approved,
         "spend_cap_usd": cap,
         "monthly_spend_usd": spent,
         "at_cap": cap > 0 and spent >= cap,
