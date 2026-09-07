@@ -7,3 +7,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Langy frontend
+
+Next.js PWA on Vercel. Product UI copy is Polish (preserve). Agent chat and new identifiers stay English.
+
+```bash
+npm install
+npm run dev
+npm run lint && npm test && npm run build
+```
+
+Env: `frontend/.env.example`. API pulse: `GET /api/health`. Names: `docs/technical/configuration.md`.

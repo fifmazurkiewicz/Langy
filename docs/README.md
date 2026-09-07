@@ -12,6 +12,8 @@ Living contract for the product. Code follows these docs (spec-driven).
 | [superpowers/specs/2026-08-26-chat-interests-memory-design.md](./superpowers/specs/2026-08-26-chat-interests-memory-design.md) | Interests soft + opening; global user memory |
 | [ux/ux-ui-spec.md](./ux/ux-ui-spec.md) | UX contract (behavior) |
 | [ux/ux-ui-decisions.md](./ux/ux-ui-decisions.md) | Classical DS + screen decisions + mock backlog |
+| [technical/local-setup.md](./technical/local-setup.md) | Local run without Docker |
+| [technical/configuration.md](./technical/configuration.md) | Env **names** (no secret values) |
 
 ## Folders
 
@@ -22,6 +24,7 @@ docs/
   technical/
     decisions/
     local-setup.md
+    configuration.md
   ux/
     ux-ui-spec.md
     ux-ui-decisions.md

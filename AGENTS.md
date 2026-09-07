@@ -37,12 +37,14 @@ Local dev without Supabase: leave `NEXT_PUBLIC_SUPABASE_*` empty so the frontend
 | `docs/architecture-for-cursor.md` | Business + technical architecture (authoritative for build) |
 | `docs/ux/` | UX/UI spec, decisions, screens, design system |
 | `docs/business/` | Business-only artifacts (to be filled) |
-| `docs/technical/` | Local setup, ADRs, technical deltas |
+| `docs/technical/` | Local setup, env names (`configuration.md`), ADRs |
 
 ## Graft + Superpowers
 
 - **Superpowers:** process skills before action (global `superpowers.mdc`). Creative work → brainstorming → writing-plans.
-- **Graft:** before broad exploration `graft map` / `graft ask "…" --source` (or MCP). Cache in `/graft/` (gitignored). Wiring: `.cursor/rules/graft.mdc`, `.cursor/mcp.json`. On this machine full `graft` CLI install may need VS C++ build tools.
+- **Graft:** before broad exploration `npx -y @nanonets/graft map` / `graft ask "…" --source` (or MCP). Cache in `/graft/` (gitignored — never commit). Wiring: `.cursor/rules/graft.mdc`, `.cursor/mcp.json`. Native global install may need VS C++ build tools; `npx` is enough. Rebuild with `npx -y @nanonets/graft build` when `graft check` reports no graph.
+- **Taste:** skill `design-taste-frontend` (global, not in git). Overlay `.cursor/rules/taste-skill-dials.mdc` — VARIANCE 3 / MOTION 2 / DENSITY 6.
+- **Language:** user may write Polish; agent replies and new code in English (`language.mdc`). Product UI already in Polish is preserve.
 
 ## Learned User Preferences
 

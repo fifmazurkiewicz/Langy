@@ -10,17 +10,19 @@ Applies to greenfield and brownfield. Fill hygiene gaps while in the repo (or as
 ## Process stack (global)
 
 1. **Superpowers** — process skills before action (`superpowers.mdc`).
-2. **Graft** — code map before broad exploration; bootstrap if unwired (`graft.mdc`).
-3. **Spec-driven** — `documentation-first.mdc` + `deployment-standard.mdc`.
+2. **Graft** — mandatory code map before broad exploration; wiring always (`graft.mdc`). See also `tooling-reminders.mdc`.
+3. **Taste Skill** — mandatory visual SoT on any UI work (`taste-skill.mdc`); never `frontend-design` beside it. Product dials: repo overlay / MI 3·2·5 (`tooling-reminders.mdc`).
+4. **Spec-driven** — `documentation-first.mdc` + `deployment-standard.mdc`.
 
 ## New / empty repo — bootstrap once
 
 When the repo lacks wiring, add in the same session (minimal):
 
-- Copy or ensure project `.cursor/rules/` includes at least: `graft.mdc`, `superpowers.mdc`, `documentation-first.mdc`, `deployment-standard.mdc`, `env-secrets.mdc`, `agent-workflow.mdc` (from `~/.cursor/rules/`).
-- Graft: init + MCP (`.cursor/mcp.json`) + `/graft/` in `.gitignore` / `.cursorignore`.
+- Copy or ensure project `.cursor/rules/` includes at least: `graft.mdc`, `superpowers.mdc`, `documentation-first.mdc`, `deployment-standard.mdc`, `env-secrets.mdc`, `agent-workflow.mdc`, `taste-skill.mdc`, `language.mdc` (from `~/.cursor/rules/`).
+- Graft: init + MCP (`.cursor/mcp.json`) + `/graft/` in `.gitignore` / `.cursorignore` — **required**, even if native CLI fails on Windows.
+- Taste: skill global `design-taste-frontend` in `~/.cursor/skills/`; dials overlay in repo when product-specific.
 - `AGENTS.md` (Commands + stack), `.env.example`, Dependabot when touching CI.
-- Do **not** wait for the user to ask for Graft/Superpowers — they are global constitution.
+- Do **not** wait for the user to ask for Graft / Superpowers / Taste — they are global constitution.
 
 ## Session
 

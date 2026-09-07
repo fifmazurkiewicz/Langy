@@ -13,7 +13,7 @@ cp .env.example .env
 cp frontend/.env.example frontend/.env.local
 ```
 
-Fill Supabase + OpenRouter + Google keys when wiring voice/AI.
+Fill Supabase + OpenRouter + Google keys when wiring voice/AI. Variable **names**: [configuration.md](./configuration.md).
 
 For UI-only dev without Supabase, leave `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` empty **and**
 set `DEV_AUTH_ENABLED=true` with an empty `SUPABASE_URL` in `.env`. The API rejects `dev-token` without that opt-in —

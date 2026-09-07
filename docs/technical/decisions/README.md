@@ -68,6 +68,13 @@ Short dated decisions. Living detail often lives in `docs/architecture-for-curso
 - ADR: `docs/technical/decisions/2026-09-07-user-approval-gate.md`
 - Spec: `docs/superpowers/specs/2026-09-07-user-approval-gate-design.md`
 
+## 2026-09-07 — Constitution hygiene in-repo
+
+- Taste + language rules copied into `.cursor/rules/`; Langy dials VARIANCE 3 / MOTION 2 / DENSITY 6
+- Env names: `docs/technical/configuration.md`
+- Dependabot per package dir; CI Gitleaks; Python 3.12
+- ADR: `docs/technical/decisions/2026-09-07-constitution-hygiene.md`
+
 ## 2026-08-27 — Mnemonics (Package 3)
 
 - Memo sub-tabs: Flashcards · Shadowing · **Mnemonics**

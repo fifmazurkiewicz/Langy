@@ -1,0 +1,16 @@
+---
+description: Langy Taste dials overlay — trust-first PWA, not marketing baseline
+alwaysApply: true
+---
+
+# Taste dials (Langy overlay)
+
+Use these values instead of Taste Skill baseline 8/6/4. Langy is a **trust-first language-learning PWA** (Chat / Memo / Menu), not a marketing landing.
+
+| Dial | Value | Why |
+|---|---|---|
+| VARIANCE | 3 | Classical DS already in `docs/ux/` and frontend tokens |
+| MOTION | 2 | Pulse / status dots only; honor `prefers-reduced-motion` |
+| DENSITY | 6 | Tool chrome: locked chat header, status row, composer, bottom nav |
+
+Existing UX spec and CSS tokens win. Do not add a parallel color/font rule in `.cursor/rules/`.
