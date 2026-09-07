@@ -12,7 +12,7 @@ Global Cursor rules required Graft, Superpowers, spec-driven docs, Taste, and En
 - Commit `taste-skill.mdc`, `language.mdc`, and `taste-skill-dials.mdc` (VARIANCE 3 / MOTION 2 / DENSITY 6) under `.cursor/rules/`.
 - Document environment **names** in `docs/technical/configuration.md`; never commit secret values.
 - Dependabot: npm in `frontend/` and `backend/`, pip in `backend/`, GitHub Actions at `/`.
-- CI: Gitleaks secret scan; Python 3.12 aligned with the Render image.
+- CI: Gitleaks secret scan (pinned image + allowlist for env templates / empty `*_API_KEY=` placeholders); Python 3.12 aligned with the Render image; Node 22 for frontend/promptfoo (Supabase JS `engines.node >= 22`).
 - Nested `backend/AGENTS.md` and a Langy section in `frontend/AGENTS.md`. Graft `/graft/` remains gitignored.
 
 ## Consequences

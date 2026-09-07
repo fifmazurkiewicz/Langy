@@ -123,10 +123,7 @@ export default function MemoPage() {
   }, [token, activeLanguage]);
 
   useEffect(() => {
-    if (!token || subTab !== "due" || !dueCategoryKey) {
-      setDue([]);
-      return;
-    }
+    if (!token || subTab !== "due" || !dueCategoryKey) return;
     let cancelled = false;
     void listDueCards(token, activeLanguage ?? undefined, dueCategoryKey).then((d) => {
       if (!cancelled) setDue(d.cards);

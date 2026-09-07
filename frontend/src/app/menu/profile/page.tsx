@@ -33,6 +33,17 @@ function sortedKey(values: string[]) {
   return [...values].sort().join(",");
 }
 
+function draftFromProfile(profile: LanguageProfile): ProfileDraft {
+  return {
+    motivations: [...profile.motivations],
+    interests: [...profile.interests],
+    skills: { ...profile.skills },
+    tts_voice_key: profile.tts_voice_key,
+    tts_custom_voice_id: profile.tts_custom_voice_id ?? "",
+    tts_playback_rate: clampTtsPlaybackRate(profile.tts_playback_rate ?? 1),
+  };
+}
+
 function isDraftDirty(draft: ProfileDraft, profile: LanguageProfile) {
   if (sortedKey(draft.motivations) !== sortedKey(profile.motivations)) return true;
   if (sortedKey(draft.interests) !== sortedKey(profile.interests)) return true;
@@ -51,6 +62,7 @@ export default function MenuProfilePage() {
   const [profiles, setProfiles] = useState<LanguageProfile[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
+  const [draftLanguage, setDraftLanguage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [voiceCatalog, setVoiceCatalog] = useState<VoiceCatalog | null>(null);
@@ -67,31 +79,26 @@ export default function MenuProfilePage() {
   useDeferredEffect(() => load(), [load]);
 
   const profile = profiles.find((p) => p.language === language);
-
-  useEffect(() => {
-    if (!profile) {
-      setDraft(null);
-      return;
-    }
-    setDraft({
-      motivations: [...profile.motivations],
-      interests: [...profile.interests],
-      skills: { ...profile.skills },
-      tts_voice_key: profile.tts_voice_key,
-      tts_custom_voice_id: profile.tts_custom_voice_id ?? "",
-      tts_playback_rate: clampTtsPlaybackRate(profile.tts_playback_rate ?? 1),
-    });
+  const profileLanguage = profile?.language ?? null;
+  if (profileLanguage !== draftLanguage) {
+    setDraftLanguage(profileLanguage);
+    setDraft(profile ? draftFromProfile(profile) : null);
     setSaved(false);
-  }, [profile]);
+  }
 
   useEffect(() => {
-    if (!token || !language) {
-      setVoiceCatalog(null);
-      return;
-    }
+    if (!token || !language) return;
+    let cancelled = false;
     fetchVoiceCatalog(token, language)
-      .then(setVoiceCatalog)
-      .catch(() => setVoiceCatalog(null));
+      .then((catalog) => {
+        if (!cancelled) setVoiceCatalog(catalog);
+      })
+      .catch(() => {
+        if (!cancelled) setVoiceCatalog(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [token, language]);
 
   const isDirty = useMemo(

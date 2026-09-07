@@ -14,7 +14,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Gitleaks
-        run: docker run --rm -v "${{ github.workspace }}:/src" ghcr.io/gitleaks/gitleaks:latest detect --source=/src --verbose --redact
+        run: docker run --rm -v "${{ github.workspace }}:/src" ghcr.io/gitleaks/gitleaks:v8.28.0 detect --source=/src --verbose --redact --config=/src/.gitleaks.toml
 
   backend:
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -58,7 +58,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 

@@ -24,13 +24,7 @@ Langy MVP: keep Web Speech; improve with **longer debounced silence** (`STT_END_
 
 ## Env
 
-```
-TTS_PROVIDER=browser
-TTS_VOICE_ID=
-TTS_VOICE_NAME=
-ELEVENLABS_API_KEY=
-STT_END_SILENCE_MS=2500
-```
+Names only (values live in `.env`, never in git): `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_VOICE_NAME`, `ELEVENLABS_API_KEY`, `STT_END_SILENCE_MS` (default 2500).
 
 ## API
 

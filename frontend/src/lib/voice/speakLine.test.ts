@@ -23,10 +23,11 @@ describe("speakLine", () => {
     });
     vi.stubGlobal(
       "SpeechSynthesisUtterance",
-      vi.fn(function SpeechSynthesisUtterance(
-        this: { lang: string; onend?: () => void; onerror?: () => void },
-        _text: string
-      ) {
+      vi.fn(function SpeechSynthesisUtterance(this: {
+        lang: string;
+        onend?: () => void;
+        onerror?: () => void;
+      }) {
         this.lang = "";
         return this;
       })

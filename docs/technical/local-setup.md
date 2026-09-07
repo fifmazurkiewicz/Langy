@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Python 3.12+
-- Node.js 20+
+- Node.js 22+ (Supabase JS requires `>=22`; Vercel uses 24.x)
 - Postgres (local) **or** Supabase Cloud dev project
 
 ## 1. Environment

@@ -129,12 +129,6 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
     };
   }, []);
 
-  useEffect(() => {
-    oneShotRef.current?.stop();
-    oneShotRef.current = null;
-    setSpeakOnceActive(false);
-  }, [lineIndex, step]);
-
   const stopSpeakCapture = useCallback(() => {
     oneShotRef.current?.stop();
     oneShotRef.current = null;
@@ -210,6 +204,7 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
       });
       setSessionId(session.session_id);
       setLines(session.dialogue);
+      stopSpeakCapture();
       setLineIndex(0);
       setHardIds([]);
       playedRef.current = null;
@@ -238,9 +233,11 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
       if (lineIndex + 1 >= agentLines.length) {
         const end = await endShadowingSession(token, sessionId);
         geminiLive.disconnect();
+        stopSpeakCapture();
         setStep("done");
         onDone(end.created);
       } else {
+        stopSpeakCapture();
         setLineIndex((i) => i + 1);
         setUserInput("");
         setFeedback(null);
