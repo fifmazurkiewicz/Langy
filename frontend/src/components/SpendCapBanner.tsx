@@ -9,10 +9,7 @@ export function SpendCapBanner() {
   const [atCap, setAtCap] = useState(false);
 
   useEffect(() => {
-    if (!token || !isApproved) {
-      setAtCap(false);
-      return;
-    }
+    if (!token || !isApproved) return;
     apiFetch<{ spend_cap_usd: number; monthly_spend_usd: number; at_cap?: boolean }>("/api/auth/me", {
       token,
     })
@@ -24,7 +21,7 @@ export function SpendCapBanner() {
       .catch(() => setAtCap(false));
   }, [token, isApproved]);
 
-  if (!atCap) return null;
+  if (!token || !isApproved || !atCap) return null;
 
   return (
     <div className="border-b border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] px-4 py-2 text-center text-sm">
