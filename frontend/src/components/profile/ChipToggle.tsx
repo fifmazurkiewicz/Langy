@@ -14,6 +14,7 @@ export function ChipToggle({ label, selected, onToggle }: Props) {
         selected ? "classical-btn-primary" : ""
       }`}
       onClick={onToggle}
+      aria-pressed={selected}
     >
       {label}
     </button>

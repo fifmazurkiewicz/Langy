@@ -29,16 +29,16 @@ function PendingApprovalScreen() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center p-6">
       <div className="classical-card w-full max-w-sm space-y-4 p-6">
-        <h1 className="font-serif text-2xl text-[var(--color-text)]">Konto oczekuje na akceptację</h1>
+        <h1 className="font-serif text-2xl text-[var(--color-text)]">Account awaiting approval</h1>
         <p className="text-sm text-[var(--color-soft)]">
-          Administrator musi zaakceptować to konto, zanim będzie można korzystać z Langy.
+          An administrator must approve this account before you can use Langy.
         </p>
         <div className="flex flex-col gap-2">
           <button type="button" className="classical-btn classical-btn-primary" onClick={() => void refreshProfile()}>
-            Sprawdź status
+            Check status
           </button>
           <button type="button" className="classical-btn" onClick={() => void signOut()}>
-            Wyloguj
+            Sign out
           </button>
         </div>
       </div>
@@ -74,7 +74,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (status === "profile_unknown") {
     return (
       <Splash
-        label="Waking up the API…"
+        label="The service is taking longer than expected."
         action={
           <button type="button" className="classical-btn" onClick={() => void refreshProfile()}>
             Retry now

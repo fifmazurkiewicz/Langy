@@ -22,10 +22,12 @@ export function BottomNav({ pendingCount = 0 }: { pendingCount?: number }) {
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
+                aria-current={active ? "page" : undefined}
                 className={`nav-tab-link relative flex min-h-[52px] flex-col items-center justify-center text-sm ${
-                  active ? "text-[var(--color-accent)]" : "text-[var(--color-text)]"
+                  active ? "font-semibold text-[var(--color-accent)]" : "text-[var(--color-text)]"
                 }`}
               >
+                {active ? <span className="absolute inset-x-5 top-0 h-0.5 bg-[var(--color-accent)]" aria-hidden="true" /> : null}
                 {tab.label}
                 {showBadge ? (
                   <span className="absolute top-2 right-[calc(50%-28px)] rounded-full bg-[var(--color-accent)] px-1.5 text-[10px] text-[var(--color-bg)]">

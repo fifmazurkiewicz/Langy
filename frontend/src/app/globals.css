@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Lora:wght@400;600&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -8,8 +7,12 @@
   --color-soft: color-mix(in srgb, #201f1d 55%, transparent);
   --color-accent: #b68235;
   --color-divider: color-mix(in srgb, #201f1d 16%, transparent);
-  --font-heading: "Cormorant Garamond", serif;
-  --font-body: "Lora", serif;
+  --color-muted: #696661;
+  --color-danger: #9f2f2f;
+  --color-success: #356945;
+  --color-focus: #7b531b;
+  --font-heading: Georgia, "Times New Roman", serif;
+  --font-body: Arial, Helvetica, sans-serif;
 }
 
 .dark {
@@ -19,6 +22,10 @@
   --color-soft: color-mix(in srgb, #f3f2f2 55%, transparent);
   --color-accent: #c28d41;
   --color-divider: color-mix(in srgb, #f3f2f2 16%, transparent);
+  --color-muted: #aaa69f;
+  --color-danger: #f09a93;
+  --color-success: #91c79e;
+  --color-focus: #e2b873;
 }
 
 @theme inline {
@@ -44,7 +51,7 @@ h1, h2, h3, h4 {
 .classical-card {
   background: var(--color-surface);
   border: 1px solid var(--color-divider);
-  border-radius: 4px;
+  border-radius: 12px;
 }
 
 .classical-btn {
@@ -55,6 +62,7 @@ h1, h2, h3, h4 {
   background: transparent;
   border-radius: 4px;
   font-family: var(--font-body);
+  font-weight: 600;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -70,11 +78,13 @@ h1, h2, h3, h4 {
 }
 
 .classical-btn-primary {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  background: var(--color-accent);
+  color: #16130f;
 }
 
 .classical-btn-primary:not(:disabled):hover {
-  background: color-mix(in srgb, var(--color-accent) 28%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-accent) 86%, var(--color-text));
+  border-color: var(--color-accent);
 }
 
 .classical-btn:not(:disabled):active {
@@ -82,7 +92,7 @@ h1, h2, h3, h4 {
 }
 
 .classical-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -99,6 +109,44 @@ h1, h2, h3, h4 {
   background: var(--color-bg);
   color: var(--color-text);
   border-radius: 4px;
+}
+
+.classical-input::placeholder {
+  color: var(--color-muted);
+}
+
+.classical-input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.text-muted {
+  color: var(--color-muted);
+}
+
+.text-danger {
+  color: var(--color-danger);
+}
+
+.segmented-control {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.segmented-control > .classical-btn {
+  flex: 1 0 auto;
+  border-color: transparent;
+}
+
+.segmented-control > .classical-btn[aria-selected="true"],
+.segmented-control > .classical-btn[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: #16130f;
 }
 
 .nav-tab-link {
@@ -151,5 +199,16 @@ h1, h2, h3, h4 {
   50% {
     transform: scale(1.06);
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

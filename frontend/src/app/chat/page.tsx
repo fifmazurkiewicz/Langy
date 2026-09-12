@@ -57,6 +57,7 @@ import {
 import { createLiveMicGate } from "@/lib/voice/liveMicGate";
 import { isLivePcmIdle, whenLivePcmIdle } from "@/lib/voice/livePcmPlayer";
 import { withMicSuspended } from "@/lib/voice/withMicSuspended";
+import { notify } from "@/lib/uiFeedback";
 
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
   tts_provider: "elevenlabs",
@@ -565,7 +566,7 @@ export default function ChatPage() {
     async (item: ConversationListItem) => {
       if (!token || deletingConversationId) return;
       if (item.is_active) {
-        alert("End the session before deleting it.");
+        notify("End the active session before deleting it.", "error");
         return;
       }
       if (!confirm("Delete this conversation? This cannot be undone.")) return;
@@ -585,7 +586,7 @@ export default function ChatPage() {
           setChatState("idle");
         }
       } catch (e) {
-        alert(e instanceof Error ? e.message : "Could not delete conversation");
+        notify(e instanceof Error ? e.message : "Could not delete conversation", "error");
       } finally {
         setDeletingConversationId(null);
       }
@@ -650,7 +651,7 @@ export default function ChatPage() {
           conversation_id: conversationId ?? undefined,
         });
         if (res.status === "already_exists") {
-          alert("Already in your list");
+          notify("Already in your list");
         } else {
           const count = await apiFetch<{ count: number }>("/api/vocab/pending/count", { token });
           setPendingCount(count.count);
@@ -658,7 +659,7 @@ export default function ChatPage() {
         setSelectedSpan(null);
         setTranslateResult(null);
       } catch (e) {
-        alert(e instanceof Error ? e.message : "Could not add word");
+        notify(e instanceof Error ? e.message : "Could not add word", "error");
       }
     },
     [token, sessionLanguage, conversationId]
@@ -678,13 +679,13 @@ export default function ChatPage() {
           conversation_id: conversationId ?? undefined,
         });
         if (res.status === "already_exists") {
-          alert("Already in your list");
+          notify("Already in your list");
         } else {
           const count = await apiFetch<{ count: number }>("/api/vocab/pending/count", { token });
           setPendingCount(count.count);
         }
       } catch (e) {
-        alert(e instanceof Error ? e.message : "Could not add word");
+        notify(e instanceof Error ? e.message : "Could not add word", "error");
       }
     },
     [token, sessionLanguage, corrections, lines, conversationId]
@@ -780,7 +781,7 @@ export default function ChatPage() {
     : "Conversation";
 
   return (
-    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden pb-[calc(168px+env(safe-area-inset-bottom))]">
+    <div className="grid h-dvh max-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden pb-[calc(52px+env(safe-area-inset-bottom))]">
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--color-divider)] px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <div className="min-w-0 flex-1">
           <LanguageSwitcher
@@ -807,7 +808,7 @@ export default function ChatPage() {
         </button>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-4">
+      <main className="flex min-h-0 flex-col overflow-hidden px-4">
         <MicStatusBanner
           status={activeMicStatus}
           hasSession={Boolean(conversationId)}

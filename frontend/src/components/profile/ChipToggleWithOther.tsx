@@ -16,6 +16,7 @@ export function ChipToggleWithOther({ label, selected, onToggle, otherText, onOt
         type="button"
         className={`classical-btn px-3 py-1 text-sm capitalize ${selected ? "classical-btn-primary" : ""}`}
         onClick={onToggle}
+        aria-pressed={selected}
       >
         {isOther ? "Other…" : label}
       </button>

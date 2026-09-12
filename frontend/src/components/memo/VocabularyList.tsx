@@ -5,6 +5,7 @@ import { deleteVocab, listAcceptedVocab } from "@/lib/api/vocab";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
 import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
 import { formatCategoryLabel, UNCATEGORIZED_DUE_CATEGORY_KEY } from "@/lib/memo/categories";
+import { notify } from "@/lib/uiFeedback";
 
 type Props = {
   token: string;
@@ -68,7 +69,7 @@ export function VocabularyList({ token, language }: Props) {
       setItems((prev) => prev.filter((v) => v.id !== item.id));
       if (mnemonicTerm === item.term) setMnemonicTerm(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Could not delete word");
+      notify(e instanceof Error ? e.message : "Could not delete word", "error");
     } finally {
       setDeletingId(null);
     }

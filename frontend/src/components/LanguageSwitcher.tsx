@@ -44,7 +44,7 @@ export function LanguageSwitcher({
                     role="option"
                     aria-selected={lang === activeLanguage}
                     className={`flex w-full items-center gap-3 rounded px-2 py-3 text-left ${
-                      lang === activeLanguage ? "text-[var(--color-accent)]" : ""
+                      lang === activeLanguage ? "bg-[var(--color-accent)] font-semibold text-[#16130f]" : ""
                     }`}
                     onClick={() => {
                       onChange(lang);

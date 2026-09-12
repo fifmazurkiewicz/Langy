@@ -13,6 +13,7 @@ import { fetchLiveToken } from "@/lib/api/live";
 import { fetchVoiceConfig, type VoiceConfig } from "@/lib/api/voice";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { speakTutorLine } from "@/lib/voice/speakLine";
+import { notify } from "@/lib/uiFeedback";
 import {
   runDebouncedRecognition,
   speechRecognitionSupported,
@@ -158,7 +159,7 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
 
     if (!handle) {
       setSpeakOnceActive(false);
-      alert("Speech not supported in this browser. Use Chrome or Edge, or type your repeat.");
+      notify("Speech is not supported in this browser. Use Chrome or Edge, or type your repeat.", "error");
       return;
     }
 
@@ -178,7 +179,7 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
       setPastConversations(data.conversations);
       setStep("past");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Could not load conversations");
+      notify(e instanceof Error ? e.message : "Could not load conversations", "error");
     } finally {
       setLoading(false);
     }
@@ -186,10 +187,11 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
 
   async function handleStart() {
     if (!canStart) {
-      alert(
+      notify(
         sourceMode === "generated"
           ? "Enter a topic first (e.g. ordering coffee)."
-          : "Pick a past conversation first."
+          : "Pick a past conversation first.",
+        "error"
       );
       return;
     }
@@ -211,7 +213,7 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
       setStep("loop");
       setRevealed(showText);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Could not start session");
+      notify(e instanceof Error ? e.message : "Could not start session", "error");
     } finally {
       setLoading(false);
     }
@@ -244,7 +246,7 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
         setRevealed(showText);
       }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Turn failed");
+      notify(e instanceof Error ? e.message : "Turn failed", "error");
     } finally {
       setLoading(false);
     }
@@ -255,9 +257,9 @@ export function ShadowingFlow({ token, language, onDone }: Props) {
     setLoading(true);
     try {
       const res = await addShadowingPending(token, sessionId, [current.id]);
-      alert(res.created ? "Added to Pending" : "Already in your list");
+      notify(res.created ? "Added to Pending" : "Already in your list", res.created ? "success" : "info");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Could not add line");
+      notify(e instanceof Error ? e.message : "Could not add line", "error");
     } finally {
       setLoading(false);
     }

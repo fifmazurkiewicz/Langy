@@ -13,6 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
 import { setActiveLanguage } from "@/lib/api/profile";
+import { notify } from "@/lib/uiFeedback";
 
 type VocabItem = {
   id: string;
@@ -66,7 +67,7 @@ export default function MemoPage() {
     try {
       const res = await generateCategory(token, catId);
       await reload();
-      alert(`${res.created} word(s) added to Pending`);
+      notify(`${res.created} word(s) added to Pending`, "success");
     } finally {
       setGeneratingId(null);
     }
@@ -162,12 +163,12 @@ export default function MemoPage() {
     if (!token) return;
     const res = await exportQuizlet(token, activeLanguage ?? undefined);
     if (!res.content) {
-      alert("No accepted cards to export.");
+      notify("No accepted cards to export.");
       return;
     }
     try {
       await navigator.clipboard.writeText(res.content);
-      alert(`Copied ${res.count} card(s) to clipboard (Quizlet format).`);
+      notify(`Copied ${res.count} card(s) to clipboard.`, "success");
     } catch {
       const blob = new Blob([res.content], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
@@ -188,7 +189,7 @@ export default function MemoPage() {
       setRevealed(false);
       await reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Could not save review");
+      notify(e instanceof Error ? e.message : "Could not save review", "error");
     } finally {
       setReviewSubmitting(false);
     }
@@ -210,12 +211,14 @@ export default function MemoPage() {
             />
           ) : null}
         </div>
-        <div className="flex gap-2 text-sm">
+        <div className="segmented-control text-sm" role="tablist" aria-label="Memo sections">
           {(["flashcards", "vocabulary", "shadowing"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
               className={`classical-btn px-3 py-2 capitalize ${tab === t ? "classical-btn-primary" : ""}`}
+              role="tab"
+              aria-selected={tab === t}
               onClick={() => setTab(t)}
             >
               {t}
@@ -227,10 +230,12 @@ export default function MemoPage() {
       <main className="flex-1 p-4">
         {tab === "flashcards" ? (
           <>
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="segmented-control mb-4" role="tablist" aria-label="Flashcard sections">
               <button
                 type="button"
                 className={`classical-btn px-3 ${subTab === "due" ? "classical-btn-primary" : ""}`}
+                role="tab"
+                aria-selected={subTab === "due"}
                 onClick={() => {
                   setSubTab("due");
                   setDueCategoryKey(null);
@@ -243,6 +248,8 @@ export default function MemoPage() {
               <button
                 type="button"
                 className={`classical-btn px-3 ${subTab === "pending" ? "classical-btn-primary" : ""}`}
+                role="tab"
+                aria-selected={subTab === "pending"}
                 onClick={() => setSubTab("pending")}
               >
                 Pending {pending.length ? `(${pending.length})` : ""}
@@ -250,11 +257,13 @@ export default function MemoPage() {
               <button
                 type="button"
                 className={`classical-btn px-3 capitalize ${subTab === "generate" ? "classical-btn-primary" : ""}`}
+                role="tab"
+                aria-selected={subTab === "generate"}
                 onClick={() => setSubTab("generate")}
               >
                 Generate
               </button>
-              <button type="button" className="classical-btn px-3 ml-auto" onClick={() => void handleExport()}>
+              <button type="button" className="classical-btn px-3" onClick={() => void handleExport()}>
                 Export Quizlet
               </button>
             </div>
@@ -337,9 +346,9 @@ export default function MemoPage() {
                           await reload();
                           if (message.toLowerCase().includes("already exists")) {
                             setNewCategoryName("");
-                            alert("This category already exists — see the list above.");
+                            notify("This category already exists. See the list above.");
                           } else {
-                            alert(message);
+                            notify(message, "error");
                           }
                         } finally {
                           setCreatingCategory(false);
@@ -489,7 +498,7 @@ export default function MemoPage() {
               language={activeLanguage}
               onDone={async (created) => {
                 await reload();
-                if (created > 0) alert(`${created} line(s) added to Pending`);
+                if (created > 0) notify(`${created} line(s) added to Pending`, "success");
               }}
             />
           ) : (

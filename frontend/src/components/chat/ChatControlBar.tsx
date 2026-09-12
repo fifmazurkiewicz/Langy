@@ -31,7 +31,7 @@ export function ChatControlBar({
 }: Props) {
   if (!hasSession) {
     return (
-      <div className="fixed inset-x-0 bottom-[calc(52px+env(safe-area-inset-bottom))] z-20 border-t border-[var(--color-divider)] bg-[var(--color-bg)] p-4">
+      <div className="shrink-0 border-t border-[var(--color-divider)] bg-[var(--color-bg)] p-4">
         <button
           type="button"
           className="classical-btn classical-btn-primary w-full"
@@ -47,7 +47,7 @@ export function ChatControlBar({
   const inputDisabled = sending && !canStop;
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(52px+env(safe-area-inset-bottom))] z-20 space-y-2 border-t border-[var(--color-divider)] bg-[var(--color-bg)] p-4">
+    <div className="shrink-0 space-y-2 border-t border-[var(--color-divider)] bg-[var(--color-bg)] p-4">
       <ChatComposer
         draft={draft}
         disabled={inputDisabled}

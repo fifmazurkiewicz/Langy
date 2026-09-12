@@ -6,6 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SpendCapBanner } from "@/components/SpendCapBanner";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ToastProvider } from "@/components/ToastProvider";
 
 export const metadata: Metadata = {
   title: "Langy",
@@ -34,7 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AuthProvider>
               <ApiPulseBanner />
               <SpendCapBanner />
-              <AuthGate>{children}</AuthGate>
+              <ToastProvider>
+                <AuthGate>{children}</AuthGate>
+              </ToastProvider>
             </AuthProvider>
           </ApiPulseProvider>
         </ThemeProvider>

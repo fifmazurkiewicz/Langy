@@ -37,7 +37,7 @@ export function AgentPresence({
         opacity={active || canPress ? 0.35 : 0.2}
         style={{
           transformOrigin: "100px 100px",
-          animation: `langyBreathe ${speed} ease-in-out infinite`,
+          animation: active ? `langyBreathe ${speed} ease-in-out infinite` : "none",
         }}
       />
       <circle
@@ -49,7 +49,7 @@ export function AgentPresence({
         opacity={active || canPress ? 0.5 : 0.3}
         style={{
           transformOrigin: "100px 100px",
-          animation: `langyBreathe ${speed} ease-in-out infinite 0.3s`,
+          animation: active ? `langyBreathe ${speed} ease-in-out infinite 0.3s` : "none",
         }}
       />
       <circle
@@ -61,7 +61,7 @@ export function AgentPresence({
         opacity={active || canPress ? 0.75 : 0.45}
         style={{
           transformOrigin: "100px 100px",
-          animation: `langyBreathe ${speed} ease-in-out infinite 0.6s`,
+          animation: active ? `langyBreathe ${speed} ease-in-out infinite 0.6s` : "none",
         }}
       />
       <circle
@@ -72,7 +72,7 @@ export function AgentPresence({
         opacity={active || canPress ? 0.9 : 0.55}
         style={{
           transformOrigin: "100px 100px",
-          animation: `langyBreathe ${speed} ease-in-out infinite 0.6s`,
+          animation: active ? `langyBreathe ${speed} ease-in-out infinite 0.6s` : "none",
         }}
       />
     </svg>

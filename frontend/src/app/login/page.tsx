@@ -17,9 +17,8 @@ export default function LoginPage() {
         <h1 className="text-3xl mb-2">Langy</h1>
         <p className="text-sm opacity-80 mb-6">Voice-first language practice</p>
         {oauthError && (
-          <p className="mb-4 text-sm text-amber-200/90" role="alert">
-            Google sign-in failed. Try again, or check Supabase redirect URLs include{" "}
-            <code className="text-xs">/auth/callback</code>.
+          <p className="mb-4 text-sm text-danger" role="alert">
+            Google sign-in failed. Please try again.
           </p>
         )}
         <button
@@ -30,7 +29,9 @@ export default function LoginPage() {
           Continue with Google
         </button>
         <ApiStatusIndicator />
-        <p className="mt-4 text-xs opacity-60">Dev mode: sign in without Supabase env</p>
+        {process.env.NODE_ENV === "development" ? (
+          <p className="mt-4 text-xs text-muted">Local development mode</p>
+        ) : null}
       </div>
     </main>
   );
