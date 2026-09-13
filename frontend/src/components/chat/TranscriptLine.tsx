@@ -1,6 +1,7 @@
 "use client";
 
 import type { CorrectionResponse } from "@/lib/api/correction";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { CorrectionTip } from "@/components/chat/CorrectionTip";
 
 type Props = {
@@ -57,13 +58,16 @@ export function TranscriptLine({
             </svg>
           </button>
         ) : null}
-        <p
-          className={`text-sm leading-relaxed ${role === "Agent" ? "text-[var(--color-soft)]" : ""}`}
-          onMouseUp={handleSelect}
-          onTouchEnd={handleSelect}
-        >
-          {text}
-        </p>
+        <div>
+          <p
+            className={`text-sm leading-relaxed ${role === "Agent" ? "text-[var(--color-soft)]" : ""}`}
+            onMouseUp={handleSelect}
+            onTouchEnd={handleSelect}
+          >
+            {text}
+          </p>
+          {role === "Agent" ? <AIGeneratedLabel /> : null}
+        </div>
       </div>
       {role === "User" && correction ? (
         <CorrectionTip tip={correction} onAdd={() => onAddFromCorrection(lineIndex)} />

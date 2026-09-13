@@ -4,6 +4,11 @@ import { CHAT_ROUTE, LOGIN_ROUTE, ONBOARDING_ROUTE, resolveRedirect } from "./ro
 const PROTECTED = ["/chat", "/memo", "/menu", "/menu/languages", "/menu/profile", "/plan"];
 
 describe("resolveRedirect", () => {
+  it("keeps the privacy policy public in every auth state", () => {
+    for (const status of ["anonymous", "needs_onboarding", "ready"] as const) {
+      expect(resolveRedirect(status, "/privacy")).toBeNull();
+    }
+  });
   it("never redirects while the session is still initializing", () => {
     for (const path of [...PROTECTED, "/", LOGIN_ROUTE, ONBOARDING_ROUTE]) {
       expect(resolveRedirect("initializing", path)).toBeNull();

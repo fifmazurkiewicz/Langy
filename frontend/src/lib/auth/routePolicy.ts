@@ -6,6 +6,7 @@ export const CHAT_ROUTE = "/chat";
 
 /** Routes that exist only to hand the visitor over to the gate. */
 const ENTRY_ROUTES = new Set<string>([LOGIN_ROUTE, ONBOARDING_ROUTE, "/"]);
+const PUBLIC_ROUTES = new Set<string>(["/privacy"]);
 
 /**
  * Single source of truth for "where does this visitor belong". Returns the path to redirect to,
@@ -16,6 +17,7 @@ const ENTRY_ROUTES = new Set<string>([LOGIN_ROUTE, ONBOARDING_ROUTE, "/"]);
  * users straight into /chat.
  */
 export function resolveRedirect(status: AuthStatus, pathname: string): string | null {
+  if (PUBLIC_ROUTES.has(pathname)) return null;
   switch (status) {
     case "initializing":
     case "profile_unknown":

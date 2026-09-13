@@ -58,6 +58,15 @@ import { createLiveMicGate } from "@/lib/voice/liveMicGate";
 import { isLivePcmIdle, whenLivePcmIdle } from "@/lib/voice/livePcmPlayer";
 import { withMicSuspended } from "@/lib/voice/withMicSuspended";
 import { notify } from "@/lib/uiFeedback";
+import { AIPrivacyNotice } from "@/components/chat/AIPrivacyNotice";
+import { MicrophonePrivacyNotice } from "@/components/chat/MicrophonePrivacyNotice";
+import {
+  acknowledgePrivacyNotice,
+  AI_NOTICE_STORAGE_KEY,
+  AI_NOTICE_VERSION,
+  MIC_NOTICE_STORAGE_KEY,
+  MIC_NOTICE_VERSION,
+} from "@/lib/api/privacy";
 
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
   tts_provider: "elevenlabs",
@@ -121,6 +130,8 @@ export default function ChatPage() {
   });
   const [liveGemini, setLiveGemini] = useState(() => readLiveGeminiPreference());
   const [micSuspended, setMicSuspended] = useState(false);
+  const [aiNoticeOpen, setAiNoticeOpen] = useState(false);
+  const [microphoneNoticeOpen, setMicrophoneNoticeOpen] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const oneShotRef = useRef<SpeechRecognition | null>(null);
@@ -135,6 +146,29 @@ export default function ChatPage() {
   const micSuspendedRef = useRef(false);
   const liveMicGateRef = useRef<ReturnType<typeof createLiveMicGate> | null>(null);
   const recognitionActive = listening && !micSuspended;
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setAiNoticeOpen(window.localStorage.getItem(AI_NOTICE_STORAGE_KEY) !== "acknowledged");
+    });
+  }, []);
+
+  const acceptNotice = useCallback(
+    (kind: "ai_first_use" | "microphone") => {
+      const isAi = kind === "ai_first_use";
+      const storageKey = isAi ? AI_NOTICE_STORAGE_KEY : MIC_NOTICE_STORAGE_KEY;
+      const version = isAi ? AI_NOTICE_VERSION : MIC_NOTICE_VERSION;
+      window.localStorage.setItem(storageKey, "acknowledged");
+      if (isAi) setAiNoticeOpen(false);
+      else {
+        setMicrophoneNoticeOpen(false);
+        setListening(true);
+        if (conversationId) setChatState("listening");
+      }
+      if (token) void acknowledgePrivacyNotice(token, kind, version).catch(() => undefined);
+    },
+    [conversationId, token]
+  );
 
   useEffect(() => {
     liveMicGateRef.current = createLiveMicGate({
@@ -851,6 +885,10 @@ export default function ChatPage() {
                     oneShotRef.current = null;
                     setSpeakOnceActive(false);
                   }
+                  if (!listening && window.localStorage.getItem(MIC_NOTICE_STORAGE_KEY) !== "acknowledged") {
+                    setMicrophoneNoticeOpen(true);
+                    return;
+                  }
                   setListening((v) => {
                     const next = !v;
                     if (next && conversationId) setChatState("listening");
@@ -953,6 +991,13 @@ export default function ChatPage() {
         open={summaryOpen}
         pendingCount={summaryPendingCount}
         onClose={() => setSummaryOpen(false)}
+      />
+
+      <AIPrivacyNotice open={aiNoticeOpen} onContinue={() => acceptNotice("ai_first_use")} />
+      <MicrophonePrivacyNotice
+        open={microphoneNoticeOpen}
+        onContinue={() => acceptNotice("microphone")}
+        onCancel={() => setMicrophoneNoticeOpen(false)}
       />
 
       {selectedSpan ? (

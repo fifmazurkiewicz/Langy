@@ -52,6 +52,7 @@ export default function MenuPage() {
           <MenuRow href="/plan" title="Plan" subtitle="Optional CEFR path and lessons" />
           <MenuRow href="/menu/memory" title="Memory" subtitle="Facts and recent session notes" />
           <MenuRow href="/menu/appearance" title="Appearance" subtitle="Light, dark, or system" />
+          <MenuRow href="/menu/privacy" title="Privacy & data" subtitle="Policy, export, and account deletion" />
           {isAdmin ? (
             <MenuRow href="/menu/admin" title="Admin" subtitle="Users and spend caps" />
           ) : null}

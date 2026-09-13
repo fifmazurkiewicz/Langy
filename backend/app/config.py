@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_jwt_secret: str = ""
     supabase_jwt_audience: str = "authenticated"
+    supabase_service_role_key: str = ""
 
     # Local-only escape hatch: accepts "dev-token" and unsigned JWTs. Never enable on Render.
     dev_auth_enabled: bool = False
@@ -38,6 +39,8 @@ class Settings(BaseSettings):
     langfuse_host: str = "https://cloud.langfuse.com"
 
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    privacy_contact_email: str = "fifmazurkiewicz@gmail.com"
+    conversation_retention_days: int = 365
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -45,7 +48,9 @@ class Settings(BaseSettings):
 
     @property
     def admin_email_set(self) -> set[str]:
-        return {e.strip().lower() for e in self.allowed_admin_emails.split(",") if e.strip()}
+        return {
+            e.strip().lower() for e in self.allowed_admin_emails.split(",") if e.strip()
+        }
 
     @property
     def dev_auth_allowed(self) -> bool:

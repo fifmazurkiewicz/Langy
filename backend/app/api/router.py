@@ -1,10 +1,28 @@
 from fastapi import APIRouter
 
-from app.api.routes import admin, auth, categories, chat, correction, health, memory, mnemonics, onboarding, plan, profile, selection, shadowing, vocab, voice
+from app.api.routes import (
+    admin,
+    auth,
+    categories,
+    chat,
+    correction,
+    health,
+    memory,
+    mnemonics,
+    onboarding,
+    plan,
+    privacy,
+    profile,
+    selection,
+    shadowing,
+    vocab,
+    voice,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(privacy.router, prefix="/privacy", tags=["privacy"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(profile.router, prefix="/profile", tags=["profile"])
 api_router.include_router(memory.router, prefix="/memory", tags=["memory"])

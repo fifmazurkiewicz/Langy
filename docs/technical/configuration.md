@@ -28,6 +28,8 @@ Placeholders only. Copy `.env.example` â†’ `.env` and `frontend/.env.example` â†
 | `LANGFUSE_PUBLIC_KEY` | Langfuse Cloud. |
 | `LANGFUSE_SECRET_KEY` | Langfuse Cloud. |
 | `LANGFUSE_HOST` | Langfuse host (`https://cloud.langfuse.com`). |
+| `PRIVACY_CONTACT_EMAIL` | Privacy/controller contact (default `fifmazurkiewicz@gmail.com`). |
+| `CONVERSATION_RETENTION_DAYS` | Completed conversation retention before automatic purge (default `365`). |
 | `PROMPTFOO_API_KEY` | Optional; CI mock provider does not need it. |
 
 Chained voice may also use `STT_PROVIDER` (commented in `.env.example`).

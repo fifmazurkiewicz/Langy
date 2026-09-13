@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { ApiStatusIndicator } from "@/components/ApiStatusIndicator";
+import Link from "next/link";
 
 export default function LoginPage() {
   const { signInWithGoogle } = useAuth();
@@ -29,6 +30,10 @@ export default function LoginPage() {
           Continue with Google
         </button>
         <ApiStatusIndicator />
+        <p className="mt-4 text-xs leading-relaxed text-[var(--color-soft)]">
+          By continuing, you acknowledge that Langy uses AI and stores learning data. Do not submit confidential or third-party personal data.{" "}
+          <Link href="/privacy" className="text-[var(--color-accent)] hover:underline">Privacy Policy</Link>
+        </p>
         {process.env.NODE_ENV === "development" ? (
           <p className="mt-4 text-xs text-muted">Local development mode</p>
         ) : null}
