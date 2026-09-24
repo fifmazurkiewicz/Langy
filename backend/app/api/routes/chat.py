@@ -231,7 +231,6 @@ def end_session(
     conversation.ended_at = datetime.now(timezone.utc)
     db.commit()
     job = enqueue_post_session_jobs(db, conversation.id, user.id)
-    process_post_session_job(db, job)
     return {"ok": True, "job_id": str(job.id)}
 
 

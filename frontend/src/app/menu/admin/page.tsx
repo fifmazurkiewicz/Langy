@@ -1,38 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { listAdminUsers, setUserApproval, updateSpendCap, type AdminUser } from "@/lib/api/admin";
+import { notify } from "@/lib/uiFeedback";
 
 export default function AdminPage() {
   const { token, isAdmin, userId } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [capValue, setCapValue] = useState("10");
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const r = await listAdminUsers(token);
+      setUsers(r.items);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Could not load users");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!token || !isAdmin) return;
-    listAdminUsers(token).then((r) => setUsers(r.items)).catch(() => setUsers([]));
+    listAdminUsers(token)
+      .then((result) => {
+        setUsers(result.items);
+        setLoadError(null);
+      })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : "Could not load users"))
+      .finally(() => setLoading(false));
   }, [token, isAdmin]);
-
-  async function refresh() {
-    if (!token) return;
-    const r = await listAdminUsers(token);
-    setUsers(r.items);
-  }
 
   async function saveCap(id: string) {
     if (!token) return;
-    await updateSpendCap(token, id, parseFloat(capValue));
-    setEditing(null);
-    await refresh();
+    try {
+      const updated = await updateSpendCap(token, id, parseFloat(capValue));
+      setUsers((current) => current.map((user) => user.id === id ? { ...user, ...updated } : user));
+      setEditing(null);
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Could not update spend cap", "error");
+    }
   }
 
   async function toggleApproval(id: string, is_approved: boolean) {
     if (!token) return;
-    await setUserApproval(token, id, is_approved);
-    await refresh();
+    try {
+      const updated = await setUserApproval(token, id, is_approved);
+      setUsers((current) => current.map((user) => user.id === id ? updated : user));
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Could not update approval", "error");
+    }
   }
 
   if (!isAdmin) {
@@ -57,6 +82,15 @@ export default function AdminPage() {
       <p className="text-sm opacity-70">
         Costly features pause until next calendar month. Reviews stay available. Nothing is deleted.
       </p>
+      {loadError ? (
+        <div className="classical-card flex flex-wrap items-center gap-3 p-4 text-sm text-red-400" role="alert">
+          <span>Could not load users: {loadError}</span>
+          <button type="button" className="classical-btn text-sm" onClick={() => void refresh()}>
+            Retry
+          </button>
+        </div>
+      ) : null}
+      {loading ? <p className="text-sm opacity-70">Loading users…</p> : null}
       <div className="hidden gap-2 border-b border-[var(--color-divider)] pb-2 text-sm font-medium md:grid md:grid-cols-7">
         <div>Name</div>
         <div>Email</div>

@@ -1,5 +1,19 @@
 export const UNCATEGORIZED_DUE_CATEGORY_KEY = "__other__";
 
+export type MemoCategory = {
+  id: string;
+  category_key: string;
+  accepted_count: number;
+  due_count: number;
+  is_custom: boolean;
+};
+
+export function makeCreatedCategory(
+  created: Pick<MemoCategory, "id" | "category_key">,
+): MemoCategory {
+  return { ...created, accepted_count: 0, due_count: 0, is_custom: true };
+}
+
 export function formatCategoryLabel(categoryKey: string): string {
   return categoryKey.replace(/^custom_/, "").replace(/_/g, " ");
 }

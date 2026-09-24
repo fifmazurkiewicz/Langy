@@ -19,7 +19,7 @@ export function ClassicalBottomSheet({ open, title, onClose, children, footer }:
     >
       <button type="button" className="flex-1" aria-label="Close" onClick={onClose} />
       <div
-        className="classical-card max-h-[85vh] overflow-hidden rounded-t-md border-b-0 shadow-lg"
+        className="classical-card max-h-[85dvh] overflow-hidden rounded-t-md border-b-0 shadow-lg"
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -30,7 +30,7 @@ export function ClassicalBottomSheet({ open, title, onClose, children, footer }:
             Close
           </button>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto p-4">{children}</div>
+        <div className="max-h-[60dvh] overflow-y-auto p-4">{children}</div>
         {footer ? <div className="border-t border-[var(--color-divider)] p-4">{footer}</div> : null}
       </div>
     </div>

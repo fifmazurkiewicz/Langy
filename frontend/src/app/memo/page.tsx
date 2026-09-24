@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { createCategory, exportQuizlet, generateCategory, listDueCards, listVocabCategories, reviewCard } from "@/lib/api/vocab";
-import { formatCategoryLabel, splitCategoriesByInterests, UNCATEGORIZED_DUE_CATEGORY_KEY } from "@/lib/memo/categories";
+import { formatCategoryLabel, makeCreatedCategory, splitCategoriesByInterests, UNCATEGORIZED_DUE_CATEGORY_KEY, type MemoCategory } from "@/lib/memo/categories";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
 import { VocabularyList } from "@/components/memo/VocabularyList";
 import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
@@ -24,13 +24,7 @@ type VocabItem = {
   category_key?: string | null;
 };
 
-type CategoryItem = {
-  id: string;
-  category_key: string;
-  accepted_count: number;
-  due_count: number;
-  is_custom: boolean;
-};
+type CategoryItem = MemoCategory;
 
 type Tab = "flashcards" | "vocabulary" | "shadowing";
 type SubTab = "due" | "pending" | "generate";
@@ -55,6 +49,7 @@ export default function MemoPage() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [dueError, setDueError] = useState<string | null>(null);
 
   const { interestCategories, customCategories } = useMemo(
     () => splitCategoriesByInterests(categories, activeInterests),
@@ -68,6 +63,8 @@ export default function MemoPage() {
       const res = await generateCategory(token, catId);
       await reload();
       notify(`${res.created} word(s) added to Pending`, "success");
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Could not generate words", "error");
     } finally {
       setGeneratingId(null);
     }
@@ -126,9 +123,13 @@ export default function MemoPage() {
   useEffect(() => {
     if (!token || subTab !== "due" || !dueCategoryKey) return;
     let cancelled = false;
-    void listDueCards(token, activeLanguage ?? undefined, dueCategoryKey).then((d) => {
-      if (!cancelled) setDue(d.cards);
-    });
+    void listDueCards(token, activeLanguage ?? undefined, dueCategoryKey)
+      .then((d) => {
+        if (!cancelled) setDue(d.cards);
+      })
+      .catch((e) => {
+        if (!cancelled) setDueError(e instanceof Error ? e.message : "Could not load due cards");
+      });
     return () => {
       cancelled = true;
     };
@@ -136,16 +137,29 @@ export default function MemoPage() {
 
   async function reload() {
     if (!token) return;
-    const p = await apiFetch<{ items: VocabItem[] }>("/api/vocab/pending", { token });
-    setPending(p.items);
-    const c = await listVocabCategories(token, activeLanguage ?? undefined);
-    setCategories(c.items);
-    setOtherDueCount(c.other_due_count);
-    if (dueCategoryKey) {
-      const d = await listDueCards(token, activeLanguage ?? undefined, dueCategoryKey);
-      setDue(d.cards);
-    } else {
-      setDue([]);
+    setCategoriesLoading(true);
+    setCategoriesError(null);
+    try {
+      const p = await apiFetch<{ items: VocabItem[] }>("/api/vocab/pending", { token });
+      const c = await listVocabCategories(token, activeLanguage ?? undefined);
+      setPending(p.items);
+      setCategories(c.items);
+      setOtherDueCount(c.other_due_count);
+      if (dueCategoryKey) {
+        try {
+          const d = await listDueCards(token, activeLanguage ?? undefined, dueCategoryKey);
+          setDue(d.cards);
+          setDueError(null);
+        } catch (e) {
+          setDueError(e instanceof Error ? e.message : "Could not load due cards");
+        }
+      } else {
+        setDue([]);
+      }
+    } catch (e) {
+      setCategoriesError(e instanceof Error ? e.message : "Could not load Memo data");
+    } finally {
+      setCategoriesLoading(false);
     }
   }
 
@@ -267,6 +281,14 @@ export default function MemoPage() {
                 Export Quizlet
               </button>
             </div>
+            {categoriesError ? (
+              <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-red-400" role="alert">
+                <span>{categoriesError}</span>
+                <button type="button" className="classical-btn text-sm" onClick={() => void reload()}>
+                  Retry
+                </button>
+              </div>
+            ) : null}
             {subTab === "pending" ? (
               <ul className="space-y-3">
                 {pending.length === 0 ? (
@@ -300,9 +322,6 @@ export default function MemoPage() {
                       ? ` · ${interestCategories.length} set${interestCategories.length === 1 ? "" : "s"}`
                       : ""}
                   </p>
-                  {categoriesError ? (
-                    <p className="text-sm text-red-400">{categoriesError}</p>
-                  ) : null}
                   {activeInterests.length === 0 ? (
                     <p className="opacity-60 text-sm">
                       No interests yet — pick favourites in Menu → Profile, then generate words here.
@@ -335,12 +354,13 @@ export default function MemoPage() {
                         if (!token || !activeLanguage || !newCategoryName.trim()) return;
                         setCreatingCategory(true);
                         try {
-                          await createCategory(token, {
+                          const created = await createCategory(token, {
                             language: activeLanguage,
                             category_key: newCategoryName.trim(),
                           });
+                          setCategories((current) => [...current, makeCreatedCategory(created)]);
                           setNewCategoryName("");
-                          await reload();
+                          void reload();
                         } catch (e) {
                           const message = e instanceof Error ? e.message : "Could not create category";
                           await reload();
@@ -379,7 +399,10 @@ export default function MemoPage() {
                           <button
                             type="button"
                             className="classical-card w-full p-4 text-left"
-                            onClick={() => setDueCategoryKey(cat.category_key)}
+                            onClick={() => {
+                              setDueError(null);
+                              setDueCategoryKey(cat.category_key);
+                            }}
                           >
                             <p className="font-serif text-lg capitalize">{formatCategoryLabel(cat.category_key)}</p>
                             <p className="text-sm opacity-70">
@@ -393,7 +416,10 @@ export default function MemoPage() {
                         <button
                           type="button"
                           className="classical-card w-full p-4 text-left"
-                          onClick={() => setDueCategoryKey(UNCATEGORIZED_DUE_CATEGORY_KEY)}
+                          onClick={() => {
+                            setDueError(null);
+                            setDueCategoryKey(UNCATEGORIZED_DUE_CATEGORY_KEY);
+                          }}
                         >
                           <p className="font-serif text-lg">Other</p>
                           <p className="text-sm opacity-70">
@@ -460,8 +486,16 @@ export default function MemoPage() {
                     ? "Other"
                     : formatCategoryLabel(dueCategoryKey ?? "")}
                 </p>
+                {dueError ? (
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-red-400" role="alert">
+                    <span>{dueError}</span>
+                    <button type="button" className="classical-btn text-sm" onClick={() => void reload()}>
+                      Retry
+                    </button>
+                  </div>
+                ) : null}
                 <ul className="space-y-3">
-                {due.length === 0 ? (
+                {due.length === 0 && !dueError ? (
                   <p className="opacity-60">Nothing due in this category.</p>
                 ) : (
                   due.map((card) => (
