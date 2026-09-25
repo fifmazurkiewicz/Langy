@@ -11,6 +11,7 @@ from app.domain.correction.schemas import (
     CorrectionResponse,
 )
 from app.domain.correction.substantive import is_substantive_diff
+from app.domain.correction.jev import correction_decision
 from app.domain.providers.text import TextCompletionProvider, get_text_provider
 from app.domain.selection.normalize import normalize_span
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
@@ -48,6 +49,15 @@ def run_correction(
     provider: TextCompletionProvider | None = None,
 ) -> CorrectionResponse:
     check_spend_cap(db, user)
+    decision = correction_decision(req.text, req.language)
+    if decision and decision["needs"] < 0.20 and decision["confidence"] >= 0.80:
+        return CorrectionResponse(
+            is_corrected=False,
+            corrected_text=None,
+            explanation_pl=None,
+            mistake_type=None,
+            original_text=req.text,
+        )
     provider = provider or get_text_provider()
     data = _call_turn_correction(provider, req)
     record_usage(db, user.id, "gen_ai", CORRECTION_COST, provider="turn_correction")
