@@ -27,6 +27,8 @@ def _call_turn_correction(provider: TextCompletionProvider, req: CorrectionReque
             "content": (
                 "Analyze learner utterance for substantive errors. L1 is Polish. "
                 "Ignore punctuation/case-only differences. "
+                "An immediate spoken self-correction means the final intended wording is the learner's answer; "
+                "do not flag the abandoned word alone as an error. "
                 'Return JSON: {"is_corrected":bool,"corrected_text":"","explanation_pl":"",'
                 '"mistake_type":"Grammar"|"Word choice"|"Pronunciation"|null}'
             ),

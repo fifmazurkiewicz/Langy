@@ -57,3 +57,33 @@ def correction_decision(text: str, language: str) -> dict[str, Any] | None:
         except (httpx.HTTPError, KeyError, TypeError, ValueError):
             return None
     return None
+
+
+def turn_completion_decision(text: str, language: str) -> dict[str, Any] | None:
+    """Conservative decision for a paused Web Speech turn; failures stay neutral."""
+    key = get_settings().openrouter_api_key
+    if not key:
+        return None
+    payload = {
+        "model": MODEL,
+        "state": {"utterance": text, "target_language": language},
+        "questions": {
+            "likely_complete": {
+                "type": "noul",
+                "instructions": (
+                    "Is this likely a complete conversational turn? Return low probability for fillers, "
+                    "obvious mid-sentence pauses, or an unfinished self-repair. A short but complete answer is valid."
+                ),
+            }
+        },
+    }
+    try:
+        response = httpx.post(URL, headers={"Authorization": f"Bearer {key}"}, json=payload, timeout=1.5)
+        response.raise_for_status()
+        answer = response.json()["answers"]["likely_complete"]
+        probability = answer.get("noul")
+        if not isinstance(probability, (int, float)):
+            return None
+        return {"likely_complete": float(probability) >= 0.80, "confidence": float(probability)}
+    except (httpx.HTTPError, KeyError, TypeError, ValueError):
+        return None

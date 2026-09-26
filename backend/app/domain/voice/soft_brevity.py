@@ -7,6 +7,12 @@ SOFT_BREVITY_RULES = (
     "During an exercise, one phrase or item per turn is correct — do not abandon the exercise for open chat."
 )
 
+SELF_REPAIR_RULES = (
+    "The learner is not an expert. When they immediately self-correct while speaking (for example, "
+    "'she see—sees a whale'), treat the corrected wording as their answer and continue naturally. "
+    "Do not ask them to repeat solely because of the abandoned word."
+)
+
 EXERCISE_ALLOWED_RULES = (
     "When the learner asks for an exercise (repetition / listen-and-repeat, drills, role-play, "
     "pronunciation, sentence practice, vocabulary practice, or similar), you MUST start that exercise immediately. "

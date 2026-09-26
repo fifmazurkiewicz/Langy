@@ -1,5 +1,5 @@
 /** Pause after last speech fragment before committing a user turn (ms). */
-export const SPEECH_END_SILENCE_MS = 1500;
+export const SPEECH_END_SILENCE_MS = 2500;
 
 export function speechRecognitionSupported(): boolean {
   if (typeof window === "undefined") return false;
@@ -15,19 +15,24 @@ export function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 }
 
 type UtteranceHandler = (text: string) => void;
+type DeferHandler = (text: string) => Promise<boolean>;
 
 /** Hands-free VAD-style turn taking: debounce finals until the user pauses. */
 export function bindDebouncedContinuousRecognition(
   recognition: SpeechRecognition,
-  onUtterance: UtteranceHandler
+  onUtterance: UtteranceHandler,
+  silenceMs = SPEECH_END_SILENCE_MS,
+  shouldDefer?: DeferHandler
 ): () => void {
   let silenceTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingText = "";
+  let committed = false;
 
   recognition.interimResults = true;
   recognition.continuous = true;
 
   recognition.onresult = (event: SpeechRecognitionEvent) => {
+    if (committed) return;
     let chunk = "";
     for (let i = 0; i < event.results.length; i += 1) {
       chunk += event.results[i][0].transcript;
@@ -38,16 +43,38 @@ export function bindDebouncedContinuousRecognition(
     if (silenceTimer) clearTimeout(silenceTimer);
     silenceTimer = setTimeout(() => {
       const text = pendingText.trim();
-      pendingText = "";
       silenceTimer = null;
-      if (text) onUtterance(text);
-    }, SPEECH_END_SILENCE_MS);
+      if (!text) return;
+      if (!shouldDefer) {
+        committed = true;
+        pendingText = "";
+        onUtterance(text);
+        return;
+      }
+      // Keep recording during the advisory decision. New speech replaces this snapshot.
+      void shouldDefer(text).then((defer) => {
+        if (committed || pendingText !== text) return;
+        if (!defer) {
+          committed = true;
+          pendingText = "";
+          onUtterance(text);
+          return;
+        }
+        silenceTimer = setTimeout(() => {
+          if (committed || pendingText !== text) return;
+          committed = true;
+          pendingText = "";
+          onUtterance(text);
+        }, Math.max(500, Math.min(silenceMs, 10000)));
+      });
+    }, Math.max(500, Math.min(silenceMs, 10000)));
   };
 
   return () => {
     if (silenceTimer) clearTimeout(silenceTimer);
     silenceTimer = null;
     pendingText = "";
+    committed = true;
   };
 }
 

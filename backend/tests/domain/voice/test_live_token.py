@@ -56,6 +56,12 @@ def test_build_live_system_instruction_includes_soft_brevity():
     assert "expand" in text
 
 
+def test_build_live_system_instruction_accepts_self_repair():
+    text = build_live_system_instruction({"language": "en-GB", "profile": {}, "memory_facts": [], "study_plan": None}).lower()
+    assert "self-correct" in text
+    assert "repeat" in text
+
+
 def test_build_live_system_instruction_allows_exercises():
     agenda = {
         "language": "en-GB",

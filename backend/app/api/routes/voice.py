@@ -9,6 +9,7 @@ from app.db import get_db
 from app.domain.spend_cap.service import SpendCapExceeded
 from app.domain.voice.catalog import voice_catalog_payload
 from app.domain.voice.tts_service import synthesize_tts, voice_public_config
+from app.domain.correction.jev import turn_completion_decision
 from app.models import User
 
 router = APIRouter()
@@ -19,6 +20,11 @@ class SynthesizeRequest(BaseModel):
     language: str | None = None
     voice_key: str | None = None
     custom_voice_id: str | None = None
+
+
+class TurnDecisionRequest(BaseModel):
+    text: str
+    language: str | None = None
 
 
 @router.get("/config")
@@ -45,6 +51,18 @@ def get_voice_catalog(
     language: str = Query(...),
 ) -> dict:
     return voice_catalog_payload(language)
+
+
+@router.post("/turn-decision")
+def turn_decision(
+    body: TurnDecisionRequest,
+    user: Annotated[User, Depends(get_approved_user)],
+) -> dict:
+    language = body.language or user.active_language
+    if not language or not body.text.strip():
+        return {"likely_complete": None}
+    decision = turn_completion_decision(body.text.strip(), language)
+    return {"likely_complete": decision["likely_complete"] if decision else None}
 
 
 @router.post("/synthesize")

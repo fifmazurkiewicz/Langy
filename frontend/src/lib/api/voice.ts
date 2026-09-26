@@ -43,6 +43,14 @@ export function fetchVoiceConfig(token: string, language?: string) {
   return apiFetch<VoiceConfig>(`/api/voice/config${q}`, { token });
 }
 
+export function decideTurnCompletion(token: string, body: { text: string; language?: string }) {
+  return apiFetch<{ likely_complete: boolean | null }>("/api/voice/turn-decision", {
+    method: "POST",
+    token,
+    body,
+  });
+}
+
 export function fetchVoiceCatalog(token: string, language: string) {
   return apiFetch<VoiceCatalog>(`/api/voice/catalog?language=${encodeURIComponent(language)}`, { token });
 }

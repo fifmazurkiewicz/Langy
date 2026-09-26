@@ -23,7 +23,7 @@ import {
 } from "@/lib/api/correction";
 import { addSelectionPending, translateSelection, type TranslateSelectionResponse } from "@/lib/api/selection";
 import { fetchLiveConfig, fetchLiveToken } from "@/lib/api/live";
-import { fetchVoiceConfig, type VoiceConfig } from "@/lib/api/voice";
+import { decideTurnCompletion, fetchVoiceConfig, type VoiceConfig } from "@/lib/api/voice";
 import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { cancelSpeech, speakTutorLine } from "@/lib/voice/speakLine";
@@ -145,7 +145,8 @@ export default function ChatPage() {
   const lineIndexRef = useRef(0);
   const micSuspendedRef = useRef(false);
   const liveMicGateRef = useRef<ReturnType<typeof createLiveMicGate> | null>(null);
-  const recognitionActive = listening && !micSuspended;
+  // Do not leave a second recognizer open while a submitted turn is awaiting its tutor reply.
+  const recognitionActive = listening && !micSuspended && !sending;
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -754,17 +755,31 @@ export default function ChatPage() {
       const recognition = new SpeechRecognitionCtor();
       recognition.lang = speechLang;
       unbindSpeechRef.current?.();
-      unbindSpeechRef.current = bindDebouncedContinuousRecognition(recognition, (text) => {
-        void submitUserMessage(text).finally(() => {
-          if (!cancelled && listeningRef.current && recognitionRef.current === recognition) {
-            try {
-              recognition.stop();
-            } catch {
-              /* restart via onend */
-            }
+      unbindSpeechRef.current = bindDebouncedContinuousRecognition(
+        recognition,
+        (text) => {
+          // Stop before state updates: this prevents a late Web Speech result from becoming a duplicate turn.
+          unbindSpeechRef.current?.();
+          unbindSpeechRef.current = null;
+          if (recognitionRef.current === recognition) recognitionRef.current = null;
+          try {
+            recognition.stop();
+          } catch {
+            /* already stopped */
           }
-        });
-      });
+          void submitUserMessage(text);
+        },
+        voiceConfigRef.current.stt_end_silence_ms,
+        async (text) => {
+          if (!token || !sessionLanguage) return false;
+          try {
+            const decision = await decideTurnCompletion(token, { text, language: sessionLanguage });
+            return decision.likely_complete === false;
+          } catch {
+            return false;
+          }
+        }
+      );
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === "not-allowed") {
           setMicStatus("blocked");
@@ -798,7 +813,7 @@ export default function ChatPage() {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
-  }, [recognitionActive, micSuspended, conversationId, speechLang, submitUserMessage]);
+  }, [recognitionActive, micSuspended, conversationId, speechLang, submitUserMessage, token, sessionLanguage]);
 
   useEffect(() => {
     if (!conversationId || !token) return;
