@@ -3,7 +3,6 @@ import {
   bindDebouncedContinuousRecognition,
   runDebouncedRecognition,
   SPEECH_END_SILENCE_MS,
-  TURN_DECISION_MAX_WAIT_MS,
   TURN_DECISION_RETRY_MS,
 } from "./webSpeechTurn";
 
@@ -126,7 +125,7 @@ describe("bindDebouncedContinuousRecognition", () => {
     vi.useRealTimers();
   });
 
-  it("commits after 15 seconds even if JEV keeps deferring", async () => {
+  it("commits after one extra second when JEV keeps deferring", async () => {
     vi.useFakeTimers();
     const onUtterance = vi.fn();
     const shouldDefer = vi.fn().mockResolvedValue(true);
@@ -142,8 +141,32 @@ describe("bindDebouncedContinuousRecognition", () => {
       results: [{ 0: { transcript: "I am thinking" }, isFinal: true, length: 1, item: () => ({ transcript: "I am thinking" }) }],
     } as unknown as SpeechRecognitionEvent);
 
-    await vi.advanceTimersByTimeAsync(TURN_DECISION_MAX_WAIT_MS);
+    await vi.advanceTimersByTimeAsync(SPEECH_END_SILENCE_MS + TURN_DECISION_RETRY_MS);
     expect(onUtterance).toHaveBeenCalledWith("I am thinking");
+    expect(shouldDefer).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
+  it("commits a punctuated transcript without waiting for JEV", () => {
+    vi.useFakeTimers();
+    const onUtterance = vi.fn();
+    const shouldDefer = vi.fn();
+    const recognition = {
+      interimResults: false,
+      continuous: false,
+      onresult: null as SpeechRecognition["onresult"],
+    } as SpeechRecognition;
+
+    bindDebouncedContinuousRecognition(recognition, onUtterance, SPEECH_END_SILENCE_MS, shouldDefer);
+    recognition.onresult?.({
+      resultIndex: 0,
+      results: [{ 0: { transcript: "That is enough." }, isFinal: true, length: 1, item: () => ({ transcript: "That is enough." }) }],
+    } as unknown as SpeechRecognitionEvent);
+
+    vi.advanceTimersByTime(SPEECH_END_SILENCE_MS);
+    expect(onUtterance).toHaveBeenCalledWith("That is enough.");
+    expect(shouldDefer).not.toHaveBeenCalled();
 
     vi.useRealTimers();
   });

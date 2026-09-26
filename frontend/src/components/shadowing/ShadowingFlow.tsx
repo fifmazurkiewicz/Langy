@@ -32,7 +32,7 @@ type SourceMode = "generated" | "past";
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
   tts_provider: "elevenlabs",
   tts_configured: false,
-  stt_end_silence_ms: 2500,
+  stt_end_silence_ms: 1500,
 };
 
 export function ShadowingFlow({ token, language, onDone }: Props) {

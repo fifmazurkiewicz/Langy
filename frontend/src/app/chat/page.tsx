@@ -72,7 +72,7 @@ import {
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
   tts_provider: "elevenlabs",
   tts_configured: false,
-  stt_end_silence_ms: 2500,
+  stt_end_silence_ms: 1500,
   tts_playback_rate: 1,
 };
 
@@ -777,7 +777,10 @@ export default function ChatPage() {
         async (text) => {
           if (!token || !sessionLanguage) return false;
           try {
-            const decision = await decideTurnCompletion(token, { text, language: sessionLanguage });
+            const decision = await Promise.race([
+              decideTurnCompletion(token, { text, language: sessionLanguage }),
+              new Promise<{ likely_complete: null }>((resolve) => setTimeout(() => resolve({ likely_complete: null }), 750)),
+            ]);
             return decision.likely_complete === false;
           } catch {
             return false;

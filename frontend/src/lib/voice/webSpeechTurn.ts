@@ -1,7 +1,7 @@
 /** Pause after last speech fragment before committing a user turn (ms). */
-export const SPEECH_END_SILENCE_MS = 2500;
+export const SPEECH_END_SILENCE_MS = 1500;
 export const TURN_DECISION_RETRY_MS = 1000;
-export const TURN_DECISION_MAX_WAIT_MS = 15000;
+export const TURN_DECISION_MAX_ATTEMPTS = 2;
 
 export function speechRecognitionSupported(): boolean {
   if (typeof window === "undefined") return false;
@@ -50,7 +50,7 @@ export function bindDebouncedContinuousRecognition(
   let silenceTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingText = "";
   let committed = false;
-  let lastSpeechAt = 0;
+  let decisionAttempts = 0;
 
   recognition.interimResults = true;
   recognition.continuous = true;
@@ -59,7 +59,7 @@ export function bindDebouncedContinuousRecognition(
     if (committed) return;
     pendingText = transcriptFromResults(event.results);
     if (!pendingText) return;
-    lastSpeechAt = Date.now();
+    decisionAttempts = 0;
 
     if (silenceTimer) clearTimeout(silenceTimer);
     const evaluateTurn = () => {
@@ -72,10 +72,17 @@ export function bindDebouncedContinuousRecognition(
         onUtterance(text);
         return;
       }
+      if (/[.!?]$/.test(text)) {
+        committed = true;
+        pendingText = "";
+        onUtterance(text);
+        return;
+      }
       // Keep recording during the advisory decision. New speech replaces this snapshot.
+      decisionAttempts += 1;
       void shouldDefer(text).then((defer) => {
         if (committed || pendingText !== text) return;
-        if (!defer || Date.now() - lastSpeechAt >= TURN_DECISION_MAX_WAIT_MS) {
+        if (!defer || decisionAttempts >= TURN_DECISION_MAX_ATTEMPTS) {
           committed = true;
           pendingText = "";
           onUtterance(text);
@@ -84,7 +91,7 @@ export function bindDebouncedContinuousRecognition(
         silenceTimer = setTimeout(() => {
           if (committed || pendingText !== text) return;
           evaluateTurn();
-        }, Math.min(TURN_DECISION_RETRY_MS, TURN_DECISION_MAX_WAIT_MS - (Date.now() - lastSpeechAt)));
+        }, TURN_DECISION_RETRY_MS);
       });
     };
     silenceTimer = setTimeout(evaluateTurn, Math.max(500, Math.min(silenceMs, 10000)));

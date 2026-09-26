@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
 
     # Web Speech debounce for shadowing / hands-free (ms). Phone-bot SOTA uses provider STT endpointing.
-    stt_end_silence_ms: int = 2500
+    stt_end_silence_ms: int = 1500
 
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
