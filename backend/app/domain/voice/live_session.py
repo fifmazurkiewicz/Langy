@@ -25,7 +25,18 @@ def build_live_system_instruction(agenda: dict) -> str:
         "Opening: invite them to talk or practice; do not list their interests unless they are silent or unsure.",
         "When the user asks to save a word, acknowledge you will save it.",
     ]
-    if plan:
+    lesson = agenda.get("lesson")
+    if lesson:
+        parts.append(
+            "This session practises the learner's study-plan lesson "
+            f"(week {lesson.get('week')}, day {lesson.get('day')}, {lesson.get('lesson_type')}): "
+            f"\"{lesson.get('title')}\". Lesson material the learner has just read:\n"
+            f"{lesson.get('body') or lesson.get('topic') or ''}\n"
+            "Help them practise exactly this material: get them to produce their own sentences with it, "
+            "give short examples, gently correct mistakes related to the lesson, and check understanding one step at a time. "
+            "If they clearly want to talk about something else, follow them."
+        )
+    elif plan:
         parts.append(
             f"Optional study context: CEFR {plan.get('cefr_level')}, day {plan.get('progress_day')}, "
             f"topic hint: {plan.get('current_topic') or 'flexible'}."

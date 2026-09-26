@@ -15,6 +15,7 @@ import {
   type StudyPlan,
 } from "@/lib/api/plan";
 import { useDeferredEffect } from "@/lib/hooks/useDeferredEffect";
+import { lessonChatHref } from "@/lib/plan/lessonChat";
 import { groupLessonsByWeek, recentlyCompleted } from "@/lib/plan/progress";
 import { notify } from "@/lib/uiFeedback";
 
@@ -240,12 +241,18 @@ export default function PlanPage() {
             </p>
             <h2 className="font-serif text-lg">{lesson.title}</h2>
             <p className="whitespace-pre-line text-sm">{lesson.content?.body || "Lesson content"}</p>
+            <Link
+              href={lessonChatHref({ id: lesson.id, title: lesson.title })}
+              className="classical-btn classical-btn-primary flex w-full items-center justify-center text-center"
+            >
+              Talk with Langy about this lesson
+            </Link>
             {lesson.is_completed ? (
               <p className="text-sm text-[var(--color-success)]">✓ Completed {formatDate(lesson.completed_at)}</p>
             ) : (
               <button
                 type="button"
-                className="classical-btn classical-btn-primary w-full"
+                className="classical-btn w-full"
                 disabled={busy}
                 onClick={() => void finishLesson()}
               >

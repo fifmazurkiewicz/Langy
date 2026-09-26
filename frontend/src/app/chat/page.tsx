@@ -13,8 +13,11 @@ import {
   listChatConversations,
   resumeChatSession,
   startChatSession,
+  type ChatLessonRef,
   type ConversationListItem,
 } from "@/lib/api/chat";
+import { readLessonHandoff } from "@/lib/plan/lessonChat";
+import { useDeferredEffect } from "@/lib/hooks/useDeferredEffect";
 import { useApiPulse } from "@/components/ApiPulseProvider";
 import {
   addCorrectionPending,
@@ -96,6 +99,9 @@ export default function ChatPage() {
   const { isHealthy: apiReady, isWaking } = useApiPulse();
   const [startingSession, setStartingSession] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  /** Lesson picked on the Plan page ("Talk with Langy"); used by the next Start. */
+  const [pendingLesson, setPendingLesson] = useState<ChatLessonRef | null>(null);
+  const [activeLesson, setActiveLesson] = useState<ChatLessonRef | null>(null);
   const [chatState, setChatState] = useState<ChatVisualState>("idle");
   const [listening, setListening] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -489,12 +495,27 @@ export default function ChatPage() {
     [connectLive, disconnectGeminiLive]
   );
 
+  useDeferredEffect(() => {
+    const lesson = readLessonHandoff(window.location.search);
+    if (lesson) setPendingLesson(lesson);
+  }, []);
+
+  const clearPendingLesson = useCallback(() => {
+    setPendingLesson(null);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
   const startSession = useCallback(async () => {
     if (!token || !sessionLanguage) return;
     setStartingSession(true);
     setStartError(null);
     try {
-      const session = await startChatSession(token, { language: sessionLanguage });
+      const session = await startChatSession(token, {
+        language: sessionLanguage,
+        lesson_id: pendingLesson?.id,
+      });
+      setActiveLesson(session.lesson);
+      if (pendingLesson) clearPendingLesson();
       await loadSession(session.conversation_id, [{ role: "Agent", text: session.opening_line }]);
       if (tutorVoiceRef.current && !liveConnected && token) {
         setChatState("speaking");
@@ -510,7 +531,7 @@ export default function ChatPage() {
     } finally {
       setStartingSession(false);
     }
-  }, [token, sessionLanguage, loadSession, liveConnected, speakWithMicGate]);
+  }, [token, sessionLanguage, loadSession, liveConnected, speakWithMicGate, pendingLesson, clearPendingLesson]);
 
   const performEndSession = useCallback(async () => {
     if (!conversationId || !token) return;
@@ -529,6 +550,7 @@ export default function ChatPage() {
     setCorrections({});
     setChatState("idle");
     setConversationId(null);
+    setActiveLesson(null);
     setLines([]);
     await endChatSession(token, endedId);
     const count = await apiFetch<{ count: number }>("/api/vocab/pending/count", { token });
@@ -550,6 +572,7 @@ export default function ChatPage() {
       setPendingResumeId(null);
       try {
         const resumed = await resumeChatSession(token, resumeId);
+        setActiveLesson(resumed.lesson);
         await loadSession(resumed.conversation_id, resumed.lines);
       } catch (e) {
         setStartError(e instanceof Error ? e.message : "Could not resume session");
@@ -603,6 +626,7 @@ export default function ChatPage() {
     }
     try {
       const resumed = await resumeChatSession(token, detailItem.id);
+      setActiveLesson(resumed.lesson);
       await loadSession(resumed.conversation_id, resumed.lines);
     } catch (e) {
       setStartError(e instanceof Error ? e.message : "Could not resume session");
@@ -878,6 +902,11 @@ export default function ChatPage() {
       </header>
 
       <main className="flex min-h-0 flex-col overflow-hidden px-4">
+        {activeLesson && conversationId ? (
+          <p className="shrink-0 truncate pt-2 text-center text-xs text-[var(--color-soft)]">
+            Practising lesson · {activeLesson.title}
+          </p>
+        ) : null}
         <MicStatusBanner
           status={activeMicStatus}
           hasSession={Boolean(conversationId)}
@@ -953,6 +982,16 @@ export default function ChatPage() {
                 <p className="text-center text-sm text-red-400">
                   Could not load your languages. Check your connection and reload.
                 </p>
+              ) : null}
+              {pendingLesson ? (
+                <div className="classical-card max-w-sm space-y-2 p-3 text-center text-sm">
+                  <p className="text-xs text-[var(--color-soft)]">Lesson practice</p>
+                  <p className="font-serif">{pendingLesson.title}</p>
+                  <p className="text-[var(--color-soft)]">Press Start — Langy will practise this lesson with you.</p>
+                  <button type="button" className="text-xs underline" onClick={clearPendingLesson}>
+                    Chat without the lesson
+                  </button>
+                </div>
               ) : null}
               {startError ? <p className="text-center text-sm text-red-400">{startError}</p> : null}
             </>

@@ -114,6 +114,33 @@ def get_active_plan(db: Session, user_id: uuid.UUID, language: str) -> StudyPlan
     )
 
 
+LESSON_CONTEXT_BODY_CHARS = 2000
+
+
+def get_owned_lesson(db: Session, user_id: uuid.UUID, lesson_id: uuid.UUID) -> tuple[Lesson, StudyPlan] | None:
+    lesson = db.get(Lesson, lesson_id)
+    if lesson is None:
+        return None
+    plan = db.get(StudyPlan, lesson.study_plan_id)
+    if plan is None or plan.user_id != user_id:
+        return None
+    return lesson, plan
+
+
+def lesson_chat_context(lesson: Lesson) -> dict[str, Any]:
+    """What the tutor needs to practise a plan lesson in Chat."""
+    content = lesson.content or {}
+    return {
+        "id": str(lesson.id),
+        "title": lesson.title,
+        "lesson_type": lesson.lesson_type,
+        "topic": content.get("topic"),
+        "week": lesson.week_index,
+        "day": lesson.day_index,
+        "body": (content.get("body") or "")[:LESSON_CONTEXT_BODY_CHARS],
+    }
+
+
 def list_plan_lessons(db: Session, plan: StudyPlan) -> list[Lesson]:
     return db.query(Lesson).filter(Lesson.study_plan_id == plan.id).order_by(Lesson.day_index).all()
 
