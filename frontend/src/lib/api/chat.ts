@@ -12,12 +12,15 @@ export type ConversationListItem = {
   is_active: boolean;
 };
 
-export function startChatSession(token: string, body: { language: string }) {
+export type ChatLessonRef = { id: string; title: string };
+
+export function startChatSession(token: string, body: { language: string; lesson_id?: string }) {
   return apiFetch<{
     conversation_id: string;
     language: string;
     opening_line: string;
     voice_mode: string;
+    lesson: ChatLessonRef | null;
   }>("/api/chat/sessions", { method: "POST", token, body });
 }
 
@@ -72,6 +75,7 @@ export function resumeChatSession(token: string, conversationId: string) {
     language: string;
     lines: TranscriptLineDto[];
     opening_line: string;
+    lesson: ChatLessonRef | null;
     resumed: boolean;
     voice_mode: string;
   }>(`/api/chat/sessions/${conversationId}/resume`, { method: "POST", token });

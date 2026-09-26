@@ -22,7 +22,7 @@ def text_user_turn(
 ) -> str:
     """Generate a tutor reply from transcript context + agenda."""
     language = conversation.language
-    agenda = build_agenda(db, user, language)
+    agenda = build_agenda(db, user, language, lesson_id=conversation.lesson_id)
     system = (
         build_live_system_instruction(agenda)
         + '\nReply in the learner\'s target language. Return JSON: {"reply": "your message"}'

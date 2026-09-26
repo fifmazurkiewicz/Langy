@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.fsrs.service import create_fsrs_card
 from app.domain.providers.text import TextCompletionProvider, get_text_provider
-from app.domain.plan.service import get_active_plan
+from app.domain.plan.service import get_active_plan, get_owned_lesson, lesson_chat_context
 from app.models import Conversation, Job, User, UserLanguageProfile, UserMemoryFact, ConversationSummary, VocabItem
 
 
@@ -23,7 +23,13 @@ RESUME_LINES = [
 ]
 
 
-def build_agenda(db: Session, user: User, language: str) -> dict[str, Any]:
+def lesson_opening_line(lesson: dict[str, Any]) -> str:
+    return f"Let's practise your lesson \u201c{lesson['title']}\u201d. Whenever you're ready, try a sentence of your own on it."
+
+
+def build_agenda(
+    db: Session, user: User, language: str, lesson_id: uuid.UUID | None = None
+) -> dict[str, Any]:
     profile = (
         db.query(UserLanguageProfile)
         .filter(UserLanguageProfile.user_id == user.id, UserLanguageProfile.language == language)
@@ -58,6 +64,11 @@ def build_agenda(db: Session, user: User, language: str) -> dict[str, Any]:
             "progress_day": plan.progress_day,
             "current_topic": slot.get("topic") if slot else None,
         }
+    lesson_context = None
+    if lesson_id is not None:
+        owned = get_owned_lesson(db, user.id, lesson_id)
+        if owned is not None:
+            lesson_context = lesson_chat_context(owned[0])
     return {
         "language": language,
         "profile": {
@@ -73,6 +84,7 @@ def build_agenda(db: Session, user: User, language: str) -> dict[str, Any]:
             "cefr_level": profile.cefr_level if profile else None,
         },
         "study_plan": plan_context,
+        "lesson": lesson_context,
         "memory_facts": [f.content for f in facts],
         "recent_summaries": [s.summary for s in summaries],
         "opening_line_pool": OPENING_LINES,

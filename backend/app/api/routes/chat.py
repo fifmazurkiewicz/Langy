@@ -17,11 +17,13 @@ from app.domain.agenda.service import (
     append_transcript_line,
     build_agenda,
     enqueue_post_session_jobs,
+    lesson_opening_line,
     process_post_session_job,
 )
 from app.domain.chat.service import ConversationDeleteError, delete_conversation
 from app.domain.chat.text_turn import text_user_turn
 from app.domain.chat.transcript import parse_transcript, preview_transcript
+from app.domain.plan.service import get_owned_lesson
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
 from app.domain.providers.text import get_text_provider
 from app.domain.voice.chained_pipeline import chained_user_turn
@@ -35,6 +37,7 @@ settings = get_settings()
 
 class StartSessionRequest(BaseModel):
     language: str | None = None
+    lesson_id: uuid.UUID | None = None
 
 
 class TranscriptLineRequest(BaseModel):
@@ -71,16 +74,24 @@ def start_session(
         raise HTTPException(status_code=402, detail=str(exc)) from exc
 
     language = body.language or user.active_language
+    if body.lesson_id is not None:
+        owned = get_owned_lesson(db, user.id, body.lesson_id)
+        if owned is None:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+        language = owned[1].language
     if not language:
         raise HTTPException(status_code=400, detail="No active language")
 
-    conversation = Conversation(user_id=user.id, language=language, transcript="")
+    conversation = Conversation(
+        user_id=user.id, language=language, transcript="", lesson_id=body.lesson_id
+    )
     db.add(conversation)
     db.commit()
     db.refresh(conversation)
 
-    agenda = build_agenda(db, user, language)
-    opening = random.choice(OPENING_LINES)
+    agenda = build_agenda(db, user, language, lesson_id=conversation.lesson_id)
+    lesson = agenda.get("lesson")
+    opening = lesson_opening_line(lesson) if lesson else random.choice(OPENING_LINES)
     append_transcript_line(conversation, "Agent", opening)
     db.commit()
 
@@ -89,8 +100,13 @@ def start_session(
         "language": language,
         "opening_line": opening,
         "agenda": agenda,
+        "lesson": _lesson_summary(lesson),
         "voice_mode": settings.voice_mode,
     }
+
+
+def _lesson_summary(lesson: dict | None) -> dict | None:
+    return {"id": lesson["id"], "title": lesson["title"]} if lesson else None
 
 
 @router.get("/conversations")
@@ -187,11 +203,13 @@ def resume_session(
     db.commit()
 
     lines = parse_transcript(conversation.transcript)
+    lesson = build_agenda(db, user, conversation.language, lesson_id=conversation.lesson_id).get("lesson")
     return {
         "conversation_id": str(conversation.id),
         "language": conversation.language,
         "lines": lines,
         "opening_line": welcome,
+        "lesson": _lesson_summary(lesson),
         "resumed": True,
         "voice_mode": settings.voice_mode,
     }
@@ -326,7 +344,15 @@ def create_live_token(
     if not language:
         raise HTTPException(status_code=400, detail="No active language")
 
-    agenda = build_agenda(db, user, language)
+    lesson_id = None
+    if body.conversation_id:
+        try:
+            conversation = db.get(Conversation, uuid.UUID(body.conversation_id))
+        except ValueError:
+            conversation = None
+        if conversation is not None and conversation.user_id == user.id:
+            lesson_id = conversation.lesson_id
+    agenda = build_agenda(db, user, language, lesson_id=lesson_id)
     system_instruction = build_live_system_instruction(agenda)
 
     if not settings.google_api_key:
