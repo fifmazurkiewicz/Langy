@@ -143,6 +143,7 @@ def list_due(
         "cards": [
             {
                 "id": str(c.id),
+                "vocab_id": str(c.vocab_item.id),
                 "term": c.vocab_item.term,
                 "translation": c.vocab_item.translation,
                 "due_at": c.due_at.isoformat(),

@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { createCategory, exportQuizlet, generateCategory, listDueCards, listVocabCategories, reviewCard } from "@/lib/api/vocab";
+import { createCategory, exportQuizlet, generateCategory, listAcceptedVocab, listDueCards, listVocabCategories, reviewCard } from "@/lib/api/vocab";
 import { formatCategoryLabel, makeCreatedCategory, splitCategoriesByInterests, UNCATEGORIZED_DUE_CATEGORY_KEY, type MemoCategory } from "@/lib/memo/categories";
+import { buildMultipleChoiceOptions, type QuizOption } from "@/lib/memo/multipleChoice";
 import { PendingSourceBadge } from "@/components/memo/PendingSourceBadge";
 import { VocabularyList } from "@/components/memo/VocabularyList";
 import { MnemonicPanel } from "@/components/mnemonics/MnemonicPanel";
@@ -28,6 +29,7 @@ type CategoryItem = MemoCategory;
 
 type Tab = "flashcards" | "vocabulary" | "shadowing";
 type SubTab = "due" | "pending" | "generate";
+type DueCard = { id: string; vocab_id: string; term: string; translation: string };
 
 export default function MemoPage() {
   const { token, refreshProfile } = useAuth();
@@ -36,13 +38,18 @@ export default function MemoPage() {
   const [tab, setTab] = useState<Tab>("flashcards");
   const [subTab, setSubTab] = useState<SubTab>("pending");
   const [pending, setPending] = useState<VocabItem[]>([]);
-  const [due, setDue] = useState<{ id: string; term: string; translation: string }[]>([]);
+  const [due, setDue] = useState<DueCard[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [otherDueCount, setOtherDueCount] = useState(0);
   const [dueCategoryKey, setDueCategoryKey] = useState<string | null>(null);
   const [mnemonicTerm, setMnemonicTerm] = useState<string | null>(null);
-  const [reviewing, setReviewing] = useState<{ id: string; term: string; translation: string } | null>(null);
+  const [reviewing, setReviewing] = useState<DueCard | null>(null);
+  const [reviewMode, setReviewMode] = useState<"reveal" | "multiple-choice" | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [quizOptions, setQuizOptions] = useState<QuizOption[]>([]);
+  const [selectedQuizOptionId, setSelectedQuizOptionId] = useState<string | null>(null);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -200,13 +207,53 @@ export default function MemoPage() {
     try {
       await reviewCard(token, reviewing.id, rating);
       setReviewing(null);
+      setReviewMode(null);
       setRevealed(false);
+      setQuizOptions([]);
+      setSelectedQuizOptionId(null);
+      setQuizError(null);
       await reload();
     } catch (e) {
       notify(e instanceof Error ? e.message : "Could not save review", "error");
     } finally {
       setReviewSubmitting(false);
     }
+  }
+
+  async function startMultipleChoice(card: DueCard) {
+    if (!token) return;
+    setReviewing(card);
+    setReviewMode("multiple-choice");
+    setRevealed(false);
+    setQuizOptions([]);
+    setSelectedQuizOptionId(null);
+    setQuizError(null);
+    setQuizLoading(true);
+    try {
+      const vocabulary = await listAcceptedVocab(token, activeLanguage ?? undefined);
+      const options = buildMultipleChoiceOptions(
+        { id: card.vocab_id, translation: card.translation },
+        vocabulary.items.map((item) => ({ id: item.id, translation: item.translation })),
+      );
+      if (options.length === 0) {
+        setQuizError("Accept at least four words with different Polish meanings to use multiple choice.");
+      } else {
+        setQuizOptions(options);
+      }
+    } catch (e) {
+      setQuizError(e instanceof Error ? e.message : "Could not load answer choices");
+    } finally {
+      setQuizLoading(false);
+    }
+  }
+
+  function cancelReview() {
+    setReviewing(null);
+    setReviewMode(null);
+    setRevealed(false);
+    setQuizOptions([]);
+    setSelectedQuizOptionId(null);
+    setQuizError(null);
   }
 
   return (
@@ -253,8 +300,7 @@ export default function MemoPage() {
                 onClick={() => {
                   setSubTab("due");
                   setDueCategoryKey(null);
-                  setReviewing(null);
-                  setRevealed(false);
+                  cancelReview();
                 }}
               >
                 Due today
@@ -434,7 +480,52 @@ export default function MemoPage() {
             ) : reviewing ? (
               <section className="classical-card space-y-4 p-6 text-center">
                 <p className="font-serif text-2xl">{reviewing.term}</p>
-                {revealed ? (
+                {reviewMode === "multiple-choice" ? (
+                  quizLoading ? (
+                    <p className="opacity-70" role="status">Loading choices…</p>
+                  ) : quizError ? (
+                    <p className="text-danger" role="alert">{quizError}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm opacity-70">Choose the Polish meaning.</p>
+                      <div className="grid gap-2 text-left sm:grid-cols-2">
+                        {quizOptions.map((option) => {
+                          const selected = selectedQuizOptionId === option.id;
+                          const correct = option.id === reviewing.vocab_id;
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              className={`classical-btn w-full ${selected && correct ? "classical-btn-primary" : ""}`}
+                              disabled={selectedQuizOptionId !== null || reviewSubmitting}
+                              aria-pressed={selected}
+                              onClick={() => setSelectedQuizOptionId(option.id)}
+                            >
+                              {option.translation}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedQuizOptionId ? (
+                        <div className="space-y-3" aria-live="polite">
+                          <p className={selectedQuizOptionId === reviewing.vocab_id ? "text-success" : "text-danger"}>
+                            {selectedQuizOptionId === reviewing.vocab_id
+                              ? "Correct. This review will be marked Good."
+                              : `Not quite. The answer is ${reviewing.translation}. This review will be marked Again.`}
+                          </p>
+                          <button
+                            type="button"
+                            className="classical-btn classical-btn-primary w-full"
+                            disabled={reviewSubmitting}
+                            onClick={() => void submitReview(selectedQuizOptionId === reviewing.vocab_id ? "good" : "again")}
+                          >
+                            {reviewSubmitting ? "Saving…" : "Next"}
+                          </button>
+                        </div>
+                      ) : null}
+                    </>
+                  )
+                ) : revealed ? (
                   <p className="text-lg opacity-80">{reviewing.translation}</p>
                 ) : (
                   <button type="button" className="classical-btn" onClick={() => setRevealed(true)}>
@@ -460,10 +551,7 @@ export default function MemoPage() {
                   type="button"
                   className="classical-btn w-full"
                   disabled={reviewSubmitting}
-                  onClick={() => {
-                    setReviewing(null);
-                    setRevealed(false);
-                  }}
+                  onClick={cancelReview}
                 >
                   Cancel
                 </button>
@@ -475,8 +563,7 @@ export default function MemoPage() {
                   className="classical-btn text-sm"
                   onClick={() => {
                     setDueCategoryKey(null);
-                    setReviewing(null);
-                    setRevealed(false);
+                    cancelReview();
                   }}
                 >
                   ← Back
@@ -503,8 +590,11 @@ export default function MemoPage() {
                       <p className="font-serif text-lg">{card.term}</p>
                       <p className="text-sm opacity-80">{card.translation}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button type="button" className="classical-btn classical-btn-primary" onClick={() => { setReviewing(card); setRevealed(false); }}>
+                        <button type="button" className="classical-btn classical-btn-primary" onClick={() => { setReviewing(card); setReviewMode("reveal"); setRevealed(false); }}>
                           Review
+                        </button>
+                        <button type="button" className="classical-btn" onClick={() => void startMultipleChoice(card)}>
+                          Multiple choice
                         </button>
                         {token && activeLanguage ? (
                           <button type="button" className="classical-btn" onClick={() => setMnemonicTerm(card.term)}>

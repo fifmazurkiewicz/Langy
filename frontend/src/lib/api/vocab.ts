@@ -36,7 +36,7 @@ export function listDueCards(token: string, language?: string, categoryKey?: str
   if (categoryKey) params.set("category_key", categoryKey);
   const q = params.toString() ? `?${params}` : "";
   return apiFetch<{
-    cards: { id: string; term: string; translation: string; category_key?: string | null }[];
+    cards: { id: string; vocab_id: string; term: string; translation: string; category_key?: string | null }[];
   }>(`/api/vocab/due${q}`, { token });
 }
 
