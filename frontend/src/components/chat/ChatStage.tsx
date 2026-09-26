@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import type { ChatVisualState } from "@/components/chat/AgentPresence";
 import { AgentPresence } from "@/components/chat/AgentPresence";
 import { ChatStatus } from "@/components/chat/ChatStatus";
@@ -9,6 +9,7 @@ type Props = {
   visualState: ChatVisualState;
   hasSession: boolean;
   transcript: ReactNode;
+  transcriptScrollRef?: RefObject<HTMLDivElement | null>;
   /** Left of status row: Live Gemini / TTS lamp. */
   leftControls?: ReactNode;
   /** Right of status row: Tutor voice + Listening dots. */
@@ -27,6 +28,7 @@ export function ChatStage({
   visualState,
   hasSession,
   transcript,
+  transcriptScrollRef,
   leftControls,
   rightControls,
   preSessionAction,
@@ -68,7 +70,9 @@ export function ChatStage({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {statusRow}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-3">{transcript}</div>
+      <div ref={transcriptScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-3">
+        {transcript}
+      </div>
     </div>
   );
 }

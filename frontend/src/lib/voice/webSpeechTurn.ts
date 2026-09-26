@@ -1,5 +1,7 @@
 /** Pause after last speech fragment before committing a user turn (ms). */
 export const SPEECH_END_SILENCE_MS = 2500;
+export const TURN_DECISION_RETRY_MS = 1000;
+export const TURN_DECISION_MAX_WAIT_MS = 15000;
 
 export function speechRecognitionSupported(): boolean {
   if (typeof window === "undefined") return false;
@@ -48,6 +50,7 @@ export function bindDebouncedContinuousRecognition(
   let silenceTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingText = "";
   let committed = false;
+  let lastSpeechAt = 0;
 
   recognition.interimResults = true;
   recognition.continuous = true;
@@ -56,9 +59,10 @@ export function bindDebouncedContinuousRecognition(
     if (committed) return;
     pendingText = transcriptFromResults(event.results);
     if (!pendingText) return;
+    lastSpeechAt = Date.now();
 
     if (silenceTimer) clearTimeout(silenceTimer);
-    silenceTimer = setTimeout(() => {
+    const evaluateTurn = () => {
       const text = pendingText.trim();
       silenceTimer = null;
       if (!text) return;
@@ -71,7 +75,7 @@ export function bindDebouncedContinuousRecognition(
       // Keep recording during the advisory decision. New speech replaces this snapshot.
       void shouldDefer(text).then((defer) => {
         if (committed || pendingText !== text) return;
-        if (!defer) {
+        if (!defer || Date.now() - lastSpeechAt >= TURN_DECISION_MAX_WAIT_MS) {
           committed = true;
           pendingText = "";
           onUtterance(text);
@@ -79,12 +83,11 @@ export function bindDebouncedContinuousRecognition(
         }
         silenceTimer = setTimeout(() => {
           if (committed || pendingText !== text) return;
-          committed = true;
-          pendingText = "";
-          onUtterance(text);
-        }, Math.max(500, Math.min(silenceMs, 10000)));
+          evaluateTurn();
+        }, Math.min(TURN_DECISION_RETRY_MS, TURN_DECISION_MAX_WAIT_MS - (Date.now() - lastSpeechAt)));
       });
-    }, Math.max(500, Math.min(silenceMs, 10000)));
+    };
+    silenceTimer = setTimeout(evaluateTurn, Math.max(500, Math.min(silenceMs, 10000)));
   };
 
   return () => {

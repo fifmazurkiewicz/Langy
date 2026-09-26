@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import type { CorrectionResponse } from "@/lib/api/correction";
 import { TranscriptLine } from "@/components/chat/TranscriptLine";
 
@@ -8,26 +8,46 @@ export type TranscriptLineData = { role: "User" | "Agent"; text: string };
 
 type Props = {
   lines: TranscriptLineData[];
+  sessionId: string;
   enabled: boolean;
   corrections: Record<number, CorrectionResponse>;
   onSelect: (text: string, lineIndex: number, role: "User" | "Agent") => void;
   onAddFromCorrection: (lineIndex: number) => void;
   onRespeak?: (text: string) => void;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
 };
 
 export function TranscriptPane({
   lines,
+  sessionId,
   enabled,
   corrections,
   onSelect,
   onAddFromCorrection,
   onRespeak,
+  scrollContainerRef,
 }: Props) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const followLatestRef = useRef(true);
+
+  useLayoutEffect(() => {
+    followLatestRef.current = true;
+  }, [sessionId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [lines.length, corrections]);
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const updateFollowLatest = () => {
+      followLatestRef.current = container.scrollHeight - container.scrollTop - container.clientHeight < 48;
+    };
+    container.addEventListener("scroll", updateFollowLatest, { passive: true });
+    return () => container.removeEventListener("scroll", updateFollowLatest);
+  }, [scrollContainerRef]);
+
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !followLatestRef.current) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  }, [lines.length, corrections, scrollContainerRef]);
 
   return (
     <div className="select-text py-1">
@@ -50,7 +70,6 @@ export function TranscriptPane({
           ))}
         </div>
       )}
-      <div ref={bottomRef} />
     </div>
   );
 }

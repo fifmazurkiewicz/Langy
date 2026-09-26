@@ -25,6 +25,7 @@ import { addSelectionPending, translateSelection, type TranslateSelectionRespons
 import { fetchLiveConfig, fetchLiveToken } from "@/lib/api/live";
 import { decideTurnCompletion, fetchVoiceConfig, type VoiceConfig } from "@/lib/api/voice";
 import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
+import { useScreenWakeLock } from "@/lib/hooks/useScreenWakeLock";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { cancelSpeech, speakTutorLine } from "@/lib/voice/speakLine";
 import {
@@ -134,6 +135,7 @@ export default function ChatPage() {
   const [microphoneNoticeOpen, setMicrophoneNoticeOpen] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const oneShotRef = useRef<SpeechRecognition | null>(null);
   const unbindSpeechRef = useRef<(() => void) | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
@@ -147,6 +149,8 @@ export default function ChatPage() {
   const liveMicGateRef = useRef<ReturnType<typeof createLiveMicGate> | null>(null);
   // Do not leave a second recognizer open while a submitted turn is awaiting its tutor reply.
   const recognitionActive = listening && !micSuspended && !sending;
+
+  useScreenWakeLock(Boolean(conversationId));
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -867,6 +871,7 @@ export default function ChatPage() {
         <ChatStage
           visualState={visualState}
           hasSession={Boolean(conversationId)}
+          transcriptScrollRef={transcriptScrollRef}
           presenceInteractive={
             Boolean(conversationId) && !listening && speechRecognitionSupported() && !speakOnceActive
           }
@@ -939,6 +944,7 @@ export default function ChatPage() {
           transcript={
             <TranscriptPane
               lines={lines}
+              sessionId={conversationId ?? ""}
               enabled={Boolean(conversationId)}
               corrections={corrections}
               onSelect={(text, lineIndex, role) => {
@@ -950,6 +956,7 @@ export default function ChatPage() {
               onRespeak={(text) => {
                 void speakWithMicGate(text).catch(() => undefined);
               }}
+              scrollContainerRef={transcriptScrollRef}
             />
           }
         />

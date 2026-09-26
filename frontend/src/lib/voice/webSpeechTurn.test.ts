@@ -3,6 +3,8 @@ import {
   bindDebouncedContinuousRecognition,
   runDebouncedRecognition,
   SPEECH_END_SILENCE_MS,
+  TURN_DECISION_MAX_WAIT_MS,
+  TURN_DECISION_RETRY_MS,
 } from "./webSpeechTurn";
 
 describe("bindDebouncedContinuousRecognition", () => {
@@ -94,6 +96,54 @@ describe("bindDebouncedContinuousRecognition", () => {
 
     vi.advanceTimersByTime(SPEECH_END_SILENCE_MS);
     expect(onUtterance).toHaveBeenCalledWith("I would like to practise");
+
+    vi.useRealTimers();
+  });
+
+  it("rechecks JEV every second after the first pause until the turn is complete", async () => {
+    vi.useFakeTimers();
+    const onUtterance = vi.fn();
+    const shouldDefer = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const recognition = {
+      interimResults: false,
+      continuous: false,
+      onresult: null as SpeechRecognition["onresult"],
+    } as SpeechRecognition;
+
+    bindDebouncedContinuousRecognition(recognition, onUtterance, SPEECH_END_SILENCE_MS, shouldDefer);
+    recognition.onresult?.({
+      resultIndex: 0,
+      results: [{ 0: { transcript: "I would like" }, isFinal: true, length: 1, item: () => ({ transcript: "I would like" }) }],
+    } as unknown as SpeechRecognitionEvent);
+
+    await vi.advanceTimersByTimeAsync(SPEECH_END_SILENCE_MS);
+    expect(shouldDefer).toHaveBeenCalledTimes(1);
+    expect(onUtterance).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(TURN_DECISION_RETRY_MS);
+    expect(shouldDefer).toHaveBeenCalledTimes(2);
+    expect(onUtterance).toHaveBeenCalledWith("I would like");
+
+    vi.useRealTimers();
+  });
+
+  it("commits after 15 seconds even if JEV keeps deferring", async () => {
+    vi.useFakeTimers();
+    const onUtterance = vi.fn();
+    const shouldDefer = vi.fn().mockResolvedValue(true);
+    const recognition = {
+      interimResults: false,
+      continuous: false,
+      onresult: null as SpeechRecognition["onresult"],
+    } as SpeechRecognition;
+
+    bindDebouncedContinuousRecognition(recognition, onUtterance, SPEECH_END_SILENCE_MS, shouldDefer);
+    recognition.onresult?.({
+      resultIndex: 0,
+      results: [{ 0: { transcript: "I am thinking" }, isFinal: true, length: 1, item: () => ({ transcript: "I am thinking" }) }],
+    } as unknown as SpeechRecognitionEvent);
+
+    await vi.advanceTimersByTimeAsync(TURN_DECISION_MAX_WAIT_MS);
+    expect(onUtterance).toHaveBeenCalledWith("I am thinking");
 
     vi.useRealTimers();
   });
