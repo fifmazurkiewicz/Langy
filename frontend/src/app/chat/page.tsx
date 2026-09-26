@@ -141,6 +141,7 @@ export default function ChatPage() {
   const unbindSpeechRef = useRef<(() => void) | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
   const listeningRef = useRef(listening);
+  const micStatusRef = useRef<MicStatus>(micStatus);
   const tutorVoiceRef = useRef(tutorVoice);
   const liveGeminiRef = useRef(liveGemini);
   const voiceModeRef = useRef("speech_to_speech");
@@ -194,6 +195,10 @@ export default function ChatPage() {
   useEffect(() => {
     micSuspendedRef.current = micSuspended;
   }, [micSuspended]);
+
+  useEffect(() => {
+    micStatusRef.current = micStatus;
+  }, [micStatus]);
 
   useEffect(() => {
     tutorVoiceRef.current = tutorVoice;
@@ -743,21 +748,24 @@ export default function ChatPage() {
     const SpeechRecognitionCtor = getSpeechRecognitionCtor();
 
     async function startListening() {
-      const status = await probeMicrophone();
+      const status = micStatusRef.current === "ready" ? "ready" : await probeMicrophone();
       if (cancelled) return;
       if (status !== "ready") {
+        micStatusRef.current = status;
         setMicStatus(status);
         setListening(false);
         setChatState("idle");
         return;
       }
       if (!SpeechRecognitionCtor) {
+        micStatusRef.current = "unsupported";
         setMicStatus("unsupported");
         setListening(false);
         setChatState("idle");
         return;
       }
 
+      micStatusRef.current = "ready";
       setMicStatus("ready");
       const recognition = new SpeechRecognitionCtor();
       recognition.lang = speechLang;
@@ -792,6 +800,7 @@ export default function ChatPage() {
       );
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === "not-allowed") {
+          micStatusRef.current = "blocked";
           setMicStatus("blocked");
           setListening(false);
         }
