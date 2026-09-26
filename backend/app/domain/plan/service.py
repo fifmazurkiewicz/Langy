@@ -5,13 +5,46 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.domain.plan.generator import generate_plan_grid
-from app.domain.providers.text import TextCompletionProvider, get_text_provider
+from app.domain.providers.text import get_text_provider
+from app.domain.skills import skill_level_to_cefr
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
 from app.models import Lesson, StudyPlan, User, UserLanguageProfile, VocabItem
 
 LESSON_GENERATE_COST = 0.05
 VALID_CEFR = {"A1", "A2", "B1", "B2", "C1", "C2"}
 VALID_DURATIONS = {4, 8, 12, 16}
+DEFAULT_DURATION_WEEKS = 8
+
+
+def resolve_plan_level(profile: UserLanguageProfile | None) -> str | None:
+    """Level used for a one-tap plan: placement CEFR if set, else the median self-assessed skill."""
+    if profile is None:
+        return None
+    if profile.cefr_level in VALID_CEFR:
+        return profile.cefr_level
+    levels = sorted(
+        v
+        for v in (
+            profile.skill_reading,
+            profile.skill_speaking,
+            profile.skill_writing,
+            profile.skill_listening,
+            profile.skill_vocabulary,
+        )
+        if v is not None
+    )
+    if not levels:
+        return None
+    # Lower median: a slightly easier start beats a plan that overwhelms a beginner.
+    return skill_level_to_cefr(levels[(len(levels) - 1) // 2])
+
+
+def get_language_profile(db: Session, user_id: uuid.UUID, language: str) -> UserLanguageProfile | None:
+    return (
+        db.query(UserLanguageProfile)
+        .filter(UserLanguageProfile.user_id == user_id, UserLanguageProfile.language == language)
+        .first()
+    )
 
 
 def create_study_plan(
@@ -36,6 +69,7 @@ def create_study_plan(
 
     grid = generate_plan_grid(cefr_level, duration_weeks, language)
     plan = StudyPlan(
+        id=uuid.uuid4(),
         user_id=user.id,
         language=language,
         cefr_level=cefr_level,
@@ -46,12 +80,23 @@ def create_study_plan(
         is_active=True,
     )
     db.add(plan)
+    # Every slot gets a lesson row up front so progress is tracked in the DB; content is generated on first open.
+    for week in grid["weeks"]:
+        for slot in week["days"]:
+            db.add(
+                Lesson(
+                    study_plan_id=plan.id,
+                    title=slot["title"],
+                    lesson_type=slot["lesson_type"],
+                    content=None,
+                    exercises=None,
+                    week_index=slot["week"],
+                    day_index=slot["day"],
+                    is_completed=False,
+                )
+            )
 
-    profile = (
-        db.query(UserLanguageProfile)
-        .filter(UserLanguageProfile.user_id == user.id, UserLanguageProfile.language == language)
-        .first()
-    )
+    profile = get_language_profile(db, user.id, language)
     if profile:
         profile.cefr_level = cefr_level
         profile.assessed_at = datetime.now(timezone.utc)
@@ -69,6 +114,54 @@ def get_active_plan(db: Session, user_id: uuid.UUID, language: str) -> StudyPlan
     )
 
 
+def list_plan_lessons(db: Session, plan: StudyPlan) -> list[Lesson]:
+    return db.query(Lesson).filter(Lesson.study_plan_id == plan.id).order_by(Lesson.day_index).all()
+
+
+def next_open_day(total_days: int, completed_days: set[int]) -> int:
+    """First day not completed yet; total_days + 1 once the whole plan is done."""
+    for day in range(1, total_days + 1):
+        if day not in completed_days:
+            return day
+    return total_days + 1
+
+
+def build_plan_progress(plan: StudyPlan, lessons: list[Lesson]) -> dict[str, Any]:
+    grid = plan.generated_plan or {}
+    by_day = {lesson.day_index: lesson for lesson in lessons}
+    items: list[dict[str, Any]] = []
+    weeks: list[dict[str, Any]] = []
+    for week in grid.get("weeks", []):
+        week_done = 0
+        for slot in week.get("days", []):
+            lesson = by_day.get(slot["day"])
+            done = bool(lesson and lesson.is_completed)
+            week_done += done
+            items.append(
+                {
+                    "day": slot["day"],
+                    "week": slot["week"],
+                    "title": lesson.title if lesson else slot["title"],
+                    "lesson_type": slot["lesson_type"],
+                    "topic": slot["topic"],
+                    "lesson_id": str(lesson.id) if lesson else None,
+                    "is_completed": done,
+                    "completed_at": lesson.completed_at.isoformat() if lesson and lesson.completed_at else None,
+                }
+            )
+        weeks.append({"week": week["week"], "total": len(week.get("days", [])), "completed": week_done})
+    total = len(items)
+    completed_days = {i["day"] for i in items if i["is_completed"]}
+    return {
+        "total_lessons": total,
+        "completed_lessons": len(completed_days),
+        "percent": round(100 * len(completed_days) / total) if total else 0,
+        "next_day": next_open_day(total, completed_days) if total else None,
+        "weeks": weeks,
+        "lessons": items,
+    }
+
+
 def get_day_slot(plan: StudyPlan, day: int) -> dict[str, Any] | None:
     grid = plan.generated_plan or {}
     for week in grid.get("weeks", []):
@@ -84,7 +177,7 @@ def get_or_create_lesson(db: Session, user: User, plan: StudyPlan, day: int) -> 
         .filter(Lesson.study_plan_id == plan.id, Lesson.day_index == day)
         .first()
     )
-    if lesson:
+    if lesson and lesson.content is not None:
         return lesson
 
     slot = get_day_slot(plan, day)
@@ -110,17 +203,19 @@ def get_or_create_lesson(db: Session, user: User, plan: StudyPlan, day: int) -> 
         },
     ]
     result = provider.complete_json(prompt)
-    lesson = Lesson(
-        study_plan_id=plan.id,
-        title=result.get("title") or slot["title"],
-        lesson_type=slot["lesson_type"],
-        content={"body": result.get("content", ""), "topic": slot["topic"]},
-        exercises=result.get("vocab_candidates", []),
-        week_index=slot["week"],
-        day_index=day,
-        is_completed=False,
-    )
-    db.add(lesson)
+    if lesson is None:
+        # Plans created before lesson rows were pre-seeded.
+        lesson = Lesson(
+            study_plan_id=plan.id,
+            lesson_type=slot["lesson_type"],
+            week_index=slot["week"],
+            day_index=day,
+            is_completed=False,
+        )
+        db.add(lesson)
+    lesson.title = result.get("title") or slot["title"]
+    lesson.content = {"body": result.get("content", ""), "topic": slot["topic"]}
+    lesson.exercises = result.get("vocab_candidates", [])
     record_usage(db, user.id, "lesson_generate", LESSON_GENERATE_COST, provider="text")
     db.commit()
     db.refresh(lesson)
@@ -128,11 +223,22 @@ def get_or_create_lesson(db: Session, user: User, plan: StudyPlan, day: int) -> 
 
 
 def complete_lesson(db: Session, user: User, lesson: Lesson) -> list[VocabItem]:
+    if lesson.is_completed:
+        return []
     lesson.is_completed = True
+    lesson.completed_at = datetime.now(timezone.utc)
     created: list[VocabItem] = []
     plan = db.get(StudyPlan, lesson.study_plan_id)
-    if plan and lesson.day_index >= plan.progress_day:
-        plan.progress_day = lesson.day_index + 1
+    if plan:
+        completed_days = {
+            day
+            for (day,) in db.query(Lesson.day_index)
+            .filter(Lesson.study_plan_id == plan.id, Lesson.is_completed.is_(True))
+            .all()
+        }
+        completed_days.add(lesson.day_index)
+        total_days = (plan.generated_plan or {}).get("total_days", 0)
+        plan.progress_day = next_open_day(total_days, completed_days)
 
     for c in lesson.exercises or []:
         term = (c.get("term") or "").strip()
