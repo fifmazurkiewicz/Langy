@@ -61,6 +61,42 @@ describe("bindDebouncedContinuousRecognition", () => {
 
     vi.useRealTimers();
   });
+
+  it("keeps the newest repeated browser hypothesis only once", () => {
+    vi.useFakeTimers();
+    const onUtterance = vi.fn();
+    const recognition = {
+      interimResults: false,
+      continuous: false,
+      onresult: null as SpeechRecognition["onresult"],
+    } as SpeechRecognition;
+
+    bindDebouncedContinuousRecognition(recognition, onUtterance);
+
+    recognition.onresult?.({
+      resultIndex: 0,
+      results: [
+        { 0: { transcript: "I would" }, isFinal: true, length: 1, item: () => ({ transcript: "I would" }) },
+        {
+          0: { transcript: "I would like" },
+          isFinal: false,
+          length: 1,
+          item: () => ({ transcript: "I would like" }),
+        },
+        {
+          0: { transcript: "I would like to practise" },
+          isFinal: false,
+          length: 1,
+          item: () => ({ transcript: "I would like to practise" }),
+        },
+      ],
+    } as unknown as SpeechRecognitionEvent);
+
+    vi.advanceTimersByTime(SPEECH_END_SILENCE_MS);
+    expect(onUtterance).toHaveBeenCalledWith("I would like to practise");
+
+    vi.useRealTimers();
+  });
 });
 
 describe("runDebouncedRecognition", () => {

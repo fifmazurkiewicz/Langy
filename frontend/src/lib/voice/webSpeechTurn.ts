@@ -17,6 +17,27 @@ export function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 type UtteranceHandler = (text: string) => void;
 type DeferHandler = (text: string) => Promise<boolean>;
 
+/**
+ * Chrome may expose each revision of one phrase as another result entry.
+ * Keep the newest complete-prefix revision instead of sending it twice.
+ */
+function transcriptFromResults(results: SpeechRecognitionResultList): string {
+  let transcript = "";
+
+  for (let i = 0; i < results.length; i += 1) {
+    const fragment = results[i][0]?.transcript?.trim();
+    if (!fragment) continue;
+
+    if (!transcript || fragment.toLocaleLowerCase().startsWith(transcript.toLocaleLowerCase())) {
+      transcript = fragment;
+    } else {
+      transcript = `${transcript} ${fragment}`;
+    }
+  }
+
+  return transcript;
+}
+
 /** Hands-free VAD-style turn taking: debounce finals until the user pauses. */
 export function bindDebouncedContinuousRecognition(
   recognition: SpeechRecognition,
@@ -33,11 +54,7 @@ export function bindDebouncedContinuousRecognition(
 
   recognition.onresult = (event: SpeechRecognitionEvent) => {
     if (committed) return;
-    let chunk = "";
-    for (let i = 0; i < event.results.length; i += 1) {
-      chunk += event.results[i][0].transcript;
-    }
-    pendingText = chunk.trim();
+    pendingText = transcriptFromResults(event.results);
     if (!pendingText) return;
 
     if (silenceTimer) clearTimeout(silenceTimer);
@@ -155,11 +172,7 @@ export function runDebouncedRecognition(
   recognition.interimResults = true;
   recognition.continuous = true;
   recognition.onresult = (event: SpeechRecognitionEvent) => {
-    let chunk = "";
-    for (let i = 0; i < event.results.length; i += 1) {
-      chunk += event.results[i][0].transcript;
-    }
-    pendingText = chunk.trim();
+    pendingText = transcriptFromResults(event.results);
     if (!pendingText) return;
     scheduleCommit();
   };
