@@ -117,6 +117,15 @@ Lesson-sourced rows: `status=pending` until Accept/Reject.
 
 See `.cursor/plans/2026-08-27-freelingo-keep-adapt-drop.md`. Reimplement assessment, study plan grid, lesson generator; skip SM-2, Redis, Stripe, sidebar-as-home, XP MVP.
 
+## Guided plan + progress (2026-09-26)
+
+For learners who don't know where to start, Menu → Plan leads with **Generate my learning plan** (one tap, pace picker only).
+
+- `POST /api/plan/generate` resolves the level from the language profile: placement `cefr_level` if set, else the **lower median** of the self-assessed skills (now stored as CEFR A1–C2 labels). No level → 400 and the UI points to Profile, with manual level choice still available.
+- Creating a plan (generate, manual, or onboarding) **seeds one `lessons` row per slot** (`content` NULL). LLM content is still generated lazily on first open (spend cap unchanged).
+- Completing a lesson sets `is_completed` + `completed_at` (migration `012_lesson_completion.sql`); repeat completion is a no-op (no duplicate Pending vocab). `progress_day` = first incomplete day.
+- `GET /api/plan` returns `progress` (totals, percent, next day, per-week counts, per-lesson status). Plan page has **Lessons** (week-grouped list, ✓ / Up next, Continue button) and **Progress** (percent, by-week bars, recently completed, Start a new plan) tabs.
+
 ## Out of scope follow-ups
 
 - Package coach roadmap (transcript → correction → shadowing → mnemonics) remains separate.
@@ -131,3 +140,4 @@ See `.cursor/plans/2026-08-27-freelingo-keep-adapt-drop.md`. Reimplement assessm
 | 2026-08-27 | Placement optional Skip in onboarding | Time-to-Chat |
 | 2026-08-27 | Keep skills 1–5 and CEFR separate | No magic mapping |
 | 2026-08-27 | Lesson vocab → Pending `lesson` | One quality gate for all sources |
+| 2026-09-26 | One-tap plan from profile level; lesson rows seeded with plan; completion + progress tabs | User — guide learners with no idea where to start; track completed lessons in DB |

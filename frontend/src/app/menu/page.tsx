@@ -49,7 +49,7 @@ export default function MenuPage() {
             title="Profile"
             subtitle="Motivation, interests, and skill levels"
           />
-          <MenuRow href="/plan" title="Plan" subtitle="Optional CEFR path and lessons" />
+          <MenuRow href="/plan" title="Plan" subtitle="Guided learning plan, lessons, and progress" />
           <MenuRow href="/menu/memory" title="Memory" subtitle="Facts and recent session notes" />
           <MenuRow href="/menu/appearance" title="Appearance" subtitle="Light, dark, or system" />
           <MenuRow href="/menu/privacy" title="Privacy & data" subtitle="Policy, export, and account deletion" />
