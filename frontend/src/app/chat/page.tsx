@@ -28,6 +28,7 @@ import { useLearningLanguage } from "@/lib/hooks/useLearningLanguage";
 import { useScreenWakeLock } from "@/lib/hooks/useScreenWakeLock";
 import { useGeminiLive } from "@/lib/voice/useGeminiLive";
 import { cancelSpeech, speakTutorLine } from "@/lib/voice/speakLine";
+import { playListeningReadyTone } from "@/lib/voice/playListeningReadyTone";
 import {
   bindDebouncedContinuousRecognition,
   getSpeechRecognitionCtor,
@@ -810,6 +811,7 @@ export default function ChatPage() {
           }
         }
       };
+      recognition.addEventListener("start", playListeningReadyTone);
       recognition.start();
       recognitionRef.current = recognition;
     }
