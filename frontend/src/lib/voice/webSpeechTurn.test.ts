@@ -170,6 +170,33 @@ describe("bindDebouncedContinuousRecognition", () => {
 
     vi.useRealTimers();
   });
+
+  it("drops tutor audio while input is gated, then captures the learner's first turn", () => {
+    vi.useFakeTimers();
+    const onUtterance = vi.fn();
+    let acceptsInput = false;
+    const recognition = {
+      interimResults: false,
+      continuous: false,
+      onresult: null as SpeechRecognition["onresult"],
+    } as SpeechRecognition;
+
+    bindDebouncedContinuousRecognition(recognition, onUtterance, SPEECH_END_SILENCE_MS, undefined, () => acceptsInput);
+    recognition.onresult?.({
+      resultIndex: 0,
+      results: [{ 0: { transcript: "tutor audio" }, isFinal: true, length: 1, item: () => ({ transcript: "tutor audio" }) }],
+    } as unknown as SpeechRecognitionEvent);
+    acceptsInput = true;
+    recognition.onresult?.({
+      resultIndex: 0,
+      results: [{ 0: { transcript: "my answer" }, isFinal: true, length: 1, item: () => ({ transcript: "my answer" }) }],
+    } as unknown as SpeechRecognitionEvent);
+
+    vi.advanceTimersByTime(SPEECH_END_SILENCE_MS);
+    expect(onUtterance).toHaveBeenCalledWith("my answer");
+
+    vi.useRealTimers();
+  });
 });
 
 describe("runDebouncedRecognition", () => {

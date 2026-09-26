@@ -139,7 +139,9 @@ export default function ChatPage() {
   const oneShotRef = useRef<SpeechRecognition | null>(null);
   const unbindSpeechRef = useRef<(() => void) | null>(null);
   const appendLineRef = useRef<(role: "User" | "Agent", text: string) => Promise<number>>(async () => 0);
+  const submitUserMessageRef = useRef<(text: string) => void>(() => undefined);
   const listeningRef = useRef(listening);
+  const sendingRef = useRef(sending);
   const tutorVoiceRef = useRef(tutorVoice);
   const liveGeminiRef = useRef(liveGemini);
   const voiceModeRef = useRef("speech_to_speech");
@@ -147,8 +149,8 @@ export default function ChatPage() {
   const lineIndexRef = useRef(0);
   const micSuspendedRef = useRef(false);
   const liveMicGateRef = useRef<ReturnType<typeof createLiveMicGate> | null>(null);
-  // Do not leave a second recognizer open while a submitted turn is awaiting its tutor reply.
-  const recognitionActive = listening && !micSuspended && !sending;
+  // Keep Web Speech warm while tutor audio plays; its results are gated until the learner can speak.
+  const recognitionActive = listening;
 
   useScreenWakeLock(Boolean(conversationId));
 
@@ -190,6 +192,10 @@ export default function ChatPage() {
   useEffect(() => {
     listeningRef.current = listening;
   }, [listening]);
+
+  useEffect(() => {
+    sendingRef.current = sending;
+  }, [sending]);
 
   useEffect(() => {
     micSuspendedRef.current = micSuspended;
@@ -317,7 +323,10 @@ export default function ChatPage() {
   const speakWithMicGate = useCallback(
     async (text: string) => {
       if (!token) return;
-      await withMicSuspended(listeningRef.current, setMicSuspended, () =>
+      await withMicSuspended(listeningRef.current, (value) => {
+        micSuspendedRef.current = value;
+        setMicSuspended(value);
+      }, () =>
         speakTutorLine(text, speechLang, token, voiceConfigRef.current)
       );
     },
@@ -346,6 +355,7 @@ export default function ChatPage() {
       const text = rawText.trim();
       if (!text || !conversationId || sending) return;
 
+      sendingRef.current = true;
       setSending(true);
       setChatState("thinking");
       try {
@@ -395,11 +405,16 @@ export default function ChatPage() {
           return;
         }
       } finally {
+        sendingRef.current = false;
         setSending(false);
       }
     },
     [conversationId, sending, appendLine, liveConnected, sendUserText, token, sessionLanguage, deliverAgentReply]
   );
+
+  useEffect(() => {
+    submitUserMessageRef.current = (text) => void submitUserMessage(text);
+  }, [submitUserMessage]);
 
   const handleSendText = useCallback(() => {
     const text = draft.trim();
@@ -412,6 +427,7 @@ export default function ChatPage() {
     cancelSpeech();
     void interruptLive();
     liveMicGateRef.current?.onInterrupt();
+    sendingRef.current = false;
     setSending(false);
     setChatState(listeningRef.current ? "listening" : "idle");
   }, [interruptLive]);
@@ -762,16 +778,7 @@ export default function ChatPage() {
       unbindSpeechRef.current = bindDebouncedContinuousRecognition(
         recognition,
         (text) => {
-          // Stop before state updates: this prevents a late Web Speech result from becoming a duplicate turn.
-          unbindSpeechRef.current?.();
-          unbindSpeechRef.current = null;
-          if (recognitionRef.current === recognition) recognitionRef.current = null;
-          try {
-            recognition.stop();
-          } catch {
-            /* already stopped */
-          }
-          void submitUserMessage(text);
+          submitUserMessageRef.current(text);
         },
         voiceConfigRef.current.stt_end_silence_ms,
         async (text) => {
@@ -785,7 +792,8 @@ export default function ChatPage() {
           } catch {
             return false;
           }
-        }
+        },
+        () => !micSuspendedRef.current && !sendingRef.current
       );
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (event.error === "not-allowed") {
@@ -798,7 +806,6 @@ export default function ChatPage() {
         if (
           !cancelled &&
           listeningRef.current &&
-          !micSuspendedRef.current &&
           recognitionRef.current === recognition
         ) {
           try {
@@ -820,7 +827,7 @@ export default function ChatPage() {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
     };
-  }, [recognitionActive, micSuspended, conversationId, speechLang, submitUserMessage, token, sessionLanguage]);
+  }, [recognitionActive, conversationId, speechLang, token, sessionLanguage]);
 
   useEffect(() => {
     if (!conversationId || !token) return;
