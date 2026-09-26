@@ -18,7 +18,6 @@ export function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 
 type UtteranceHandler = (text: string) => void;
 type DeferHandler = (text: string) => Promise<boolean>;
-type AcceptInput = () => boolean;
 
 /**
  * Chrome may expose each revision of one phrase as another result entry.
@@ -46,33 +45,18 @@ export function bindDebouncedContinuousRecognition(
   recognition: SpeechRecognition,
   onUtterance: UtteranceHandler,
   silenceMs = SPEECH_END_SILENCE_MS,
-  shouldDefer?: DeferHandler,
-  acceptInput?: AcceptInput
+  shouldDefer?: DeferHandler
 ): () => void {
   let silenceTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingText = "";
   let committed = false;
   let decisionAttempts = 0;
 
-  const commit = (text: string) => {
-    committed = true;
-    pendingText = "";
-    onUtterance(text);
-    // The recognizer stays warm between turns; acceptInput gates tutor and in-flight audio.
-    committed = false;
-  };
-
   recognition.interimResults = true;
   recognition.continuous = true;
 
   recognition.onresult = (event: SpeechRecognitionEvent) => {
     if (committed) return;
-    if (acceptInput && !acceptInput()) {
-      if (silenceTimer) clearTimeout(silenceTimer);
-      silenceTimer = null;
-      pendingText = "";
-      return;
-    }
     pendingText = transcriptFromResults(event.results);
     if (!pendingText) return;
     decisionAttempts = 0;
@@ -83,11 +67,15 @@ export function bindDebouncedContinuousRecognition(
       silenceTimer = null;
       if (!text) return;
       if (!shouldDefer) {
-        commit(text);
+        committed = true;
+        pendingText = "";
+        onUtterance(text);
         return;
       }
       if (/[.!?]$/.test(text)) {
-        commit(text);
+        committed = true;
+        pendingText = "";
+        onUtterance(text);
         return;
       }
       // Keep recording during the advisory decision. New speech replaces this snapshot.
@@ -95,7 +83,9 @@ export function bindDebouncedContinuousRecognition(
       void shouldDefer(text).then((defer) => {
         if (committed || pendingText !== text) return;
         if (!defer || decisionAttempts >= TURN_DECISION_MAX_ATTEMPTS) {
-          commit(text);
+          committed = true;
+          pendingText = "";
+          onUtterance(text);
           return;
         }
         silenceTimer = setTimeout(() => {
