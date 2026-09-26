@@ -134,6 +134,10 @@ class Conversation(Base):
     )
     transcript: Mapped[str] = mapped_column(Text, default="")
     audio_ref: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Set when the session was started from a plan lesson ("Talk with Langy").
+    lesson_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class FlashcardSet(Base):

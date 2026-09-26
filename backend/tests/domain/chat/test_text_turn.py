@@ -11,6 +11,7 @@ class FakeUser:
 class FakeConversation:
     language = "en-GB"
     transcript = "Agent: Hello!\nUser: I want grammar practice."
+    lesson_id = None
 
 
 class FakeProvider:

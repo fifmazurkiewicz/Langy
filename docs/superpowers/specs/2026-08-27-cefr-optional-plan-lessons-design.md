@@ -126,6 +126,13 @@ For learners who don't know where to start, Menu → Plan leads with **Generate 
 - Completing a lesson sets `is_completed` + `completed_at` (migration `012_lesson_completion.sql`); repeat completion is a no-op (no duplicate Pending vocab). `progress_day` = first incomplete day.
 - `GET /api/plan` returns `progress` (totals, percent, next day, per-week counts, per-lesson status). Plan page has **Lessons** (week-grouped list, ✓ / Up next, Continue button) and **Progress** (percent, by-week bars, recently completed, Start a new plan) tabs.
 
+## Talk with Langy about a lesson (2026-09-26)
+
+- Lesson view has **Talk with Langy about this lesson** → `/chat?lesson=<id>&lessonTitle=…`. Chat shows a "Lesson practice" card; the next **Start** sends `lesson_id` to `POST /api/chat/sessions` (ownership checked; session language = the plan's language).
+- `conversations.lesson_id` (migration `013_conversation_lesson.sql`, `ON DELETE SET NULL`) keeps the lesson for the whole session, including resume.
+- `build_agenda(..., lesson_id)` adds `lesson` (title, type, topic, week/day, body ≤ 2000 chars). The Live system instruction (live token) and the text-turn fallback tell the tutor to practise that material and follow the learner if they change topic. The chained `VOICE_MODE` path has no agenda and is unchanged.
+- The opening line names the lesson; the lesson is not auto-completed by chatting.
+
 ## Out of scope follow-ups
 
 - Package coach roadmap (transcript → correction → shadowing → mnemonics) remains separate.
@@ -140,4 +147,5 @@ For learners who don't know where to start, Menu → Plan leads with **Generate 
 | 2026-08-27 | Placement optional Skip in onboarding | Time-to-Chat |
 | 2026-08-27 | Keep skills 1–5 and CEFR separate | No magic mapping |
 | 2026-08-27 | Lesson vocab → Pending `lesson` | One quality gate for all sources |
+| 2026-09-26 | Talk with Langy from a lesson; lesson stored on the conversation | User — tutor should know the lesson being practised |
 | 2026-09-26 | One-tap plan from profile level; lesson rows seeded with plan; completion + progress tabs | User — guide learners with no idea where to start; track completed lessons in DB |
