@@ -2,6 +2,11 @@
 
 FastAPI on Render Docker. Postgres via `DATABASE_URL`. Do not store durable state on disk.
 
+`app/` is the package root. Keep FastAPI routes and provider clients as outer
+adapters; put orchestration outside routes and keep language-learning rules
+independent of FastAPI, database, and provider SDKs. Wire concrete clients in
+the application entrypoint rather than migrating the existing layout.
+
 ```bash
 python -m pip install -r requirements.txt
 python -m scripts.create_tables
