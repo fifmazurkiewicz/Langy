@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     spend_cap_tz: str = "Europe/Warsaw"
     allowed_admin_emails: str = "fifmazurkiewicz@gmail.com"
+    resend_api_key: str = ""
+    resend_mail: str = "fifmazurkiewicz@gmail.com"
+    resend_from: str = "Powiadomienia <powiadomienia@fmazurkiewicz.dev>"
 
     text_provider: str = "openrouter"
     text_model: str = "google/gemini-2.5-flash"

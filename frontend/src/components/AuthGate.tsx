@@ -33,6 +33,7 @@ function PendingApprovalScreen() {
         <p className="text-sm text-[var(--color-soft)]">
           An administrator must approve this account before you can use Langy.
         </p>
+        <a className="text-sm underline" href="mailto:fifmazurkiewicz@gmail.com?subject=Langy%20-%20pro%C5%9Bba%20o%20akceptacj%C4%99%20konta">Write to the administrator</a>
         <div className="flex flex-col gap-2">
           <button type="button" className="classical-btn classical-btn-primary" onClick={() => void refreshProfile()}>
             Check status

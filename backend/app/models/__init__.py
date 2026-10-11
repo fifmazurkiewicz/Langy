@@ -33,6 +33,9 @@ class User(Base):
     is_approved: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
     )
+    approval_notification_status: Mapped[str] = mapped_column(String, default="sent", server_default="sent", nullable=False)
+    approval_notification_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approval_notification_error: Mapped[str | None] = mapped_column(String, nullable=True)
     spend_cap_usd: Mapped[float] = mapped_column(Numeric(10, 2), default=10)
     active_language: Mapped[str | None] = mapped_column(String, nullable=True)
     onboarding_completed_at: Mapped[datetime | None] = mapped_column(
