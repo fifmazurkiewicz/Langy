@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Langy — Current System Architecture",
+    "output": "docs/architecture/current.architecture.html",
+    "quality_profile": "showcase",
+    "repository": {"url": "https://github.com/fifmazurkiewicz/Langy.git", "revision": "f10124b2dfe65ab08f84ff4f75cc84de907eefa3", "link_mode": "local-only"}
+  },
+  "components": [
+    {"id": "learner", "type": "external", "label": "Learner", "sublabel": "browser and PWA", "pos": [40, 300], "size": [130, 60], "sources": [{"path": "README.md", "line": 1, "end_line": 12, "label": "product"}]},
+    {"id": "frontend", "type": "cloud", "label": "Next.js Frontend", "sublabel": "Vercel PWA", "pos": [240, 300], "size": [150, 60], "sources": [{"path": "README.md", "line": 10, "end_line": 12, "label": "stack"}]},
+    {"id": "api", "type": "backend", "label": "Langy API", "sublabel": "FastAPI /api", "pos": [530, 300], "size": [140, 60], "sources": [{"path": "backend/app/main.py", "line": 1, "end_line": 21, "label": "entry"}, {"path": "backend/app/api/router.py", "line": 1, "end_line": 31, "label": "routes"}]},
+    {"id": "supabase", "type": "database", "label": "Supabase", "sublabel": "Auth, Postgres, RLS", "pos": [810, 300], "size": [150, 60], "sources": [{"path": "docs/architecture-for-cursor.md", "line": 82, "end_line": 95, "label": "persistence"}]},
+    {"id": "voice", "type": "cloud", "label": "Voice and LLM Providers", "sublabel": "Gemini Live / OpenRouter", "pos": [530, 130], "size": [180, 60], "sources": [{"path": "docs/architecture-for-cursor.md", "line": 82, "end_line": 104, "label": "providers"}]},
+    {"id": "observability", "type": "cloud", "label": "Langfuse and Promptfoo", "sublabel": "prompts, tracing, regression", "pos": [810, 130], "size": [180, 60], "sources": [{"path": "docs/architecture-for-cursor.md", "line": 82, "end_line": 104, "label": "quality"}]}
+  ],
+  "connections": [
+    {"from": "learner", "to": "frontend", "label": "HTTPS", "variant": "emphasis"},
+    {"from": "frontend", "to": "api", "label": "authenticated API"},
+    {"from": "api", "to": "supabase", "label": "profiles, FSRS, jobs"},
+    {"from": "api", "to": "voice", "label": "text and voice", "fromSide": "top", "toSide": "bottom"},
+    {"from": "api", "to": "observability", "label": "traces and prompts", "fromSide": "top", "toSide": "bottom"}
+  ]
+}

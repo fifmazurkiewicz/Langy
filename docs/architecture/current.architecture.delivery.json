@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "83c88073-a401-4b3a-ae5a-7a480d08aec9",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/Filip/dev/Langy/docs/architecture/current.architecture.json",
+  "output": "/Users/Filip/dev/Langy/docs/architecture/current.architecture.html",
+  "specification": {
+    "sha256": "782ccfabda1fd053905b4535229bbf1389f7c445d1d9433f7ed5c801b039cfb3",
+    "bytes": 2381
+  },
+  "artifact": {
+    "sha256": "07d121786a042e14f8b3c098ecac2801e6da55c18b49b5aeb2f4e4fc619285fd",
+    "bytes": 753168
+  }
+}
