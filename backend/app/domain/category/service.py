@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.domain.error_reporting import report_error
 from app.domain.providers.text import TextCompletionProvider, get_text_provider
 from app.domain.spend_cap.service import SpendCapExceeded, check_spend_cap, record_usage
 from app.models import FlashcardSet, Job, User, VocabItem
@@ -119,7 +120,8 @@ def process_category_job(db: Session, job: Job, provider: TextCompletionProvider
         job.status = "done"
     except SpendCapExceeded:
         job.status = "failed"
-    except Exception:
+    except Exception as error:  # noqa: BLE001 — terminal provider boundary
+        report_error(error)
         job.status = "failed"
     from datetime import datetime, timezone
 

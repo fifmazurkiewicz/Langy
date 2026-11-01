@@ -1,14 +1,25 @@
-import json
 import uuid
 from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.domain.error_reporting import report_error
 from app.domain.fsrs.service import create_fsrs_card
+from app.domain.plan.service import (
+    get_active_plan,
+    get_owned_lesson,
+    lesson_chat_context,
+)
 from app.domain.providers.text import TextCompletionProvider, get_text_provider
-from app.domain.plan.service import get_active_plan, get_owned_lesson, lesson_chat_context
-from app.models import Conversation, Job, User, UserLanguageProfile, UserMemoryFact, ConversationSummary, VocabItem
-
+from app.models import (
+    Conversation,
+    ConversationSummary,
+    Job,
+    User,
+    UserLanguageProfile,
+    UserMemoryFact,
+    VocabItem,
+)
 
 OPENING_LINES = [
     "I'm listening — what would you like to talk about today?",
@@ -140,7 +151,8 @@ def process_post_session_job(db: Session, job: Job, provider: TextCompletionProv
     try:
         result = provider.complete_json(extraction_prompt)
         candidates = result.get("candidates", [])
-    except Exception:
+    except Exception as error:  # noqa: BLE001 — terminal provider boundary
+        report_error(error)
         candidates = []
 
     for c in candidates:
@@ -203,8 +215,8 @@ def process_post_session_job(db: Session, job: Job, provider: TextCompletionProv
                         source_conversation_id=conversation.id,
                     )
                 )
-    except Exception:
-        pass
+    except Exception as error:  # noqa: BLE001 — terminal provider boundary
+        report_error(error)
 
     db.commit()
     job.status = "done"

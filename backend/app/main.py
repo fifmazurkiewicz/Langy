@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.config import get_settings
+from app.domain.error_reporting import set_error_reporter
+from app.monitoring import capture_error, init_sentry
 
 settings = get_settings()
+
+init_sentry("langy-api", api=True)
+set_error_reporter(capture_error)
 
 app = FastAPI(title="Langy API", version="0.1.0")
 

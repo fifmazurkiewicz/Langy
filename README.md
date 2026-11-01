@@ -12,3 +12,7 @@ Zacznij od [`docs/README.md`](docs/README.md).
 ## Stack
 
 Vercel (frontend) · Render (backend) · Supabase (DB + Auth) — szczegóły w architekturze i `AGENTS.md`.
+
+## Error monitoring
+
+[Sentry tasks, privacy contract and deployment variables](docs/technical/sentry.md). SDK source verification and production activation are tracked separately.
